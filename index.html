@@ -457,17 +457,15 @@
                 area: '', fecha: '', responsable: '', entrevistador: '', estado: 'pendiente', notas: ''
             });
             async function agregar() {
-    if (!form.nombre || !form.area_inicio) return alert('Completá nombre y área inicio');
-    const { error } = await supabase.from('procesos').insert([form]);
-    if (error) {
-        alert('Error guardando: ' + error.message);
-    } else {
-        setForm({ nombre: '', area_inicio: '', areas_intermedias: '', area_cierre: '', frecuencia: 'mensual', prioridad: 'media', estado_relevamiento: 'sin_iniciar' });
-        // Recargar procesos
-        const { data: nuevosProcesos } = await supabase.from('procesos').select('*').order('created_at', { ascending: false });
-        if (nuevosProcesos) setProcesos(nuevosProcesos);
-    }
-}
+                if (!form.area || !form.fecha) return alert('Completá área y fecha');
+                const { data, error } = await supabase.from('entrevistas').insert([form]).select();
+                if (error) {
+                    alert('Error guardando: ' + error.message);
+                } else {
+                    setEntrevistas([...entrevistas, data[0]]);
+                    setForm({ area: '', fecha: '', responsable: '', entrevistador: '', estado: 'pendiente', notas: '' });
+                }
+            }
             async function eliminar(id) {
                 if (!confirm('¿Eliminar esta entrevista?')) return;
                 const { error } = await supabase.from('entrevistas').delete().eq('id', id);
@@ -846,4 +844,3 @@
     </script>
 </body>
 </html>
-

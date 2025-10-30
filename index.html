@@ -16,7 +16,7 @@
     <script type="text/babel">
         const { useState, useEffect } = React;
 
-        // ⚠️ CONFIGURACIÓN - REEMPLAZAR CON TUS DATOS DE SUPABASE rxP*p*3LZzKN9+T
+        // ⚠️ CONFIGURACIÓN - REEMPLAZAR CON TUS DATOS DE SUPABASE
         const SUPABASE_URL = 'https://ketmsuhhyymhprwvoxjx.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtldG1zdWhoeXltaHByd3ZveGp4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE3ODExODksImV4cCI6MjA3NzM1NzE4OX0.R6sOE9UofsP8NZnhc4uFJF3hTauEjvGJjnoSYtIifbQ';
         
@@ -462,6 +462,543 @@
                 );
             }
 
+            // PLANTILLA DE ENTREVISTA
+            function PlantillaEntrevista() {
+                function descargarPlantilla() {
+                    const contenido = `
+GUÍA DE RELEVAMIENTO DE PROCESOS
+Ministerio de Ecología - Provincia de Misiones
+===============================================
+
+PREPARACIÓN DE LA ENTREVISTA
+-----------------------------
+Antes de la reunión:
+- Confirmar el área/sector específico
+- Pedir organigrama del sector (si existe)
+- Solicitar ejemplos de formularios/documentos que usan
+- Tiempo estimado: 90 minutos
+
+
+PARTE 1: IDENTIFICACIÓN DEL ÁREA (10 min)
+------------------------------------------
+
+1.1 Datos Básicos
+- Nombre oficial del área/dirección/departamento: _______________________
+- Responsable a cargo: _______________________
+- Cantidad de personal: _______________________
+- Ubicación física (edificio/piso/oficina): _______________________
+
+1.2 Contexto Funcional
+- ¿Cuál es la función principal del área según la estructura del Ministerio?
+  _______________________
+- ¿A qué subsecretaría/dirección responden?
+  _______________________
+- ¿Qué competencias legales tienen? (si conocen decretos/leyes específicas)
+  _______________________
+
+1.3 Público/Usuarios
+¿Quiénes son los principales destinatarios de sus servicios?
+  □ Ciudadanos
+  □ Empresas privadas
+  □ Municipios
+  □ ONGs
+  □ Otras áreas del Ministerio
+  □ Otros organismos provinciales
+  □ Organismos nacionales
+  □ Otros: ___________
+
+
+PARTE 2: MAPEO GENERAL DE PROCESOS (20 min)
+--------------------------------------------
+
+2.1 Inventario de Procesos
+Listar TODOS los procesos que ejecuta el área:
+
+| # | Nombre del Proceso | Frecuencia | Tipo | Prioridad |
+|---|-------------------|------------|------|-----------|
+| 1 | | Diario/Semanal/Mensual/Eventual | Interno/Externo | Alta/Media/Baja |
+| 2 | | | | |
+| 3 | | | | |
+
+Tipos:
+- Externo: Involucra ciudadanos, empresas, municipios, etc.
+- Interno: Solo entre áreas del Ministerio
+
+2.2 Interacciones
+- ¿Con qué otras áreas del Ministerio interactúan regularmente?
+  _______________________
+- ¿Reciben expedientes de otras áreas? ¿Cuáles?
+  _______________________
+- ¿Derivan expedientes a otras áreas? ¿Cuáles?
+  _______________________
+- ¿Generan expedientes nuevos?
+  _______________________
+
+
+PARTE 3: DETALLE POR PROCESO (40 min por proceso)
+--------------------------------------------------
+Elegir 2-3 procesos prioritarios para esta sesión.
+
+A. IDENTIFICACIÓN
+
+Nombre del proceso: _______________________
+(Usar verbo + objeto. Ej: "Otorgar Certificado Ambiental")
+
+Código: _______________________ (Asignarás después. Ej: ME-DA-001)
+
+Marco legal: ¿Existe alguna ley, decreto o resolución que regule este proceso?
+_______________________
+
+Objetivo: ¿Para qué existe este proceso? ¿Qué problema resuelve?
+_______________________
+
+Áreas involucradas: Listar todas las áreas que participan de inicio a fin
+_______________________
+
+
+B. INICIO DEL PROCESO
+
+¿Cómo inicia?
+  □ Solicitud de ciudadano/empresa (presencial/web/email)
+  □ Llegada de expediente de otra área
+  □ Denuncia
+  □ Inspección programada
+  □ Requerimiento de organismo externo
+  □ Otro: ___________
+
+¿Qué documentación reciben para iniciar?
+- Formularios específicos (pedir copia): _______________________
+- Documentación adjunta requerida: _______________________
+- ¿En qué formato llega? (papel/digital/email/expediente): _______________________
+
+¿Dónde se registra el inicio?
+  □ Libro de actas
+  □ Planilla Excel
+  □ Sistema de expedientes provincial
+  □ Sistema propio del Ministerio
+  □ No se registra formalmente
+  □ Otro: ___________
+
+
+C. FLUJO DEL PROCESO
+
+Para cada paso del proceso, completar:
+
+PASO #1
+-------
+¿Qué se hace?: _______________________
+
+¿Quién lo hace? (Rol o nombre del puesto, no persona específica): _______________________
+
+¿En qué área se realiza?: _______________________
+
+¿Cómo lo hace?
+- Herramienta/sistema usado: _______________________
+- ¿Es manual o digital?: _______________________
+
+¿Qué información necesita?
+- Datos específicos: _______________________
+- ¿De dónde la obtiene?: _______________________
+
+¿Genera algún documento/registro?
+- Tipo de documento: _______________________
+- ¿Se archiva? ¿Dónde?: _______________________
+
+¿Hay plazos legales/administrativos?: _______________________
+
+¿Existe un punto de decisión?
+  □ No, sigue secuencial
+  □ Sí → ¿Qué condiciones evalúan?: _______________________
+    - Si CUMPLE → va a: _______________________
+    - Si NO CUMPLE → va a: _______________________
+
+¿Pasa a otra área después de este paso?
+  □ No, continúa en la misma área
+  □ Sí → ¿A qué área?: _______________________
+    ¿Qué le envían?: _______________________
+    ¿Qué esperan que esa área haga?: _______________________
+    ¿El proceso puede continuar sin la respuesta de esa área?: □ Sí □ No
+
+[Repetir estructura para PASO #2, #3, etc.]
+
+
+D. FINALIZACIÓN
+
+¿Cómo termina el proceso?
+  □ Emisión de resolución/certificado/dictamen
+  □ Archivo del expediente
+  □ Derivación a otra área
+  □ Notificación al solicitante
+  □ Otro: ___________
+
+¿En qué área se cierra el proceso?: _______________________
+
+¿Qué entregables genera?
+- Documentos oficiales: _______________________
+- Registros: _______________________
+- Actualizaciones en sistemas: _______________________
+
+¿Cómo se notifica al interesado?
+  □ Presencial (retira en oficina)
+  □ Correo postal
+  □ Email
+  □ Publicación en web/boletín oficial
+  □ No se notifica formalmente
+  □ Otro: ___________
+
+
+E. EXPEDIENTES Y DOCUMENTOS
+
+¿Este proceso genera o modifica expedientes?
+  □ Genera expediente nuevo
+  □ Se agrega a expediente existente
+  □ No involucra expedientes
+
+Si maneja expedientes:
+- ¿Se carga en el sistema provincial de expedientes digitales?: _______________________
+- ¿Qué información específicamente cargan?: _______________________
+- ¿El expediente físico sigue circulando en paralelo?: _______________________
+- ¿Dónde se archiva finalmente el expediente físico?: _______________________
+- Cuando el expediente pasa a otra área, ¿va físico o se notifica digitalmente?: _______________________
+
+Formularios/Planillas que usan:
+| Nombre del documento | Formato actual | Quién lo completa | En qué paso del proceso |
+|---------------------|----------------|-------------------|------------------------|
+| | Papel/Excel/Word/PDF | | |
+
+
+F. DATOS CRÍTICOS
+
+¿Qué datos/información son fundamentales para este proceso?
+
+Para cada dato relevante:
+- Nombre del dato: _______________________
+- ¿De dónde viene?: _______________________
+- ¿Se valida de alguna forma?: _______________________
+- ¿Dónde se almacena actualmente?: _______________________
+- ¿Qué área lo registra?: _______________________
+
+Ejemplos comunes en Ecología:
+- Datos del solicitante (CUIT/CUIL, domicilio)
+- Ubicación del proyecto (coordenadas, parcela, municipio)
+- Tipo de actividad/emprendimiento
+- Superficies (hectáreas afectadas)
+- Especies involucradas (flora/fauna)
+- Resoluciones/permisos anteriores
+- Fechas de inspecciones
+- Resultados de análisis (agua, suelo, aire)
+- Montos de multas/tasas
+
+
+G. TIEMPOS Y VOLUMEN
+
+Tiempos:
+- Tiempo ideal de resolución: _______________________
+- Tiempo real promedio: _______________________
+- ¿Hay plazos legales?: _______________________
+- ¿En qué paso se demora más?: _______________________
+
+Volumen:
+- Cantidad de casos por mes (aprox.): _______________________
+- ¿Hay épocas de mayor demanda?: _______________________
+
+
+H. PROBLEMAS Y CUELLOS DE BOTELLA
+
+¿Dónde se traba el proceso habitualmente?
+- Paso específico: _______________________
+- ¿En qué área ocurre?: _______________________
+- ¿Por qué?: _______________________
+
+¿Qué dificultades operativas tienen?
+  □ Falta de información completa al inicio
+  □ Demoras en respuestas de otras áreas (¿cuáles?: _______)
+  □ Falta de conectividad/sistemas
+  □ Procesos manuales repetitivos
+  □ Falta de personal
+  □ Normativa poco clara
+  □ Otro: ___________
+
+¿Qué mejorarían si pudieran?
+_______________________
+
+
+I. CASOS ESPECIALES
+
+¿Existen variantes de este proceso?
+- Situación especial: _______________________
+- ¿Cómo se maneja diferente?: _______________________
+
+¿Qué pasa en caso de excepciones?
+  □ Se escala a un superior
+  □ Se aplica criterio del responsable
+  □ Hay un proceso alternativo
+  □ Otro: ___________
+
+
+PARTE 4: INFORMACIÓN COMPLEMENTARIA (20 min)
+---------------------------------------------
+
+4.1 Sistemas Actuales
+
+¿Qué herramientas digitales usan hoy?
+| Sistema/Herramienta | Para qué lo usan | Observaciones |
+|---------------------|------------------|---------------|
+| Excel | | |
+| Word | | |
+| Email | | |
+| Sistema provincial expedientes | | |
+| Otro: ___________ | | |
+
+¿Tienen acceso a internet estable?
+  □ Sí, siempre
+  □ Intermitente
+  □ Solo algunas PCs
+
+¿Tienen equipamiento suficiente?
+- Cantidad de PCs/notebooks: _______________________
+- Impresoras: _______________________
+- Escáner: _______________________
+
+
+4.2 Normativa y Referencias
+
+¿Tienen manuales de procedimientos escritos?
+  □ Sí (pedir copia)
+  □ No
+  □ Parcialmente
+
+¿Hay formularios oficiales establecidos por resolución?
+  □ Sí → Número de resolución: _______________________
+  □ No, se usan informalmente
+
+
+4.3 Integración con otras Áreas
+
+Matriz de interacciones:
+| Área del Ministerio | Qué le envían | Qué reciben de vuelta | Frecuencia | Para qué proceso |
+|---------------------|---------------|----------------------|------------|------------------|
+| Mesa de Entradas | | | | |
+| Legal | | | | |
+| Inspecciones | | | | |
+
+
+PARTE 5: CIERRE Y PRÓXIMOS PASOS (10 min)
+------------------------------------------
+
+Validación:
+- Fecha de esta entrevista: _______________________
+- Entrevistador: _______________________
+- Entrevistado(s): _______________________
+
+Acuerdos:
+  □ Enviar resumen documentado en 3-5 días
+  □ Agendar reunión de validación
+  □ Solicitar documentación faltante (especificar): _______________________
+
+Observaciones generales:
+_______________________
+
+
+CHECKLIST POST-ENTREVISTA
+--------------------------
+Después de cada entrevista, verificar que tengas:
+
+  □ Lista completa de procesos del área
+  □ Detalle de al menos 2 procesos prioritarios
+  □ Todas las áreas involucradas identificadas
+  □ Puntos de transición entre áreas marcados
+  □ Copias de formularios obtenidas
+  □ Contacto para seguimiento anotado
+  □ Notas sobre integración con otras áreas
+  □ Identificación preliminar de entidades de datos
+
+
+TIPS PARA LA ENTREVISTA
+------------------------
+
+1. Llevá ejemplos concretos: "Contame qué pasó con el último caso que atendiste"
+
+2. Usá el método del caso real: Pediles que te narren un caso específico paso por paso
+
+3. Dibujá mientras hablan: Hacé un diagrama de flujo simple en papel para validar
+
+4. Cuando mencionen otra área, NO pares ahí: Preguntá "¿Y qué hace esa área cuando le llega?"
+
+5. Identificá workarounds: Muchas veces tienen "trucos" no oficiales importantes
+
+6. Validá en el momento: "Entonces, si entendí bien, primero hacen X, después Y..."
+
+7. Grabá (con permiso): Para no perderte detalles técnicos
+
+8. Preguntá por el pasado: "¿Antes cómo lo hacían?" - da contexto de evolución
+
+9. Para identificar si es un solo proceso: "¿Pueden cerrar este trámite sin que [otra área] responda?"
+
+10. Marcá las transiciones: Cada vez que digan "lo mandamos a...", resaltalo
+
+
+PREGUNTAS CLAVE PARA IDENTIFICAR LÍMITES DEL PROCESO
+-----------------------------------------------------
+
+Para saber dónde empieza:
+- "¿Qué evento específico hace que este proceso comience?"
+- "¿Ustedes inician esto o les llega de otro lado?"
+
+Para saber dónde termina:
+- "¿Cuándo consideran que este trámite está completamente cerrado?"
+- "¿Cuál es el resultado final que espera el solicitante?"
+
+Para identificar áreas involucradas:
+- "¿Qué otras áreas participan en este proceso?"
+- "¿Pueden completar todo o necesitan intervención de otras áreas?"
+- "Si [otra área] no responde, ¿el trámite queda trabado?"
+
+Para entender las transiciones:
+- "¿Cómo le avisan a [otra área] que necesitan algo?"
+- "¿Cuánto demora normalmente [otra área] en responder?"
+- "¿Qué pasa si [otra área] dice que no o pide correcciones?"
+
+
+⚠️ RECORDATORIOS IMPORTANTES
+-----------------------------
+• Cuando mencionen "lo mandamos a otra área", anotar ESA ÁREA como pendiente de entrevistar
+• Si dicen "no podemos cerrar sin que X área nos responda", es parte del mismo proceso
+• Dibujar el flujo mientras hablan para validar comprensión
+• Pedir ejemplos concretos de casos reales
+• Grabar la entrevista (con permiso) para no perder detalles
+`;
+
+                    const blob = new Blob([contenido], { type: 'text/plain;charset=utf-8' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'plantilla-entrevista-procesos.txt';
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                }
+
+                return (
+                    <div className="bg-white p-6 rounded-lg border shadow-sm max-w-5xl mx-auto">
+                        <div className="flex items-center justify-between mb-6">
+                            <h2 className="text-2xl font-bold">Plantilla de Entrevista</h2>
+                            <button
+                                onClick={descargarPlantilla}
+                                className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
+                            >
+                                <Icons.Download />
+                                Descargar Plantilla
+                            </button>
+                        </div>
+
+                        <div className="prose max-w-none space-y-6 text-sm bg-gray-50 p-6 rounded-lg">
+                            <div className="bg-blue-50 p-4 rounded border border-blue-200">
+                                <h3 className="text-lg font-bold text-blue-900 mb-2">Instrucciones de Uso</h3>
+                                <ul className="text-sm text-blue-800 space-y-1 list-disc pl-5">
+                                    <li>Descargá la plantilla usando el botón verde de arriba</li>
+                                    <li>Imprimila o usala en formato digital durante las entrevistas</li>
+                                    <li>Completá cada sección durante o después de la entrevista</li>
+                                    <li>Después cargá los datos en las otras pestañas del sistema</li>
+                                </ul>
+                            </div>
+
+                            <section>
+                                <h3 className="font-bold text-base mb-2 bg-gray-700 text-white p-2 rounded">PARTE 1: IDENTIFICACIÓN DEL ÁREA</h3>
+                                <div className="space-y-2 pl-4">
+                                    <div>• Nombre oficial del área</div>
+                                    <div>• Responsable a cargo</div>
+                                    <div>• Cantidad de personal</div>
+                                    <div>• Ubicación física</div>
+                                    <div>• Función principal del área</div>
+                                    <div>• Público/usuarios que atienden</div>
+                                </div>
+                            </section>
+
+                            <section>
+                                <h3 className="font-bold text-base mb-2 bg-gray-700 text-white p-2 rounded">PARTE 2: INVENTARIO DE PROCESOS</h3>
+                                <div className="pl-4">
+                                    <p className="mb-2">Listar TODOS los procesos que ejecuta el área con:</p>
+                                    <div className="space-y-1">
+                                        <div>• Nombre del proceso</div>
+                                        <div>• Frecuencia (diaria/semanal/mensual/eventual)</div>
+                                        <div>• Tipo (interno/externo)</div>
+                                        <div>• Prioridad (alta/media/baja)</div>
+                                    </div>
+                                </div>
+                            </section>
+
+                            <section>
+                                <h3 className="font-bold text-base mb-2 bg-gray-700 text-white p-2 rounded">PARTE 3: DETALLE POR PROCESO</h3>
+                                <div className="pl-4 space-y-3">
+                                    <div>
+                                        <strong>A. Identificación:</strong> Nombre, objetivo, marco legal, áreas involucradas
+                                    </div>
+                                    <div>
+                                        <strong>B. Inicio:</strong> Cómo inicia, documentación requerida, dónde se registra
+                                    </div>
+                                    <div>
+                                        <strong>C. Flujo:</strong> Paso a paso detallado
+                                        <div className="ml-4 mt-1 text-xs">
+                                            Para cada paso: qué se hace, quién lo hace, en qué área, herramientas usadas, 
+                                            información necesaria, documentos generados, plazos, decisiones, transiciones a otras áreas
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <strong>D. Finalización:</strong> Cómo termina, entregables, notificación
+                                    </div>
+                                    <div>
+                                        <strong>E. Expedientes:</strong> Manejo de expedientes físicos y digitales
+                                    </div>
+                                    <div>
+                                        <strong>F. Datos críticos:</strong> Información fundamental para el proceso
+                                    </div>
+                                    <div>
+                                        <strong>G. Tiempos y volumen:</strong> Duración, cantidad de casos
+                                    </div>
+                                    <div>
+                                        <strong>H. Problemas:</strong> Cuellos de botella, dificultades operativas
+                                    </div>
+                                    <div>
+                                        <strong>I. Casos especiales:</strong> Variantes y excepciones
+                                    </div>
+                                </div>
+                            </section>
+
+                            <section>
+                                <h3 className="font-bold text-base mb-2 bg-gray-700 text-white p-2 rounded">PARTE 4: INFORMACIÓN COMPLEMENTARIA</h3>
+                                <div className="pl-4 space-y-2">
+                                    <div>• Sistemas actuales que usan</div>
+                                    <div>• Normativa y manuales de procedimientos</div>
+                                    <div>• Integración con otras áreas</div>
+                                </div>
+                            </section>
+
+                            <section>
+                                <h3 className="font-bold text-base mb-2 bg-gray-700 text-white p-2 rounded">PARTE 5: CIERRE</h3>
+                                <div className="pl-4 space-y-2">
+                                    <div>• Validación de datos de la entrevista</div>
+                                    <div>• Acuerdos y próximos pasos</div>
+                                    <div>• Checklist post-entrevista</div>
+                                </div>
+                            </section>
+
+                            <div className="bg-yellow-50 p-4 rounded border border-yellow-200 mt-6">
+                                <h3 className="font-bold text-base mb-2 text-yellow-900">⚠️ TIPS IMPORTANTES</h3>
+                                <ul className="text-sm text-yellow-800 space-y-1 list-disc pl-5">
+                                    <li>Cuando mencionen "lo mandamos a otra área", anotar para entrevistar a esa área</li>
+                                    <li>Si dicen "no podemos cerrar sin que X área responda", es parte del mismo proceso</li>
+                                    <li>Dibujar el flujo mientras hablan para validar comprensión</li>
+                                    <li>Pedir ejemplos concretos de casos reales</li>
+                                    <li>Grabar (con permiso) para no perder detalles</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                );
+            }
+
             if (loading) {
                 return (
                     <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -512,12 +1049,23 @@
                             >
                                 Validación de Handoffs
                             </button>
+                            <button
+                                onClick={() => setActiveTab('plantilla')}
+                                className={`px-4 py-2 font-medium border-b-2 transition-colors ${
+                                    activeTab === 'plantilla'
+                                        ? 'border-blue-600 text-blue-600'
+                                        : 'border-transparent text-gray-600 hover:text-gray-900'
+                                }`}
+                            >
+                                Plantilla de Entrevista
+                            </button>
                         </div>
 
                         <div>
                             {activeTab === 'tracker' && <TrackerEntrevistas />}
                             {activeTab === 'procesos' && <MatrizProcesos />}
                             {activeTab === 'handoffs' && <ValidacionHandoffs />}
+                            {activeTab === 'plantilla' && <PlantillaEntrevista />}
                         </div>
                     </div>
                 </div>
@@ -527,4 +1075,9 @@
         ReactDOM.render(<App />, document.getElementById('root'));
     </script>
 </body>
+</html>
+        ReactDOM.render(<App />, document.getElementById('root'));
+    </script>
+</body>
+
 </html>

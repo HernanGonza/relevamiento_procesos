@@ -9,18 +9,14 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body>
     <div id="root"></div>
-
     <script type="text/babel">
         const { useState, useEffect } = React;
-
         // ⚠️ CONFIGURACIÓN - REEMPLAZAR CON TUS DATOS DE SUPABASE
         const SUPABASE_URL = 'https://ketmsuhhyymhprwvoxjx.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtldG1zdWhoeXltaHByd3ZveGp4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE3ODExODksImV4cCI6MjA3NzM1NzE4OX0.R6sOE9UofsP8NZnhc4uFJF3hTauEjvGJjnoSYtIifbQ';
-        
         const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
         // Iconos simples con SVG
@@ -30,9 +26,821 @@
             ArrowRight: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>,
             Alert: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>,
             Check: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>,
-            Download: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>,
         };
 
+        // =============== COMPONENTE NUEVO: FORMULARIO COMPLETO ===============
+        function FormularioEntrevistaCompleto() {
+            const [loading, setLoading] = useState(false);
+
+            const [entrevista, setEntrevista] = useState({
+                area: '', fecha: '', responsable: '', entrevistador: '', notas: '',
+                cantidad_personal: '', ubicacion: '', funcion_principal: '', depende_de: '',
+                publico_usuarios: []
+            });
+
+            const [procesos, setProcesos] = useState([{
+                nombre: '', frecuencia: 'mensual', tipo: 'interno', prioridad: 'media',
+                area_inicio: '', areas_intermedias: '', area_cierre: '',
+                pasos: [{ descripcion: '', responsable_rol: '', area: '', herramienta: '', es_manual: true,
+                    datos_necesarios: '', documentos_generados: '', plazos: '',
+                    tiene_decision: false, condicion_decision: '', destino_si_cumple: '', destino_si_no_cumple: '',
+                    pasa_a_otra_area: false, area_destino: '', que_envia: '', espera_respuesta: false }]
+            }]);
+
+            const [complemento, setComplemento] = useState({
+                interacciones_externas: '', sistemas_usados: '', tiene_manuales: false,
+                resolucion_formularios: '', entrevistados: '', acuerdos: '', observaciones_generales: ''
+            });
+
+            const togglePublico = (valor) => {
+                setEntrevista(prev => {
+                    const lista = [...prev.publico_usuarios];
+                    if (lista.includes(valor)) {
+                        return { ...prev, publico_usuarios: lista.filter(x => x !== valor) };
+                    } else {
+                        return { ...prev, publico_usuarios: [...lista, valor] };
+                    }
+                });
+            };
+
+            const agregarProceso = () => {
+                setProcesos([...procesos, {
+                    nombre: '', frecuencia: 'mensual', tipo: 'interno', prioridad: 'media',
+                    area_inicio: '', areas_intermedias: '', area_cierre: '',
+                    pasos: [{ descripcion: '', responsable_rol: '', area: '', herramienta: '', es_manual: true,
+                        datos_necesarios: '', documentos_generados: '', plazos: '',
+                        tiene_decision: false, condicion_decision: '', destino_si_cumple: '', destino_si_no_cumple: '',
+                        pasa_a_otra_area: false, area_destino: '', que_envia: '', espera_respuesta: false }]
+                }]);
+            };
+
+            const eliminarProceso = (index) => {
+                const nuevos = [...procesos];
+                nuevos.splice(index, 1);
+                setProcesos(nuevos);
+            };
+
+            const actualizarProceso = (index, campo, valor) => {
+                const nuevos = [...procesos];
+                nuevos[index] = { ...nuevos[index], [campo]: valor };
+                setProcesos(nuevos);
+            };
+
+            const agregarPaso = (procIndex) => {
+                const nuevos = [...procesos];
+                nuevos[procIndex].pasos.push({
+                    descripcion: '', responsable_rol: '', area: '', herramienta: '', es_manual: true,
+                    datos_necesarios: '', documentos_generados: '', plazos: '',
+                    tiene_decision: false, condicion_decision: '', destino_si_cumple: '', destino_si_no_cumple: '',
+                    pasa_a_otra_area: false, area_destino: '', que_envia: '', espera_respuesta: false
+                });
+                setProcesos(nuevos);
+            };
+
+            const eliminarPaso = (procIndex, pasoIndex) => {
+                const nuevos = [...procesos];
+                nuevos[procIndex].pasos.splice(pasoIndex, 1);
+                setProcesos(nuevos);
+            };
+
+            const actualizarPaso = (procIndex, pasoIndex, campo, valor) => {
+                const nuevos = [...procesos];
+                nuevos[procIndex].pasos[pasoIndex] = {
+                    ...nuevos[procIndex].pasos[pasoIndex],
+                    [campo]: valor
+                };
+                setProcesos(nuevos);
+            };
+
+            async function guardarEntrevista() {
+                if (!entrevista.area || !entrevista.fecha) {
+                    alert('Completá al menos el área y la fecha.');
+                    return;
+                }
+
+                setLoading(true);
+                try {
+                    const { data: entrevistaData, error: entrevistaError } = await supabase
+                        .from('entrevistas')
+                        .insert([{
+                            area: entrevista.area,
+                            fecha: entrevista.fecha,
+                            responsable: entrevista.responsable,
+                            entrevistador: entrevista.entrevistador,
+                            notas: entrevista.notas,
+                            estado: 'realizada',
+                            cantidad_personal: entrevista.cantidad_personal || null,
+                            ubicacion: entrevista.ubicacion || null,
+                            funcion_principal: entrevista.funcion_principal || null,
+                            depende_de: entrevista.depende_de || null,
+                            publico_usuarios: entrevista.publico_usuarios.length ? entrevista.publico_usuarios : null,
+                            interacciones_externas: complemento.interacciones_externas || null,
+                            sistemas_usados: complemento.sistemas_usados || null,
+                            tiene_manuales: complemento.tiene_manuales,
+                            resolucion_formularios: complemento.resolucion_formularios || null,
+                            entrevistados: complemento.entrevistados || null,
+                            acuerdos: complemento.acuerdos || null,
+                            observaciones_generales: complemento.observaciones_generales || null
+                        }])
+                        .select();
+
+                    if (entrevistaError) throw entrevistaError;
+                    const entrevistaId = entrevistaData[0].id;
+
+                    for (const proc of procesos) {
+                        if (!proc.nombre || !proc.area_inicio) continue;
+
+                        const { data: procData, error: procError } = await supabase
+                            .from('procesos')
+                            .insert([{
+                                nombre: proc.nombre,
+                                area_inicio: proc.area_inicio,
+                                areas_intermedias: proc.areas_intermedias || null,
+                                area_cierre: proc.area_cierre || null,
+                                frecuencia: proc.frecuencia,
+                                prioridad: proc.prioridad,
+                                estado_relevamiento: 'en_proceso'
+                            }])
+                            .select();
+
+                        if (procError) throw procError;
+                        const procesoId = procData[0].id;
+
+                        for (let i = 0; i < proc.pasos.length; i++) {
+                            const paso = proc.pasos[i];
+                            if (!paso.descripcion) continue;
+                            await supabase.from('pasos_proceso').insert({
+                                proceso_id: procesoId,
+                                orden: i + 1,
+                                descripcion: paso.descripcion,
+                                responsable_rol: paso.responsable_rol,
+                                area: paso.area,
+                                herramienta: paso.herramienta,
+                                es_manual: paso.es_manual,
+                                datos_necesarios: paso.datos_necesarios,
+                                documentos_generados: paso.documentos_generados,
+                                plazos: paso.plazos,
+                                tiene_decision: paso.tiene_decision,
+                                condicion_decision: paso.condicion_decision,
+                                destino_si_cumple: paso.destino_si_cumple,
+                                destino_si_no_cumple: paso.destino_si_no_cumple,
+                                pasa_a_otra_area: paso.pasa_a_otra_area,
+                                area_destino: paso.area_destino,
+                                que_envia: paso.que_envia,
+                                espera_respuesta: paso.espera_respuesta
+                            });
+                        }
+                    }
+
+                    alert('Entrevista guardada exitosamente.');
+                    window.location.reload();
+
+                } catch (error) {
+                    console.error('Error:', error);
+                    alert('Error al guardar: ' + (error.message || 'Desconocido'));
+                } finally {
+                    setLoading(false);
+                }
+            }
+
+            const publicoOpciones = [
+                'Ciudadanos', 'Empresas privadas', 'Municipios', 'ONGs',
+                'Otras áreas del Ministerio', 'Otros organismos provinciales',
+                'Organismos nacionales', 'Otros'
+            ];
+
+            return (
+                <div className="bg-white p-6 rounded-lg border shadow-sm max-w-6xl mx-auto">
+                    <h2 className="text-2xl font-bold mb-6">Formulario Completo de Entrevista</h2>
+
+                    {/* Parte 1 */}
+                    <div className="mb-8 p-4 border rounded bg-gray-50">
+                        <h3 className="font-bold text-lg mb-3">Parte 1: Identificación del Área</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <input type="text" placeholder="Área" className="border p-2 rounded" value={entrevista.area} onChange={e => setEntrevista({...entrevista, area: e.target.value})} />
+                            <input type="date" className="border p-2 rounded" value={entrevista.fecha} onChange={e => setEntrevista({...entrevista, fecha: e.target.value})} />
+                            <input type="text" placeholder="Responsable del área" className="border p-2 rounded" value={entrevista.responsable} onChange={e => setEntrevista({...entrevista, responsable: e.target.value})} />
+                            <input type="text" placeholder="Entrevistador" className="border p-2 rounded" value={entrevista.entrevistador} onChange={e => setEntrevista({...entrevista, entrevistador: e.target.value})} />
+                            <input type="number" placeholder="Cantidad de personal" className="border p-2 rounded" value={entrevista.cantidad_personal} onChange={e => setEntrevista({...entrevista, cantidad_personal: e.target.value})} />
+                            <input type="text" placeholder="Ubicación física" className="border p-2 rounded" value={entrevista.ubicacion} onChange={e => setEntrevista({...entrevista, ubicacion: e.target.value})} />
+                            <input type="text" placeholder="Función principal" className="border p-2 rounded md:col-span-2" value={entrevista.funcion_principal} onChange={e => setEntrevista({...entrevista, funcion_principal: e.target.value})} />
+                            <input type="text" placeholder="Depende de (subsecretaría, etc.)" className="border p-2 rounded md:col-span-2" value={entrevista.depende_de} onChange={e => setEntrevista({...entrevista, depende_de: e.target.value})} />
+                        </div>
+                        <div className="mt-4">
+                            <p className="font-medium mb-2">Público/Usuarios:</p>
+                            <div className="flex flex-wrap gap-2">
+                                {publicoOpciones.map(opt => (
+                                    <label key={opt} className="flex items-center gap-1">
+                                        <input
+                                            type="checkbox"
+                                            checked={entrevista.publico_usuarios.includes(opt)}
+                                            onChange={() => togglePublico(opt)}
+                                            className="rounded"
+                                        />
+                                        <span className="text-sm">{opt}</span>
+                                    </label>
+                                ))}
+                            </div>
+                        </div>
+                        <textarea
+                            placeholder="Notas generales"
+                            className="border p-2 rounded mt-3 w-full"
+                            rows="2"
+                            value={entrevista.notas}
+                            onChange={e => setEntrevista({...entrevista, notas: e.target.value})}
+                        />
+                    </div>
+
+                    {/* Parte 2 y 3 */}
+                    <div className="mb-8">
+                        <div className="flex justify-between items-center mb-4">
+                            <h3 className="font-bold text-lg">Parte 2 y 3: Procesos y Pasos Detallados</h3>
+                            <button
+                                type="button"
+                                onClick={agregarProceso}
+                                className="flex items-center gap-1 bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700"
+                            >
+                                <Icons.Plus /> Agregar Proceso
+                            </button>
+                        </div>
+
+                        {procesos.map((proc, idx) => (
+                            <div key={idx} className="mb-6 p-4 border rounded bg-blue-50">
+                                <div className="flex justify-between items-start mb-3">
+                                    <h4 className="font-semibold">Proceso #{idx + 1}</h4>
+                                    {procesos.length > 1 && (
+                                        <button
+                                            type="button"
+                                            onClick={() => eliminarProceso(idx)}
+                                            className="text-red-600 hover:bg-red-100 p-1 rounded"
+                                        >
+                                            <Icons.Trash />
+                                        </button>
+                                    )}
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
+                                    <input type="text" placeholder="Nombre del proceso" className="border p-2 rounded" value={proc.nombre} onChange={e => actualizarProceso(idx, 'nombre', e.target.value)} />
+                                    <select className="border p-2 rounded" value={proc.frecuencia} onChange={e => actualizarProceso(idx, 'frecuencia', e.target.value)}>
+                                        <option value="diaria">Diaria</option>
+                                        <option value="semanal">Semanal</option>
+                                        <option value="mensual">Mensual</option>
+                                        <option value="eventual">Eventual</option>
+                                    </select>
+                                    <select className="border p-2 rounded" value={proc.tipo} onChange={e => actualizarProceso(idx, 'tipo', e.target.value)}>
+                                        <option value="interno">Interno</option>
+                                        <option value="externo">Externo</option>
+                                    </select>
+                                    <select className="border p-2 rounded" value={proc.prioridad} onChange={e => actualizarProceso(idx, 'prioridad', e.target.value)}>
+                                        <option value="baja">Baja</option>
+                                        <option value="media">Media</option>
+                                        <option value="alta">Alta</option>
+                                    </select>
+                                    <input type="text" placeholder="Área que inicia" className="border p-2 rounded" value={proc.area_inicio} onChange={e => actualizarProceso(idx, 'area_inicio', e.target.value)} />
+                                    <input type="text" placeholder="Áreas intermedias" className="border p-2 rounded" value={proc.areas_intermedias} onChange={e => actualizarProceso(idx, 'areas_intermedias', e.target.value)} />
+                                    <input type="text" placeholder="Área que cierra" className="border p-2 rounded" value={proc.area_cierre} onChange={e => actualizarProceso(idx, 'area_cierre', e.target.value)} />
+                                </div>
+
+                                <div className="mt-4">
+                                    <div className="flex justify-between items-center mb-2">
+                                        <span className="font-medium text-sm">Pasos del proceso:</span>
+                                        <button
+                                            type="button"
+                                            onClick={() => agregarPaso(idx)}
+                                            className="flex items-center gap-1 bg-green-600 text-white px-2 py-1 rounded text-xs hover:bg-green-700"
+                                        >
+                                            <Icons.Plus /> Agregar Paso
+                                        </button>
+                                    </div>
+                                    {proc.pasos.map((paso, pidx) => (
+                                        <div key={pidx} className="mb-4 p-3 border rounded bg-white">
+                                            <div className="flex justify-between items-start mb-2">
+                                                <span className="text-sm font-medium">Paso {pidx + 1}</span>
+                                                {proc.pasos.length > 1 && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => eliminarPaso(idx, pidx)}
+                                                        className="text-red-600 hover:bg-red-100 p-1 rounded"
+                                                    >
+                                                        <Icons.Trash />
+                                                    </button>
+                                                )}
+                                            </div>
+                                            <input type="text" placeholder="¿Qué se hace?" className="border p-2 rounded w-full mb-2 text-sm" value={paso.descripcion} onChange={e => actualizarPaso(idx, pidx, 'descripcion', e.target.value)} />
+                                            <input type="text" placeholder="¿Quién lo hace? (rol)" className="border p-2 rounded w-full mb-2 text-sm" value={paso.responsable_rol} onChange={e => actualizarPaso(idx, pidx, 'responsable_rol', e.target.value)} />
+                                            <input type="text" placeholder="Área donde se realiza" className="border p-2 rounded w-full mb-2 text-sm" value={paso.area} onChange={e => actualizarPaso(idx, pidx, 'area', e.target.value)} />
+                                            <input type="text" placeholder="Herramienta/sistema usado" className="border p-2 rounded w-full mb-2 text-sm" value={paso.herramienta} onChange={e => actualizarPaso(idx, pidx, 'herramienta', e.target.value)} />
+                                            <div className="mb-2">
+                                                <label className="flex items-center gap-2 text-sm">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={paso.es_manual}
+                                                        onChange={e => actualizarPaso(idx, pidx, 'es_manual', e.target.checked)}
+                                                        className="rounded"
+                                                    />
+                                                    Es manual
+                                                </label>
+                                            </div>
+                                            <input type="text" placeholder="Datos necesarios" className="border p-2 rounded w-full mb-2 text-sm" value={paso.datos_necesarios} onChange={e => actualizarPaso(idx, pidx, 'datos_necesarios', e.target.value)} />
+                                            <input type="text" placeholder="Documentos generados" className="border p-2 rounded w-full mb-2 text-sm" value={paso.documentos_generados} onChange={e => actualizarPaso(idx, pidx, 'documentos_generados', e.target.value)} />
+                                            <input type="text" placeholder="Plazos" className="border p-2 rounded w-full mb-2 text-sm" value={paso.plazos} onChange={e => actualizarPaso(idx, pidx, 'plazos', e.target.value)} />
+
+                                            <div className="mb-2">
+                                                <label className="flex items-center gap-2 text-sm">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={paso.tiene_decision}
+                                                        onChange={e => actualizarPaso(idx, pidx, 'tiene_decision', e.target.checked)}
+                                                        className="rounded"
+                                                    />
+                                                    Tiene punto de decisión
+                                                </label>
+                                                {paso.tiene_decision && (
+                                                    <div className="ml-4 mt-2 space-y-2">
+                                                        <input type="text" placeholder="Condición a evaluar" className="border p-2 rounded w-full text-sm" value={paso.condicion_decision} onChange={e => actualizarPaso(idx, pidx, 'condicion_decision', e.target.value)} />
+                                                        <input type="text" placeholder="Si cumple → va a" className="border p-2 rounded w-full text-sm" value={paso.destino_si_cumple} onChange={e => actualizarPaso(idx, pidx, 'destino_si_cumple', e.target.value)} />
+                                                        <input type="text" placeholder="Si NO cumple → va a" className="border p-2 rounded w-full text-sm" value={paso.destino_si_no_cumple} onChange={e => actualizarPaso(idx, pidx, 'destino_si_no_cumple', e.target.value)} />
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            <div className="mb-2">
+                                                <label className="flex items-center gap-2 text-sm">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={paso.pasa_a_otra_area}
+                                                        onChange={e => actualizarPaso(idx, pidx, 'pasa_a_otra_area', e.target.checked)}
+                                                        className="rounded"
+                                                    />
+                                                    Pasa a otra área
+                                                </label>
+                                                {paso.pasa_a_otra_area && (
+                                                    <div className="ml-4 mt-2 space-y-2">
+                                                        <input type="text" placeholder="Área destino" className="border p-2 rounded w-full text-sm" value={paso.area_destino} onChange={e => actualizarPaso(idx, pidx, 'area_destino', e.target.value)} />
+                                                        <input type="text" placeholder="¿Qué le envían?" className="border p-2 rounded w-full text-sm" value={paso.que_envia} onChange={e => actualizarPaso(idx, pidx, 'que_envia', e.target.value)} />
+                                                        <label className="flex items-center gap-2 text-sm">
+                                                            <input
+                                                                type="checkbox"
+                                                                checked={paso.espera_respuesta}
+                                                                onChange={e => actualizarPaso(idx, pidx, 'espera_respuesta', e.target.checked)}
+                                                                className="rounded"
+                                                            />
+                                                            El proceso espera respuesta de esa área
+                                                        </label>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* Parte 4 y 5 */}
+                    <div className="mb-8 p-4 border rounded bg-gray-50">
+                        <h3 className="font-bold text-lg mb-3">Parte 4 y 5: Información Complementaria</h3>
+                        <div className="grid grid-cols-1 gap-4">
+                            <textarea
+                                placeholder="Interacciones con otras áreas (qué envían/reciben)"
+                                className="border p-2 rounded"
+                                rows="3"
+                                value={complemento.interacciones_externas}
+                                onChange={e => setComplemento({...complemento, interacciones_externas: e.target.value})}
+                            />
+                            <textarea
+                                placeholder="Sistemas/herramientas que usan (Excel, Word, etc.)"
+                                className="border p-2 rounded"
+                                rows="2"
+                                value={complemento.sistemas_usados}
+                                onChange={e => setComplemento({...complemento, sistemas_usados: e.target.value})}
+                            />
+                            <div>
+                                <label className="flex items-center gap-2">
+                                    <input
+                                        type="checkbox"
+                                        checked={complemento.tiene_manuales}
+                                        onChange={e => setComplemento({...complemento, tiene_manuales: e.target.checked})}
+                                        className="rounded"
+                                    />
+                                    Tienen manuales de procedimientos escritos
+                                </label>
+                            </div>
+                            <input
+                                type="text"
+                                placeholder="Resolución/Formularios oficiales (número de resolución)"
+                                className="border p-2 rounded"
+                                value={complemento.resolucion_formularios}
+                                onChange={e => setComplemento({...complemento, resolucion_formularios: e.target.value})}
+                            />
+                            <input
+                                type="text"
+                                placeholder="Entrevistado(s)"
+                                className="border p-2 rounded"
+                                value={complemento.entrevistados}
+                                onChange={e => setComplemento({...complemento, entrevistados: e.target.value})}
+                            />
+                            <textarea
+                                placeholder="Acuerdos (ej: enviar resumen en 3 días)"
+                                className="border p-2 rounded"
+                                rows="2"
+                                value={complemento.acuerdos}
+                                onChange={e => setComplemento({...complemento, acuerdos: e.target.value})}
+                            />
+                            <textarea
+                                placeholder="Observaciones generales"
+                                className="border p-2 rounded"
+                                rows="2"
+                                value={complemento.observaciones_generales}
+                                onChange={e => setComplemento({...complemento, observaciones_generales: e.target.value})}
+                            />
+                        </div>
+                    </div>
+
+                    <div className="text-center">
+                        <button
+                            onClick={guardarEntrevista}
+                            disabled={loading}
+                            className={`px-6 py-3 rounded font-medium flex items-center gap-2 mx-auto ${
+                                loading ? 'bg-gray-400' : 'bg-green-600 hover:bg-green-700 text-white'
+                            }`}
+                        >
+                            {loading ? 'Guardando...' : 'Guardar Entrevista Completa'}
+                        </button>
+                    </div>
+                </div>
+            );
+        }
+
+        // =============== COMPONENTES ORIGINALES (sin cambios) ===============
+        function TrackerEntrevistas({ entrevistas, setEntrevistas }) {
+            const [form, setForm] = useState({
+                area: '', fecha: '', responsable: '', entrevistador: '', estado: 'pendiente', notas: ''
+            });
+            async function agregar() {
+                if (!form.area || !form.fecha) return alert('Completá área y fecha');
+                const { data, error } = await supabase.from('entrevistas').insert([form]).select();
+                if (error) {
+                    alert('Error guardando: ' + error.message);
+                } else {
+                    setEntrevistas([...entrevistas, data[0]]);
+                    setForm({ area: '', fecha: '', responsable: '', entrevistador: '', estado: 'pendiente', notas: '' });
+                }
+            }
+            async function eliminar(id) {
+                if (!confirm('¿Eliminar esta entrevista?')) return;
+                const { error } = await supabase.from('entrevistas').delete().eq('id', id);
+                if (!error) setEntrevistas(entrevistas.filter(e => e.id !== id));
+            }
+            async function actualizarEstado(id, nuevoEstado) {
+                const { error } = await supabase.from('entrevistas').update({ estado: nuevoEstado }).eq('id', id);
+                if (!error) {
+                    setEntrevistas(entrevistas.map(e => e.id === id ? { ...e, estado: nuevoEstado } : e));
+                }
+            }
+            const contarPorEstado = (estado) => entrevistas.filter(e => e.estado === estado).length;
+            const estadoColor = (estado) => {
+                const colores = {
+                    pendiente: 'bg-yellow-100 text-yellow-800',
+                    realizada: 'bg-blue-100 text-blue-800',
+                    validada: 'bg-green-100 text-green-800',
+                    requiere_seguimiento: 'bg-orange-100 text-orange-800'
+                };
+                return colores[estado] || 'bg-gray-100 text-gray-800';
+            };
+            return (
+                <div className="space-y-6">
+                    <div className="grid grid-cols-4 gap-4">
+                        <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+                            <div className="text-2xl font-bold text-yellow-800">{contarPorEstado('pendiente')}</div>
+                            <div className="text-sm text-yellow-600">Pendientes</div>
+                        </div>
+                        <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                            <div className="text-2xl font-bold text-blue-800">{contarPorEstado('realizada')}</div>
+                            <div className="text-sm text-blue-600">Realizadas</div>
+                        </div>
+                        <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+                            <div className="text-2xl font-bold text-green-800">{contarPorEstado('validada')}</div>
+                            <div className="text-sm text-green-600">Validadas</div>
+                        </div>
+                        <div className="bg-orange-50 p-4 rounded-lg border border-orange-200">
+                            <div className="text-2xl font-bold text-orange-800">{contarPorEstado('requiere_seguimiento')}</div>
+                            <div className="text-sm text-orange-600">Seguimiento</div>
+                        </div>
+                    </div>
+                    <div className="bg-white p-4 rounded-lg border shadow-sm">
+                        <h3 className="font-semibold mb-3">Nueva Entrevista</h3>
+                        <div className="grid grid-cols-2 gap-3">
+                            <input type="text" placeholder="Área" className="border p-2 rounded" value={form.area} onChange={(e) => setForm({ ...form, area: e.target.value })} />
+                            <input type="date" className="border p-2 rounded" value={form.fecha} onChange={(e) => setForm({ ...form, fecha: e.target.value })} />
+                            <input type="text" placeholder="Responsable del área" className="border p-2 rounded" value={form.responsable} onChange={(e) => setForm({ ...form, responsable: e.target.value })} />
+                            <input type="text" placeholder="Entrevistador" className="border p-2 rounded" value={form.entrevistador} onChange={(e) => setForm({ ...form, entrevistador: e.target.value })} />
+                            <textarea placeholder="Notas" className="border p-2 rounded col-span-2" value={form.notas} onChange={(e) => setForm({ ...form, notas: e.target.value })} rows="2" />
+                        </div>
+                        <button onClick={agregar} className="mt-3 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 flex items-center gap-2">
+                            <Icons.Plus /> Agregar Entrevista
+                        </button>
+                    </div>
+                    <div className="space-y-2">
+                        {entrevistas.map((e) => (
+                            <div key={e.id} className="bg-white p-4 rounded-lg border hover:shadow-md transition-shadow">
+                                <div className="flex items-start justify-between">
+                                    <div className="flex-1">
+                                        <div className="flex items-center gap-3 mb-2">
+                                            <h4 className="font-semibold text-lg">{e.area}</h4>
+                                            <span className={`px-3 py-1 rounded-full text-xs font-medium ${estadoColor(e.estado)}`}>
+                                                {e.estado.replace('_', ' ')}
+                                            </span>
+                                        </div>
+                                        <div className="text-sm text-gray-600 space-y-1">
+                                            <div><strong>Fecha:</strong> {new Date(e.fecha).toLocaleDateString('es-AR')}</div>
+                                            {e.responsable && <div><strong>Responsable:</strong> {e.responsable}</div>}
+                                            {e.entrevistador && <div><strong>Entrevistador:</strong> {e.entrevistador}</div>}
+                                            {e.notas && <div className="mt-2 text-gray-500"><strong>Notas:</strong> {e.notas}</div>}
+                                        </div>
+                                    </div>
+                                    <div className="flex gap-2">
+                                        <select value={e.estado} onChange={(ev) => actualizarEstado(e.id, ev.target.value)} className="border p-1 rounded text-sm">
+                                            <option value="pendiente">Pendiente</option>
+                                            <option value="realizada">Realizada</option>
+                                            <option value="validada">Validada</option>
+                                            <option value="requiere_seguimiento">Requiere Seguimiento</option>
+                                        </select>
+                                        <button onClick={() => eliminar(e.id)} className="text-red-600 hover:bg-red-50 p-2 rounded">
+                                            <Icons.Trash />
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            );
+        }
+
+        function MatrizProcesos({ procesos, setProcesos }) {
+            const [form, setForm] = useState({
+                nombre: '', area_inicio: '', areas_intermedias: '', area_cierre: '', 
+                frecuencia: 'mensual', prioridad: 'media', estado_relevamiento: 'sin_iniciar'
+            });
+            async function agregar() {
+                if (!form.nombre || !form.area_inicio) return alert('Completá nombre y área inicio');
+                const { data, error } = await supabase.from('procesos').insert([form]).select();
+                if (error) {
+                    alert('Error guardando: ' + error.message);
+                } else {
+                    setProcesos([...procesos, data[0]]);
+                    setForm({ nombre: '', area_inicio: '', areas_intermedias: '', area_cierre: '', frecuencia: 'mensual', prioridad: 'media', estado_relevamiento: 'sin_iniciar' });
+                }
+            }
+            async function eliminar(id) {
+                if (!confirm('¿Eliminar este proceso?')) return;
+                const { error } = await supabase.from('procesos').delete().eq('id', id);
+                if (!error) setProcesos(procesos.filter(p => p.id !== id));
+            }
+            async function actualizarEstado(id, nuevoEstado) {
+                const { error } = await supabase.from('procesos').update({ estado_relevamiento: nuevoEstado }).eq('id', id);
+                if (!error) {
+                    setProcesos(procesos.map(p => p.id === id ? { ...p, estado_relevamiento: nuevoEstado } : p));
+                }
+            }
+            const estadoColor = (estado) => {
+                const colores = {
+                    sin_iniciar: 'bg-gray-100 text-gray-800',
+                    en_proceso: 'bg-blue-100 text-blue-800',
+                    completo: 'bg-green-100 text-green-800',
+                    falta_validar: 'bg-yellow-100 text-yellow-800'
+                };
+                return colores[estado] || 'bg-gray-100 text-gray-800';
+            };
+            const prioridadColor = (prioridad) => {
+                const colores = {
+                    alta: 'bg-red-100 text-red-800',
+                    media: 'bg-yellow-100 text-yellow-800',
+                    baja: 'bg-green-100 text-green-800'
+                };
+                return colores[prioridad] || 'bg-gray-100 text-gray-800';
+            };
+            return (
+                <div className="space-y-6">
+                    <div className="bg-white p-4 rounded-lg border shadow-sm">
+                        <h3 className="font-semibold mb-3">Nuevo Proceso</h3>
+                        <div className="grid grid-cols-2 gap-3">
+                            <input type="text" placeholder="Nombre del proceso" className="border p-2 rounded col-span-2" value={form.nombre} onChange={(e) => setForm({ ...form, nombre: e.target.value })} />
+                            <input type="text" placeholder="Área que inicia" className="border p-2 rounded" value={form.area_inicio} onChange={(e) => setForm({ ...form, area_inicio: e.target.value })} />
+                            <input type="text" placeholder="Áreas intermedias (separadas por coma)" className="border p-2 rounded" value={form.areas_intermedias} onChange={(e) => setForm({ ...form, areas_intermedias: e.target.value })} />
+                            <input type="text" placeholder="Área que cierra" className="border p-2 rounded" value={form.area_cierre} onChange={(e) => setForm({ ...form, area_cierre: e.target.value })} />
+                            <select className="border p-2 rounded" value={form.frecuencia} onChange={(e) => setForm({ ...form, frecuencia: e.target.value })}>
+                                <option value="diaria">Diaria</option>
+                                <option value="semanal">Semanal</option>
+                                <option value="mensual">Mensual</option>
+                                <option value="eventual">Eventual</option>
+                            </select>
+                            <select className="border p-2 rounded" value={form.prioridad} onChange={(e) => setForm({ ...form, prioridad: e.target.value })}>
+                                <option value="baja">Prioridad Baja</option>
+                                <option value="media">Prioridad Media</option>
+                                <option value="alta">Prioridad Alta</option>
+                            </select>
+                        </div>
+                        <button onClick={agregar} className="mt-3 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 flex items-center gap-2">
+                            <Icons.Plus /> Agregar Proceso
+                        </button>
+                    </div>
+                    <div className="bg-white rounded-lg border shadow-sm overflow-hidden">
+                        <table className="w-full">
+                            <thead className="bg-gray-50">
+                                <tr>
+                                    <th className="text-left p-3 text-sm font-semibold">Proceso</th>
+                                    <th className="text-left p-3 text-sm font-semibold">Flujo de áreas</th>
+                                    <th className="text-left p-3 text-sm font-semibold">Frecuencia</th>
+                                    <th className="text-left p-3 text-sm font-semibold">Prioridad</th>
+                                    <th className="text-left p-3 text-sm font-semibold">Estado</th>
+                                    <th className="text-left p-3 text-sm font-semibold">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {procesos.map((p) => (
+                                    <tr key={p.id} className="border-t hover:bg-gray-50">
+                                        <td className="p-3 font-medium">{p.nombre}</td>
+                                        <td className="p-3">
+                                            <div className="flex items-center gap-2 text-sm">
+                                                <span className="font-medium">{p.area_inicio}</span>
+                                                {p.areas_intermedias && (
+                                                    <>
+                                                        <Icons.ArrowRight />
+                                                        <span className="text-gray-600">{p.areas_intermedias}</span>
+                                                    </>
+                                                )}
+                                                {p.area_cierre && (
+                                                    <>
+                                                        <Icons.ArrowRight />
+                                                        <span className="font-medium">{p.area_cierre}</span>
+                                                    </>
+                                                )}
+                                            </div>
+                                        </td>
+                                        <td className="p-3 text-sm capitalize">{p.frecuencia}</td>
+                                        <td className="p-3">
+                                            <span className={`px-2 py-1 rounded-full text-xs ${prioridadColor(p.prioridad)}`}>
+                                                {p.prioridad}
+                                            </span>
+                                        </td>
+                                        <td className="p-3">
+                                            <select value={p.estado_relevamiento} onChange={(e) => actualizarEstado(p.id, e.target.value)} className={`px-2 py-1 rounded text-xs ${estadoColor(p.estado_relevamiento)}`}>
+                                                <option value="sin_iniciar">Sin Iniciar</option>
+                                                <option value="en_proceso">En Proceso</option>
+                                                <option value="falta_validar">Falta Validar</option>
+                                                <option value="completo">Completo</option>
+                                            </select>
+                                        </td>
+                                        <td className="p-3">
+                                            <button onClick={() => eliminar(p.id)} className="text-red-600 hover:bg-red-50 p-2 rounded">
+                                                <Icons.Trash />
+                                            </button>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            );
+        }
+
+        function ValidacionHandoffs({ handoffs, setHandoffs }) {
+            const [form, setForm] = useState({
+                proceso: '', area_origen: '', area_destino: '', que_se_envia: '', 
+                como_se_envia: '', que_esperan_recibir: '', discrepancias: ''
+            });
+            async function agregar() {
+                if (!form.proceso || !form.area_origen || !form.area_destino) {
+                    return alert('Completá proceso, área origen y área destino');
+                }
+                const { data, error } = await supabase.from('handoffs').insert([form]).select();
+                if (error) {
+                    alert('Error guardando: ' + error.message);
+                } else {
+                    setHandoffs([...handoffs, data[0]]);
+                    setForm({ proceso: '', area_origen: '', area_destino: '', que_se_envia: '', como_se_envia: '', que_esperan_recibir: '', discrepancias: '' });
+                }
+            }
+            async function eliminar(id) {
+                if (!confirm('¿Eliminar este handoff?')) return;
+                const { error } = await supabase.from('handoffs').delete().eq('id', id);
+                if (!error) setHandoffs(handoffs.filter(h => h.id !== id));
+            }
+            async function toggleValidacion(id, campo, valorActual) {
+                const { error } = await supabase.from('handoffs').update({ [campo]: !valorActual }).eq('id', id);
+                if (!error) {
+                    setHandoffs(handoffs.map(h => h.id === id ? { ...h, [campo]: !valorActual } : h));
+                }
+            }
+            const handoffsIncompletos = handoffs.filter(h => !h.validado_por_origen || !h.validado_por_destino);
+            return (
+                <div className="space-y-6">
+                    {handoffsIncompletos.length > 0 && (
+                        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 flex items-start gap-3">
+                            <Icons.Alert />
+                            <div>
+                                <h4 className="font-semibold text-yellow-800">Handoffs pendientes de validación</h4>
+                                <p className="text-sm text-yellow-700 mt-1">
+                                    Hay {handoffsIncompletos.length} transición(es) que necesitan validación de ambas partes.
+                                </p>
+                            </div>
+                        </div>
+                    )}
+                    <div className="bg-white p-4 rounded-lg border shadow-sm">
+                        <h3 className="font-semibold mb-3">Nueva Transición entre Áreas</h3>
+                        <div className="space-y-3">
+                            <input type="text" placeholder="Proceso al que pertenece" className="border p-2 rounded w-full" value={form.proceso} onChange={(e) => setForm({ ...form, proceso: e.target.value })} />
+                            <div className="grid grid-cols-2 gap-3">
+                                <input type="text" placeholder="Área origen (envía)" className="border p-2 rounded" value={form.area_origen} onChange={(e) => setForm({ ...form, area_origen: e.target.value })} />
+                                <input type="text" placeholder="Área destino (recibe)" className="border p-2 rounded" value={form.area_destino} onChange={(e) => setForm({ ...form, area_destino: e.target.value })} />
+                            </div>
+                            <textarea placeholder="¿Qué se envía?" className="border p-2 rounded w-full" value={form.que_se_envia} onChange={(e) => setForm({ ...form, que_se_envia: e.target.value })} rows="2" />
+                            <input type="text" placeholder="¿Cómo se envía?" className="border p-2 rounded w-full" value={form.como_se_envia} onChange={(e) => setForm({ ...form, como_se_envia: e.target.value })} />
+                            <textarea placeholder="¿Qué esperan recibir?" className="border p-2 rounded w-full" value={form.que_esperan_recibir} onChange={(e) => setForm({ ...form, que_esperan_recibir: e.target.value })} rows="2" />
+                            <textarea placeholder="Discrepancias" className="border p-2 rounded w-full" value={form.discrepancias} onChange={(e) => setForm({ ...form, discrepancias: e.target.value })} rows="2" />
+                        </div>
+                        <button onClick={agregar} className="mt-3 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 flex items-center gap-2">
+                            <Icons.Plus /> Agregar Handoff
+                        </button>
+                    </div>
+                    <div className="space-y-3">
+                        {handoffs.map((h) => (
+                            <div key={h.id} className="bg-white p-4 rounded-lg border shadow-sm">
+                                <div className="flex items-start justify-between mb-3">
+                                    <div>
+                                        <h4 className="font-semibold text-lg">{h.proceso}</h4>
+                                        <div className="flex items-center gap-2 text-sm text-gray-600 mt-1">
+                                            <span className="font-medium">{h.area_origen}</span>
+                                            <Icons.ArrowRight />
+                                            <span className="font-medium">{h.area_destino}</span>
+                                        </div>
+                                    </div>
+                                    <button onClick={() => eliminar(h.id)} className="text-red-600 hover:bg-red-50 p-2 rounded">
+                                        <Icons.Trash />
+                                    </button>
+                                </div>
+                                <div className="space-y-2 text-sm">
+                                    {h.que_se_envia && (
+                                        <div>
+                                            <strong className="text-gray-700">Qué se envía:</strong>
+                                            <p className="text-gray-600 mt-1">{h.que_se_envia}</p>
+                                        </div>
+                                    )}
+                                    {h.como_se_envia && (
+                                        <div>
+                                            <strong className="text-gray-700">Cómo se envía:</strong>
+                                            <p className="text-gray-600 mt-1">{h.como_se_envia}</p>
+                                        </div>
+                                    )}
+                                    {h.que_esperan_recibir && (
+                                        <div>
+                                            <strong className="text-gray-700">Qué esperan recibir:</strong>
+                                            <p className="text-gray-600 mt-1">{h.que_esperan_recibir}</p>
+                                        </div>
+                                    )}
+                                    {h.discrepancias && (
+                                        <div className="bg-yellow-50 p-2 rounded">
+                                            <strong className="text-yellow-800">Discrepancias:</strong>
+                                            <p className="text-yellow-700 mt-1">{h.discrepancias}</p>
+                                        </div>
+                                    )}
+                                </div>
+                                <div className="mt-4 flex gap-4">
+                                    <label className="flex items-center gap-2 cursor-pointer">
+                                        <input
+                                            type="checkbox"
+                                            checked={h.validado_por_origen}
+                                            onChange={() => toggleValidacion(h.id, 'validado_por_origen', h.validado_por_origen)}
+                                            className="w-4 h-4"
+                                        />
+                                        <span className="text-sm">Validado por {h.area_origen}</span>
+                                    </label>
+                                    <label className="flex items-center gap-2 cursor-pointer">
+                                        <input
+                                            type="checkbox"
+                                            checked={h.validado_por_destino}
+                                            onChange={() => toggleValidacion(h.id, 'validado_por_destino', h.validado_por_destino)}
+                                            className="w-4 h-4"
+                                        />
+                                        <span className="text-sm">Validado por {h.area_destino}</span>
+                                    </label>
+                                </div>
+                                {h.validado_por_origen && h.validado_por_destino && (
+                                    <div className="mt-3 bg-green-50 text-green-700 px-3 py-2 rounded flex items-center gap-2 text-sm">
+                                        <Icons.Check />
+                                        <span>Handoff validado por ambas áreas</span>
+                                    </div>
+                                )}
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            );
+        }
+
+        // =============== APP PRINCIPAL ===============
         function App() {
             const [activeTab, setActiveTab] = useState('tracker');
             const [entrevistas, setEntrevistas] = useState([]);
@@ -40,7 +848,6 @@
             const [handoffs, setHandoffs] = useState([]);
             const [loading, setLoading] = useState(true);
 
-            // Cargar datos iniciales
             useEffect(() => {
                 loadData();
             }, []);
@@ -52,7 +859,6 @@
                         supabase.from('procesos').select('*').order('created_at', { ascending: false }),
                         supabase.from('handoffs').select('*').order('created_at', { ascending: false })
                     ]);
-
                     if (entrevistasData.data) setEntrevistas(entrevistasData.data);
                     if (procesosData.data) setProcesos(procesosData.data);
                     if (handoffsData.data) setHandoffs(handoffsData.data);
@@ -62,669 +868,6 @@
                 } finally {
                     setLoading(false);
                 }
-            }
-
-            // TRACKER DE ENTREVISTAS
-            function TrackerEntrevistas() {
-                const [form, setForm] = useState({
-                    area: '', fecha: '', responsable: '', entrevistador: '', estado: 'pendiente', notas: ''
-                });
-
-                async function agregar() {
-                    if (!form.area || !form.fecha) return alert('Completá área y fecha');
-                    
-                    const { data, error } = await supabase.from('entrevistas').insert([form]).select();
-                    if (error) {
-                        alert('Error guardando: ' + error.message);
-                    } else {
-                        setEntrevistas([...entrevistas, data[0]]);
-                        setForm({ area: '', fecha: '', responsable: '', entrevistador: '', estado: 'pendiente', notas: '' });
-                    }
-                }
-
-                async function eliminar(id) {
-                    if (!confirm('¿Eliminar esta entrevista?')) return;
-                    const { error } = await supabase.from('entrevistas').delete().eq('id', id);
-                    if (!error) setEntrevistas(entrevistas.filter(e => e.id !== id));
-                }
-
-                async function actualizarEstado(id, nuevoEstado) {
-                    const { error } = await supabase.from('entrevistas').update({ estado: nuevoEstado }).eq('id', id);
-                    if (!error) {
-                        setEntrevistas(entrevistas.map(e => e.id === id ? { ...e, estado: nuevoEstado } : e));
-                    }
-                }
-
-                const contarPorEstado = (estado) => entrevistas.filter(e => e.estado === estado).length;
-
-                const estadoColor = (estado) => {
-                    const colores = {
-                        pendiente: 'bg-yellow-100 text-yellow-800',
-                        realizada: 'bg-blue-100 text-blue-800',
-                        validada: 'bg-green-100 text-green-800',
-                        requiere_seguimiento: 'bg-orange-100 text-orange-800'
-                    };
-                    return colores[estado] || 'bg-gray-100 text-gray-800';
-                };
-
-                return (
-                    <div className="space-y-6">
-                        <div className="grid grid-cols-4 gap-4">
-                            <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
-                                <div className="text-2xl font-bold text-yellow-800">{contarPorEstado('pendiente')}</div>
-                                <div className="text-sm text-yellow-600">Pendientes</div>
-                            </div>
-                            <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-                                <div className="text-2xl font-bold text-blue-800">{contarPorEstado('realizada')}</div>
-                                <div className="text-sm text-blue-600">Realizadas</div>
-                            </div>
-                            <div className="bg-green-50 p-4 rounded-lg border border-green-200">
-                                <div className="text-2xl font-bold text-green-800">{contarPorEstado('validada')}</div>
-                                <div className="text-sm text-green-600">Validadas</div>
-                            </div>
-                            <div className="bg-orange-50 p-4 rounded-lg border border-orange-200">
-                                <div className="text-2xl font-bold text-orange-800">{contarPorEstado('requiere_seguimiento')}</div>
-                                <div className="text-sm text-orange-600">Seguimiento</div>
-                            </div>
-                        </div>
-
-                        <div className="bg-white p-4 rounded-lg border shadow-sm">
-                            <h3 className="font-semibold mb-3">Nueva Entrevista</h3>
-                            <div className="grid grid-cols-2 gap-3">
-                                <input type="text" placeholder="Área" className="border p-2 rounded" value={form.area} onChange={(e) => setForm({ ...form, area: e.target.value })} />
-                                <input type="date" className="border p-2 rounded" value={form.fecha} onChange={(e) => setForm({ ...form, fecha: e.target.value })} />
-                                <input type="text" placeholder="Responsable del área" className="border p-2 rounded" value={form.responsable} onChange={(e) => setForm({ ...form, responsable: e.target.value })} />
-                                <input type="text" placeholder="Entrevistador" className="border p-2 rounded" value={form.entrevistador} onChange={(e) => setForm({ ...form, entrevistador: e.target.value })} />
-                                <textarea placeholder="Notas" className="border p-2 rounded col-span-2" value={form.notas} onChange={(e) => setForm({ ...form, notas: e.target.value })} rows="2" />
-                            </div>
-                            <button onClick={agregar} className="mt-3 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 flex items-center gap-2">
-                                <Icons.Plus /> Agregar Entrevista
-                            </button>
-                        </div>
-
-                        <div className="space-y-2">
-                            {entrevistas.map((e) => (
-                                <div key={e.id} className="bg-white p-4 rounded-lg border hover:shadow-md transition-shadow">
-                                    <div className="flex items-start justify-between">
-                                        <div className="flex-1">
-                                            <div className="flex items-center gap-3 mb-2">
-                                                <h4 className="font-semibold text-lg">{e.area}</h4>
-                                                <span className={`px-3 py-1 rounded-full text-xs font-medium ${estadoColor(e.estado)}`}>
-                                                    {e.estado.replace('_', ' ')}
-                                                </span>
-                                            </div>
-                                            <div className="text-sm text-gray-600 space-y-1">
-                                                <div><strong>Fecha:</strong> {new Date(e.fecha).toLocaleDateString('es-AR')}</div>
-                                                {e.responsable && <div><strong>Responsable:</strong> {e.responsable}</div>}
-                                                {e.entrevistador && <div><strong>Entrevistador:</strong> {e.entrevistador}</div>}
-                                                {e.notas && <div className="mt-2 text-gray-500"><strong>Notas:</strong> {e.notas}</div>}
-                                            </div>
-                                        </div>
-                                        <div className="flex gap-2">
-                                            <select value={e.estado} onChange={(ev) => actualizarEstado(e.id, ev.target.value)} className="border p-1 rounded text-sm">
-                                                <option value="pendiente">Pendiente</option>
-                                                <option value="realizada">Realizada</option>
-                                                <option value="validada">Validada</option>
-                                                <option value="requiere_seguimiento">Requiere Seguimiento</option>
-                                            </select>
-                                            <button onClick={() => eliminar(e.id)} className="text-red-600 hover:bg-red-50 p-2 rounded">
-                                                <Icons.Trash />
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                );
-            }
-
-            // MATRIZ DE PROCESOS
-            function MatrizProcesos() {
-                const [form, setForm] = useState({
-                    nombre: '', area_inicio: '', areas_intermedias: '', area_cierre: '', 
-                    frecuencia: 'mensual', prioridad: 'media', estado_relevamiento: 'sin_iniciar'
-                });
-
-                async function agregar() {
-                    if (!form.nombre || !form.area_inicio) return alert('Completá nombre y área inicio');
-                    
-                    const { data, error } = await supabase.from('procesos').insert([form]).select();
-                    if (error) {
-                        alert('Error guardando: ' + error.message);
-                    } else {
-                        setProcesos([...procesos, data[0]]);
-                        setForm({ nombre: '', area_inicio: '', areas_intermedias: '', area_cierre: '', frecuencia: 'mensual', prioridad: 'media', estado_relevamiento: 'sin_iniciar' });
-                    }
-                }
-
-                async function eliminar(id) {
-                    if (!confirm('¿Eliminar este proceso?')) return;
-                    const { error } = await supabase.from('procesos').delete().eq('id', id);
-                    if (!error) setProcesos(procesos.filter(p => p.id !== id));
-                }
-
-                async function actualizarEstado(id, nuevoEstado) {
-                    const { error } = await supabase.from('procesos').update({ estado_relevamiento: nuevoEstado }).eq('id', id);
-                    if (!error) {
-                        setProcesos(procesos.map(p => p.id === id ? { ...p, estado_relevamiento: nuevoEstado } : p));
-                    }
-                }
-
-                const estadoColor = (estado) => {
-                    const colores = {
-                        sin_iniciar: 'bg-gray-100 text-gray-800',
-                        en_proceso: 'bg-blue-100 text-blue-800',
-                        completo: 'bg-green-100 text-green-800',
-                        falta_validar: 'bg-yellow-100 text-yellow-800'
-                    };
-                    return colores[estado] || 'bg-gray-100 text-gray-800';
-                };
-
-                const prioridadColor = (prioridad) => {
-                    const colores = {
-                        alta: 'bg-red-100 text-red-800',
-                        media: 'bg-yellow-100 text-yellow-800',
-                        baja: 'bg-green-100 text-green-800'
-                    };
-                    return colores[prioridad] || 'bg-gray-100 text-gray-800';
-                };
-
-                return (
-                    <div className="space-y-6">
-                        <div className="bg-white p-4 rounded-lg border shadow-sm">
-                            <h3 className="font-semibold mb-3">Nuevo Proceso</h3>
-                            <div className="grid grid-cols-2 gap-3">
-                                <input type="text" placeholder="Nombre del proceso" className="border p-2 rounded col-span-2" value={form.nombre} onChange={(e) => setForm({ ...form, nombre: e.target.value })} />
-                                <input type="text" placeholder="Área que inicia" className="border p-2 rounded" value={form.area_inicio} onChange={(e) => setForm({ ...form, area_inicio: e.target.value })} />
-                                <input type="text" placeholder="Áreas intermedias (separadas por coma)" className="border p-2 rounded" value={form.areas_intermedias} onChange={(e) => setForm({ ...form, areas_intermedias: e.target.value })} />
-                                <input type="text" placeholder="Área que cierra" className="border p-2 rounded" value={form.area_cierre} onChange={(e) => setForm({ ...form, area_cierre: e.target.value })} />
-                                <select className="border p-2 rounded" value={form.frecuencia} onChange={(e) => setForm({ ...form, frecuencia: e.target.value })}>
-                                    <option value="diaria">Diaria</option>
-                                    <option value="semanal">Semanal</option>
-                                    <option value="mensual">Mensual</option>
-                                    <option value="eventual">Eventual</option>
-                                </select>
-                                <select className="border p-2 rounded" value={form.prioridad} onChange={(e) => setForm({ ...form, prioridad: e.target.value })}>
-                                    <option value="baja">Prioridad Baja</option>
-                                    <option value="media">Prioridad Media</option>
-                                    <option value="alta">Prioridad Alta</option>
-                                </select>
-                            </div>
-                            <button onClick={agregar} className="mt-3 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 flex items-center gap-2">
-                                <Icons.Plus /> Agregar Proceso
-                            </button>
-                        </div>
-
-                        <div className="bg-white rounded-lg border shadow-sm overflow-hidden">
-                            <table className="w-full">
-                                <thead className="bg-gray-50">
-                                    <tr>
-                                        <th className="text-left p-3 text-sm font-semibold">Proceso</th>
-                                        <th className="text-left p-3 text-sm font-semibold">Flujo de áreas</th>
-                                        <th className="text-left p-3 text-sm font-semibold">Frecuencia</th>
-                                        <th className="text-left p-3 text-sm font-semibold">Prioridad</th>
-                                        <th className="text-left p-3 text-sm font-semibold">Estado</th>
-                                        <th className="text-left p-3 text-sm font-semibold">Acciones</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {procesos.map((p) => (
-                                        <tr key={p.id} className="border-t hover:bg-gray-50">
-                                            <td className="p-3 font-medium">{p.nombre}</td>
-                                            <td className="p-3">
-                                                <div className="flex items-center gap-2 text-sm">
-                                                    <span className="font-medium">{p.area_inicio}</span>
-                                                    {p.areas_intermedias && (
-                                                        <>
-                                                            <Icons.ArrowRight />
-                                                            <span className="text-gray-600">{p.areas_intermedias}</span>
-                                                        </>
-                                                    )}
-                                                    {p.area_cierre && (
-                                                        <>
-                                                            <Icons.ArrowRight />
-                                                            <span className="font-medium">{p.area_cierre}</span>
-                                                        </>
-                                                    )}
-                                                </div>
-                                            </td>
-                                            <td className="p-3 text-sm capitalize">{p.frecuencia}</td>
-                                            <td className="p-3">
-                                                <span className={`px-2 py-1 rounded-full text-xs ${prioridadColor(p.prioridad)}`}>
-                                                    {p.prioridad}
-                                                </span>
-                                            </td>
-                                            <td className="p-3">
-                                                <select value={p.estado_relevamiento} onChange={(e) => actualizarEstado(p.id, e.target.value)} className={`px-2 py-1 rounded text-xs ${estadoColor(p.estado_relevamiento)}`}>
-                                                    <option value="sin_iniciar">Sin Iniciar</option>
-                                                    <option value="en_proceso">En Proceso</option>
-                                                    <option value="falta_validar">Falta Validar</option>
-                                                    <option value="completo">Completo</option>
-                                                </select>
-                                            </td>
-                                            <td className="p-3">
-                                                <button onClick={() => eliminar(p.id)} className="text-red-600 hover:bg-red-50 p-2 rounded">
-                                                    <Icons.Trash />
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                );
-            }
-
-            // VALIDACIÓN DE HANDOFFS
-            function ValidacionHandoffs() {
-                const [form, setForm] = useState({
-                    proceso: '', area_origen: '', area_destino: '', que_se_envia: '', 
-                    como_se_envia: '', que_esperan_recibir: '', discrepancias: ''
-                });
-
-                async function agregar() {
-                    if (!form.proceso || !form.area_origen || !form.area_destino) {
-                        return alert('Completá proceso, área origen y área destino');
-                    }
-                    
-                    const { data, error } = await supabase.from('handoffs').insert([form]).select();
-                    if (error) {
-                        alert('Error guardando: ' + error.message);
-                    } else {
-                        setHandoffs([...handoffs, data[0]]);
-                        setForm({ proceso: '', area_origen: '', area_destino: '', que_se_envia: '', como_se_envia: '', que_esperan_recibir: '', discrepancias: '' });
-                    }
-                }
-
-                async function eliminar(id) {
-                    if (!confirm('¿Eliminar este handoff?')) return;
-                    const { error } = await supabase.from('handoffs').delete().eq('id', id);
-                    if (!error) setHandoffs(handoffs.filter(h => h.id !== id));
-                }
-
-                async function toggleValidacion(id, campo, valorActual) {
-                    const { error } = await supabase.from('handoffs').update({ [campo]: !valorActual }).eq('id', id);
-                    if (!error) {
-                        setHandoffs(handoffs.map(h => h.id === id ? { ...h, [campo]: !valorActual } : h));
-                    }
-                }
-
-                const handoffsIncompletos = handoffs.filter(h => !h.validado_por_origen || !h.validado_por_destino);
-
-                return (
-                    <div className="space-y-6">
-                        {handoffsIncompletos.length > 0 && (
-                            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 flex items-start gap-3">
-                                <Icons.Alert />
-                                <div>
-                                    <h4 className="font-semibold text-yellow-800">Handoffs pendientes de validación</h4>
-                                    <p className="text-sm text-yellow-700 mt-1">
-                                        Hay {handoffsIncompletos.length} transición(es) que necesitan validación de ambas partes.
-                                    </p>
-                                </div>
-                            </div>
-                        )}
-
-                        <div className="bg-white p-4 rounded-lg border shadow-sm">
-                            <h3 className="font-semibold mb-3">Nueva Transición entre Áreas</h3>
-                            <div className="space-y-3">
-                                <input type="text" placeholder="Proceso al que pertenece" className="border p-2 rounded w-full" value={form.proceso} onChange={(e) => setForm({ ...form, proceso: e.target.value })} />
-                                <div className="grid grid-cols-2 gap-3">
-                                    <input type="text" placeholder="Área origen (envía)" className="border p-2 rounded" value={form.area_origen} onChange={(e) => setForm({ ...form, area_origen: e.target.value })} />
-                                    <input type="text" placeholder="Área destino (recibe)" className="border p-2 rounded" value={form.area_destino} onChange={(e) => setForm({ ...form, area_destino: e.target.value })} />
-                                </div>
-                                <textarea placeholder="¿Qué se envía?" className="border p-2 rounded w-full" value={form.que_se_envia} onChange={(e) => setForm({ ...form, que_se_envia: e.target.value })} rows="2" />
-                                <input type="text" placeholder="¿Cómo se envía?" className="border p-2 rounded w-full" value={form.como_se_envia} onChange={(e) => setForm({ ...form, como_se_envia: e.target.value })} />
-                                <textarea placeholder="¿Qué esperan recibir?" className="border p-2 rounded w-full" value={form.que_esperan_recibir} onChange={(e) => setForm({ ...form, que_esperan_recibir: e.target.value })} rows="2" />
-                                <textarea placeholder="Discrepancias" className="border p-2 rounded w-full" value={form.discrepancias} onChange={(e) => setForm({ ...form, discrepancias: e.target.value })} rows="2" />
-                            </div>
-                            <button onClick={agregar} className="mt-3 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 flex items-center gap-2">
-                                <Icons.Plus /> Agregar Handoff
-                            </button>
-                        </div>
-
-                        <div className="space-y-3">
-                            {handoffs.map((h) => (
-                                <div key={h.id} className="bg-white p-4 rounded-lg border shadow-sm">
-                                    <div className="flex items-start justify-between mb-3">
-                                        <div>
-                                            <h4 className="font-semibold text-lg">{h.proceso}</h4>
-                                            <div className="flex items-center gap-2 text-sm text-gray-600 mt-1">
-                                                <span className="font-medium">{h.area_origen}</span>
-                                                <Icons.ArrowRight />
-                                                <span className="font-medium">{h.area_destino}</span>
-                                            </div>
-                                        </div>
-                                        <button onClick={() => eliminar(h.id)} className="text-red-600 hover:bg-red-50 p-2 rounded">
-                                            <Icons.Trash />
-                                        </button>
-                                    </div>
-
-                                    <div className="space-y-2 text-sm">
-                                        {h.que_se_envia && (
-                                            <div>
-                                                <strong className="text-gray-700">Qué se envía:</strong>
-                                                <p className="text-gray-600 mt-1">{h.que_se_envia}</p>
-                                            </div>
-                                        )}
-                                        {h.como_se_envia && (
-                                            <div>
-                                                <strong className="text-gray-700">Cómo se envía:</strong>
-                                                <p className="text-gray-600 mt-1">{h.como_se_envia}</p>
-                                            </div>
-                                        )}
-                                        {h.que_esperan_recibir && (
-                                            <div>
-                                                <strong className="text-gray-700">Qué esperan recibir:</strong>
-                                                <p className="text-gray-600 mt-1">{h.que_esperan_recibir}</p>
-                                            </div>
-                                        )}
-                                        {h.discrepancias && (
-                                            <div className="bg-yellow-50 p-2 rounded">
-                                                <strong className="text-yellow-800">Discrepancias:</strong>
-                                                <p className="text-yellow-700 mt-1">{h.discrepancias}</p>
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    <div className="mt-4 flex gap-4">
-                                        <label className="flex items-center gap-2 cursor-pointer">
-                                            <input
-                                                type="checkbox"
-                                                checked={h.validado_por_origen}
-                                                onChange={() => toggleValidacion(h.id, 'validado_por_origen', h.validado_por_origen)}
-                                                className="w-4 h-4"
-                                            />
-                                            <span className="text-sm">Validado por {h.area_origen}</span>
-                                        </label>
-                                        <label className="flex items-center gap-2 cursor-pointer">
-                                            <input
-                                                type="checkbox"
-                                                checked={h.validado_por_destino}
-                                                onChange={() => toggleValidacion(h.id, 'validado_por_destino', h.validado_por_destino)}
-                                                className="w-4 h-4"
-                                            />
-                                            <span className="text-sm">Validado por {h.area_destino}</span>
-                                        </label>
-                                    </div>
-
-                                    {h.validado_por_origen && h.validado_por_destino && (
-                                        <div className="mt-3 bg-green-50 text-green-700 px-3 py-2 rounded flex items-center gap-2 text-sm">
-                                            <Icons.Check />
-                                            <span>Handoff validado por ambas áreas</span>
-                                        </div>
-                                    )}
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                );
-            }
-
-            // PLANTILLA DE ENTREVISTA
-            function PlantillaEntrevista() {
-                function descargarPlantilla() {
-    const XLSX = window.XLSX;
-
-    // Hoja 1: Instrucciones y portada
-    const hoja1 = XLSX.utils.aoa_to_sheet([
-        ["GUÍA DE RELEVAMIENTO DE PROCESOS"],
-        ["Ministerio de Ecología - Provincia de Misiones"],
-        [""],
-        ["INSTRUCCIONES"],
-        ["• Imprimí esta plantilla o usala en formato digital durante las entrevistas."],
-        ["• Completá cada sección durante o después de la entrevista."],
-        ["• Después, cargá los datos en el sistema web."],
-        [""],
-        ["PREPARACIÓN DE LA ENTREVISTA"],
-        ["- Confirmar el área/sector específico"],
-        ["- Pedir organigrama del sector (si existe)"],
-        ["- Solicitar ejemplos de formularios/documentos que usan"],
-        ["- Tiempo estimado: 90 minutos"]
-    ]);
-
-    // Hoja 2: Parte 1 – Identificación del Área
-    const hoja2 = XLSX.utils.json_to_sheet([
-        { "Campo": "Nombre oficial del área/dirección/departamento", "Valor": "" },
-        { "Campo": "Responsable a cargo", "Valor": "" },
-        { "Campo": "Cantidad de personal", "Valor": "" },
-        { "Campo": "Ubicación física (edificio/piso/oficina)", "Valor": "" },
-        { "Campo": "Función principal del área", "Valor": "" },
-        { "Campo": "Subsecretaría/dirección a la que responden", "Valor": "" },
-        { "Campo": "Competencias legales (leyes/decretos)", "Valor": "" }
-    ]);
-
-    // Hoja 3: Parte 2 – Inventario de Procesos (tabla editable)
-    const hoja3 = XLSX.utils.aoa_to_sheet([
-        ["Inventario de Procesos"],
-        [""],
-        ["#", "Nombre del Proceso", "Frecuencia", "Tipo", "Prioridad"],
-        ["", "", "Diario/Semanal/Mensual/Eventual", "Interno/Externo", "Alta/Media/Baja"],
-        ["", "", "", "", ""],
-        ["", "", "", "", ""],
-        ["", "", "", "", ""]
-    ]);
-
-    // Hoja 4: Parte 3 – Detalle por Proceso (estructura para 1 proceso, replicable)
-    const hoja4 = XLSX.utils.json_to_sheet([
-        { "Sección": "A. IDENTIFICACIÓN", "Contenido": "" },
-        { "Sección": "Nombre del proceso", "Contenido": "" },
-        { "Sección": "Código", "Contenido": "" },
-        { "Sección": "Marco legal", "Contenido": "" },
-        { "Sección": "Objetivo", "Contenido": "" },
-        { "Sección": "Áreas involucradas", "Contenido": "" },
-        { "Sección": "", "Contenido": "" },
-        { "Sección": "B. INICIO DEL PROCESO", "Contenido": "" },
-        { "Sección": "¿Cómo inicia?", "Contenido": "" },
-        { "Sección": "Documentación requerida", "Contenido": "" },
-        { "Sección": "Formato de recepción", "Contenido": "" },
-        { "Sección": "¿Dónde se registra?", "Contenido": "" },
-        { "Sección": "", "Contenido": "" },
-        { "Sección": "C. FLUJO DEL PROCESO", "Contenido": "Completar paso a paso en hojas adicionales o en documento aparte" },
-        { "Sección": "", "Contenido": "" },
-        { "Sección": "D. FINALIZACIÓN", "Contenido": "" },
-        { "Sección": "¿Cómo termina?", "Contenido": "" },
-        { "Sección": "Área que cierra", "Contenido": "" },
-        { "Sección": "Entregables", "Contenido": "" },
-        { "Sección": "Notificación al interesado", "Contenido": "" },
-        { "Sección": "", "Contenido": "" },
-        { "Sección": "E. EXPEDIENTES", "Contenido": "" },
-        { "Sección": "F. DATOS CRÍTICOS", "Contenido": "" },
-        { "Sección": "G. TIEMPOS Y VOLUMEN", "Contenido": "" },
-        { "Sección": "H. PROBLEMAS", "Contenido": "" },
-        { "Sección": "I. CASOS ESPECIALES", "Contenido": "" }
-    ]);
-
-    // Hoja 5: Parte 4 – Sistemas y normativa
-    const hoja5 = XLSX.utils.json_to_sheet([
-        { "Tema": "Sistemas Actuales", "Ejemplo": "Excel, Word, Email, Sistema provincial..." },
-        { "Tema": "Acceso a internet", "Ejemplo": "" },
-        { "Tema": "Equipamiento", "Ejemplo": "PCs: __, Impresoras: __, Escáner: __" },
-        { "Tema": "Manuales de procedimientos", "Ejemplo": "□ Sí □ No □ Parcial" },
-        { "Tema": "Formularios oficiales", "Ejemplo": "" },
-        { "Tema": "Integración con otras áreas", "Ejemplo": "Ver matriz en sistema web" }
-    ]);
-
-    // Hoja 6: Parte 5 – Cierre y checklist
-    const hoja6 = XLSX.utils.aoa_to_sheet([
-        ["PARTE 5: CIERRE Y PRÓXIMOS PASOS"],
-        [""],
-        ["Fecha de entrevista", ""],
-        ["Entrevistador", ""],
-        ["Entrevistado(s)", ""],
-        [""],
-        ["Acuerdos:"],
-        ["□ Enviar resumen en 3-5 días"],
-        ["□ Agendar validación"],
-        ["□ Solicitar documentación faltante:", ""],
-        [""],
-        ["CHECKLIST POST-ENTREVISTA"],
-        ["□ Lista completa de procesos"],
-        ["□ Detalle de 2+ procesos prioritarios"],
-        ["□ Áreas involucradas identificadas"],
-        ["□ Puntos de transición marcados"],
-        ["□ Copias de formularios obtenidas"],
-        ["□ Contacto para seguimiento"],
-        ["□ Notas sobre integración"],
-        ["□ Entidades de datos identificadas"]
-    ]);
-
-    // Hoja 7: Tips y recordatorios
-    const hoja7 = XLSX.utils.aoa_to_sheet([
-        ["TIPS PARA LA ENTREVISTA"],
-        [""],
-        ["1. Llevá ejemplos concretos: 'Contame qué pasó con el último caso'"],
-        ["2. Usá el método del caso real"],
-        ["3. Dibujá mientras hablan"],
-        ["4. Cuando mencionen otra área, preguntá '¿Y qué hace esa área?'"],
-        ["5. Identificá workarounds (trucos no oficiales)"],
-        ["6. Validá en el momento: 'Entonces, primero hacen X, después Y...'"],
-        ["7. Grabá (con permiso)"],
-        ["8. Preguntá por el pasado: '¿Antes cómo lo hacían?'"],
-        ["9. Para identificar si es un solo proceso: '¿Pueden cerrar sin que X responda?'"],
-        ["10. Marcá las transiciones: cada 'lo mandamos a...' es clave"],
-        [""],
-        ["⚠️ RECORDATORIOS"],
-        ["• 'Lo mandamos a otra área' → anotar para entrevistar"],
-        ["• 'No podemos cerrar sin X' → es parte del mismo proceso"],
-        ["• Dibujar flujo en tiempo real"],
-        ["• Pedir casos reales"],
-        ["• Grabar con permiso"]
-    ]);
-
-    // Crear libro de trabajo
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, hoja1, "Portada");
-    XLSX.utils.book_append_sheet(wb, hoja2, "Parte 1 - Área");
-    XLSX.utils.book_append_sheet(wb, hoja3, "Parte 2 - Inventario");
-    XLSX.utils.book_append_sheet(wb, hoja4, "Parte 3 - Proceso");
-    XLSX.utils.book_append_sheet(wb, hoja5, "Parte 4 - Sistemas");
-    XLSX.utils.book_append_sheet(wb, hoja6, "Parte 5 - Cierre");
-    XLSX.utils.book_append_sheet(wb, hoja7, "Tips");
-
-    // Exportar
-    XLSX.writeFile(wb, "plantilla-entrevista-procesos.xlsx");
-}
-
-                return (
-                    <div className="bg-white p-6 rounded-lg border shadow-sm max-w-5xl mx-auto">
-                        <div className="flex items-center justify-between mb-6">
-                            <h2 className="text-2xl font-bold">Plantilla de Entrevista</h2>
-                            <button
-                                onClick={descargarPlantilla}
-                                className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
-                            >
-                                <Icons.Download />
-                                Descargar Plantilla
-                            </button>
-                        </div>
-
-                        <div className="prose max-w-none space-y-6 text-sm bg-gray-50 p-6 rounded-lg">
-                            <div className="bg-blue-50 p-4 rounded border border-blue-200">
-                                <h3 className="text-lg font-bold text-blue-900 mb-2">Instrucciones de Uso</h3>
-                                <ul className="text-sm text-blue-800 space-y-1 list-disc pl-5">
-                                    <li>Descargá la plantilla usando el botón verde de arriba</li>
-                                    <li>Imprimila o usala en formato digital durante las entrevistas</li>
-                                    <li>Completá cada sección durante o después de la entrevista</li>
-                                    <li>Después cargá los datos en las otras pestañas del sistema</li>
-                                </ul>
-                            </div>
-
-                            <section>
-                                <h3 className="font-bold text-base mb-2 bg-gray-700 text-white p-2 rounded">PARTE 1: IDENTIFICACIÓN DEL ÁREA</h3>
-                                <div className="space-y-2 pl-4">
-                                    <div>• Nombre oficial del área</div>
-                                    <div>• Responsable a cargo</div>
-                                    <div>• Cantidad de personal</div>
-                                    <div>• Ubicación física</div>
-                                    <div>• Función principal del área</div>
-                                    <div>• Público/usuarios que atienden</div>
-                                </div>
-                            </section>
-
-                            <section>
-                                <h3 className="font-bold text-base mb-2 bg-gray-700 text-white p-2 rounded">PARTE 2: INVENTARIO DE PROCESOS</h3>
-                                <div className="pl-4">
-                                    <p className="mb-2">Listar TODOS los procesos que ejecuta el área con:</p>
-                                    <div className="space-y-1">
-                                        <div>• Nombre del proceso</div>
-                                        <div>• Frecuencia (diaria/semanal/mensual/eventual)</div>
-                                        <div>• Tipo (interno/externo)</div>
-                                        <div>• Prioridad (alta/media/baja)</div>
-                                    </div>
-                                </div>
-                            </section>
-
-                            <section>
-                                <h3 className="font-bold text-base mb-2 bg-gray-700 text-white p-2 rounded">PARTE 3: DETALLE POR PROCESO</h3>
-                                <div className="pl-4 space-y-3">
-                                    <div>
-                                        <strong>A. Identificación:</strong> Nombre, objetivo, marco legal, áreas involucradas
-                                    </div>
-                                    <div>
-                                        <strong>B. Inicio:</strong> Cómo inicia, documentación requerida, dónde se registra
-                                    </div>
-                                    <div>
-                                        <strong>C. Flujo:</strong> Paso a paso detallado
-                                        <div className="ml-4 mt-1 text-xs">
-                                            Para cada paso: qué se hace, quién lo hace, en qué área, herramientas usadas, 
-                                            información necesaria, documentos generados, plazos, decisiones, transiciones a otras áreas
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <strong>D. Finalización:</strong> Cómo termina, entregables, notificación
-                                    </div>
-                                    <div>
-                                        <strong>E. Expedientes:</strong> Manejo de expedientes físicos y digitales
-                                    </div>
-                                    <div>
-                                        <strong>F. Datos críticos:</strong> Información fundamental para el proceso
-                                    </div>
-                                    <div>
-                                        <strong>G. Tiempos y volumen:</strong> Duración, cantidad de casos
-                                    </div>
-                                    <div>
-                                        <strong>H. Problemas:</strong> Cuellos de botella, dificultades operativas
-                                    </div>
-                                    <div>
-                                        <strong>I. Casos especiales:</strong> Variantes y excepciones
-                                    </div>
-                                </div>
-                            </section>
-
-                            <section>
-                                <h3 className="font-bold text-base mb-2 bg-gray-700 text-white p-2 rounded">PARTE 4: INFORMACIÓN COMPLEMENTARIA</h3>
-                                <div className="pl-4 space-y-2">
-                                    <div>• Sistemas actuales que usan</div>
-                                    <div>• Normativa y manuales de procedimientos</div>
-                                    <div>• Integración con otras áreas</div>
-                                </div>
-                            </section>
-
-                            <section>
-                                <h3 className="font-bold text-base mb-2 bg-gray-700 text-white p-2 rounded">PARTE 5: CIERRE</h3>
-                                <div className="pl-4 space-y-2">
-                                    <div>• Validación de datos de la entrevista</div>
-                                    <div>• Acuerdos y próximos pasos</div>
-                                    <div>• Checklist post-entrevista</div>
-                                </div>
-                            </section>
-
-                            <div className="bg-yellow-50 p-4 rounded border border-yellow-200 mt-6">
-                                <h3 className="font-bold text-base mb-2 text-yellow-900">⚠️ TIPS IMPORTANTES</h3>
-                                <ul className="text-sm text-yellow-800 space-y-1 list-disc pl-5">
-                                    <li>Cuando mencionen "lo mandamos a otra área", anotar para entrevistar a esa área</li>
-                                    <li>Si dicen "no podemos cerrar sin que X área responda", es parte del mismo proceso</li>
-                                    <li>Dibujar el flujo mientras hablan para validar comprensión</li>
-                                    <li>Pedir ejemplos concretos de casos reales</li>
-                                    <li>Grabar (con permiso) para no perder detalles</li>
-                                </ul>
-                            </div>
-                        </div>
-                    </div>
-                );
             }
 
             if (loading) {
@@ -745,7 +888,6 @@
                             <h1 className="text-3xl font-bold text-gray-900">Sistema de Relevamiento de Procesos</h1>
                             <p className="text-gray-600 mt-2">Ministerio de Ecología - Provincia de Misiones</p>
                         </div>
-
                         <div className="flex gap-2 mb-6 border-b">
                             <button
                                 onClick={() => setActiveTab('tracker')}
@@ -785,15 +927,14 @@
                                         : 'border-transparent text-gray-600 hover:text-gray-900'
                                 }`}
                             >
-                                Plantilla de Entrevista
+                                Formulario de Entrevista
                             </button>
                         </div>
-
                         <div>
-                            {activeTab === 'tracker' && <TrackerEntrevistas />}
-                            {activeTab === 'procesos' && <MatrizProcesos />}
-                            {activeTab === 'handoffs' && <ValidacionHandoffs />}
-                            {activeTab === 'plantilla' && <PlantillaEntrevista />}
+                            {activeTab === 'tracker' && <TrackerEntrevistas entrevistas={entrevistas} setEntrevistas={setEntrevistas} />}
+                            {activeTab === 'procesos' && <MatrizProcesos procesos={procesos} setProcesos={setProcesos} />}
+                            {activeTab === 'handoffs' && <ValidacionHandoffs handoffs={handoffs} setHandoffs={setHandoffs} />}
+                            {activeTab === 'plantilla' && <FormularioEntrevistaCompleto />}
                         </div>
                     </div>
                 </div>

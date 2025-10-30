@@ -22,9 +22,11 @@
             Plus: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>,
             Trash: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>,
             ArrowRight: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>,
+            Alert: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>,
+            Check: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>,
         };
 
-        // =============== FORMULARIO COMPLETO CON TODA LA GUÍA ===============
+        // =============== FORMULARIO COMPLETO ===============
         function FormularioEntrevistaCompleto({ entrevistaId, onVolver }) {
             const [loading, setLoading] = useState(false);
             const [entrevista, setEntrevista] = useState(null);
@@ -180,7 +182,7 @@
                         <button onClick={onVolver} className="text-blue-600 hover:underline">← Volver al Tracker</button>
                     </div>
 
-                    {/* Parte 1: Identificación del Área */}
+                    {/* Parte 1 */}
                     <div className="mb-8 p-4 border rounded bg-gray-50">
                         <h3 className="font-bold text-lg mb-3">Parte 1: Identificación del Área</h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -207,7 +209,7 @@
                         </div>
                     </div>
 
-                    {/* Parte 2 y 3: Procesos y Pasos Detallados */}
+                    {/* Parte 2 y 3 */}
                     <div className="mb-8">
                         <div className="flex justify-between items-center mb-4">
                             <h3 className="font-bold text-lg">Parte 2 y 3: Procesos y Pasos Detallados</h3>
@@ -336,7 +338,7 @@
                         ))}
                     </div>
 
-                    {/* Parte 4 y 5: Complemento */}
+                    {/* Parte 4 y 5 */}
                     <div className="mb-8 p-4 border rounded bg-gray-50">
                         <h3 className="font-bold text-lg mb-3">Parte 4 y 5: Información Complementaria</h3>
                         <div className="grid grid-cols-1 gap-4">
@@ -575,4 +577,154 @@
                                                         <span className="font-medium">{p.area_cierre}</span>
                                                     </>
                                                 )}
-                             
+                                            </div>
+                                        </td>
+                                        <td className="p-3 text-sm capitalize">{p.frecuencia}</td>
+                                        <td className="p-3">
+                                            <span className={`px-2 py-1 rounded-full text-xs ${prioridadColor(p.prioridad)}`}>
+                                                {p.prioridad}
+                                            </span>
+                                        </td>
+                                        <td className="p-3">
+                                            <span className={`px-2 py-1 rounded-full text-xs ${estadoColor(p.estado_relevamiento)}`}>
+                                                {p.estado_relevamiento}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            );
+        }
+
+        function ValidacionHandoffs({ handoffs }) {
+            const handoffsIncompletos = handoffs.filter(h => !h.validado_por_origen || !h.validado_por_destino);
+            return (
+                <div className="space-y-6">
+                    {handoffsIncompletos.length > 0 && (
+                        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                            <h4 className="font-semibold text-yellow-800">Handoffs pendientes de validación</h4>
+                            <p className="text-sm text-yellow-700 mt-1">
+                                Hay {handoffsIncompletos.length} transición(es) que necesitan validación.
+                            </p>
+                        </div>
+                    )}
+                    <div className="space-y-3">
+                        {handoffs.map((h) => (
+                            <div key={h.id} className="bg-white p-4 rounded-lg border shadow-sm">
+                                <h4 className="font-semibold text-lg">{h.proceso}</h4>
+                                <div className="flex items-center gap-2 text-sm text-gray-600 mt-1">
+                                    <span className="font-medium">{h.area_origen}</span>
+                                    <Icons.ArrowRight />
+                                    <span className="font-medium">{h.area_destino}</span>
+                                </div>
+                                {h.que_se_envia && <p><strong>Qué se envía:</strong> {h.que_se_envia}</p>}
+                                {h.validado_por_origen && h.validado_por_destino && (
+                                    <div className="mt-2 text-green-700">✅ Validado por ambas áreas</div>
+                                )}
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            );
+        }
+
+        // =============== APP PRINCIPAL ===============
+        function App() {
+            const [activeTab, setActiveTab] = useState('tracker');
+            const [entrevistas, setEntrevistas] = useState([]);
+            const [procesos, setProcesos] = useState([]);
+            const [handoffs, setHandoffs] = useState([]);
+            const [loading, setLoading] = useState(true);
+            const [entrevistaEnProgreso, setEntrevistaEnProgreso] = useState(null);
+
+            useEffect(() => {
+                loadData();
+            }, []);
+
+            async function loadData() {
+                try {
+                    const [e, p, h] = await Promise.all([
+                        supabase.from('entrevistas').select('*').order('fecha', { ascending: false }),
+                        supabase.from('procesos').select('*').order('created_at', { ascending: false }),
+                        supabase.from('handoffs').select('*').order('created_at', { ascending: false })
+                    ]);
+                    if (e.data) setEntrevistas(e.data);
+                    if (p.data) setProcesos(p.data);
+                    if (h.data) setHandoffs(h.data);
+                } catch (error) {
+                    alert('Error al cargar datos');
+                } finally {
+                    setLoading(false);
+                }
+            }
+
+            function iniciarCompletar(id) {
+                setEntrevistaEnProgreso(id);
+                setActiveTab('completar');
+            }
+
+            function volverAlTracker() {
+                setEntrevistaEnProgreso(null);
+                setActiveTab('tracker');
+                loadData();
+            }
+
+            if (loading) return <div className="p-6">Cargando...</div>;
+
+            return (
+                <div className="min-h-screen bg-gray-50 p-6">
+                    <div className="max-w-7xl mx-auto">
+                        <div className="mb-6">
+                            <h1 className="text-3xl font-bold text-gray-900">Sistema de Relevamiento de Procesos</h1>
+                            <p className="text-gray-600 mt-2">Ministerio de Ecología - Provincia de Misiones</p>
+                        </div>
+                        <div className="flex gap-2 mb-6 border-b">
+                            <button
+                                onClick={() => setActiveTab('tracker')}
+                                className={`px-4 py-2 font-medium border-b-2 transition-colors ${
+                                    activeTab === 'tracker' || activeTab === 'completar'
+                                        ? 'border-blue-600 text-blue-600'
+                                        : 'border-transparent text-gray-600 hover:text-gray-900'
+                                }`}
+                            >
+                                Tracker de Entrevistas
+                            </button>
+                            <button
+                                onClick={() => setActiveTab('procesos')}
+                                className={`px-4 py-2 font-medium border-b-2 transition-colors ${
+                                    activeTab === 'procesos'
+                                        ? 'border-blue-600 text-blue-600'
+                                        : 'border-transparent text-gray-600 hover:text-gray-900'
+                                }`}
+                            >
+                                Matriz de Procesos
+                            </button>
+                            <button
+                                onClick={() => setActiveTab('handoffs')}
+                                className={`px-4 py-2 font-medium border-b-2 transition-colors ${
+                                    activeTab === 'handoffs'
+                                        ? 'border-blue-600 text-blue-600'
+                                        : 'border-transparent text-gray-600 hover:text-gray-900'
+                                }`}
+                            >
+                                Validación de Handoffs
+                            </button>
+                        </div>
+                        <div>
+                            {activeTab === 'tracker' && <TrackerEntrevistas entrevistas={entrevistas} setEntrevistas={setEntrevistas} onCompletar={iniciarCompletar} />}
+                            {activeTab === 'completar' && <FormularioEntrevistaCompleto entrevistaId={entrevistaEnProgreso} onVolver={volverAlTracker} />}
+                            {activeTab === 'procesos' && <MatrizProcesos procesos={procesos} />}
+                            {activeTab === 'handoffs' && <ValidacionHandoffs handoffs={handoffs} />}
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        ReactDOM.render(<App />, document.getElementById('root'));
+    </script>
+</body>
+</html>

@@ -139,10 +139,20 @@
 
                     for (const proc of procesos) {
                         if (!proc.nombre || !proc.area_inicio) continue;
-                        const { data, error } = await supabase
-                            .from('procesos')
-                            .insert([{ ...proc, entrevista_id: entrevista.id }])
-                            .select('*');
+                     const { nombre, frecuencia, tipo, prioridad, area_inicio, areas_intermedias, area_cierre } = proc;
+const { data, error } = await supabase
+    .from('procesos')
+    .insert([{
+        nombre,
+        frecuencia,
+        tipo,
+        prioridad,
+        area_inicio,
+        areas_intermedias,
+        area_cierre,
+        entrevista_id: entrevista.id
+    }])
+    .select('*');
                         if (error) throw error;
                         const procesoId = data[0].id;
                         for (let i = 0; i < proc.pasos.length; i++) {
@@ -728,3 +738,4 @@
     </script>
 </body>
 </html>
+

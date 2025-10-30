@@ -19,7 +19,6 @@
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtldG1zdWhoeXltaHByd3ZveGp4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE3ODExODksImV4cCI6MjA3NzM1NzE4OX0.R6sOE9UofsP8NZnhc4uFJF3hTauEjvGJjnoSYtIifbQ';
         const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        // Iconos simples con SVG
         const Icons = {
             Plus: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>,
             Trash: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>,
@@ -28,16 +27,10 @@
             Check: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>,
         };
 
-        // =============== COMPONENTE NUEVO: FORMULARIO COMPLETO ===============
-        function FormularioEntrevistaCompleto() {
+        // =============== FORMULARIO COMPLETO VINCULADO A ENTREVISTA ===============
+        function FormularioEntrevistaCompleto({ entrevistaId, onVolver }) {
             const [loading, setLoading] = useState(false);
-
-            const [entrevista, setEntrevista] = useState({
-                area: '', fecha: '', responsable: '', entrevistador: '', notas: '',
-                cantidad_personal: '', ubicacion: '', funcion_principal: '', depende_de: '',
-                publico_usuarios: []
-            });
-
+            const [entrevista, setEntrevista] = useState(null);
             const [procesos, setProcesos] = useState([{
                 nombre: '', frecuencia: 'mensual', tipo: 'interno', prioridad: 'media',
                 area_inicio: '', areas_intermedias: '', area_cierre: '',
@@ -46,22 +39,30 @@
                     tiene_decision: false, condicion_decision: '', destino_si_cumple: '', destino_si_no_cumple: '',
                     pasa_a_otra_area: false, area_destino: '', que_envia: '', espera_respuesta: false }]
             }]);
-
             const [complemento, setComplemento] = useState({
                 interacciones_externas: '', sistemas_usados: '', tiene_manuales: false,
                 resolucion_formularios: '', entrevistados: '', acuerdos: '', observaciones_generales: ''
             });
 
-            const togglePublico = (valor) => {
-                setEntrevista(prev => {
-                    const lista = [...prev.publico_usuarios];
-                    if (lista.includes(valor)) {
-                        return { ...prev, publico_usuarios: lista.filter(x => x !== valor) };
-                    } else {
-                        return { ...prev, publico_usuarios: [...lista, valor] };
-                    }
-                });
-            };
+            // Cargar entrevista si se pasa un ID
+            useEffect(() => {
+                if (entrevistaId) {
+                    supabase.from('entrevistas').select('*').eq('id', entrevistaId).then(({ data }) => {
+                        if (data && data[0]) {
+                            setEntrevista(data[0]);
+                            setComplemento({
+                                interacciones_externas: data[0].interacciones_externas || '',
+                                sistemas_usados: data[0].sistemas_usados || '',
+                                tiene_manuales: data[0].tiene_manuales || false,
+                                resolucion_formularios: data[0].resolucion_formularios || '',
+                                entrevistados: data[0].entrevistados || '',
+                                acuerdos: data[0].acuerdos || '',
+                                observaciones_generales: data[0].observaciones_generales || ''
+                            });
+                        }
+                    });
+                }
+            }, [entrevistaId]);
 
             const agregarProceso = () => {
                 setProcesos([...procesos, {
@@ -113,44 +114,30 @@
             };
 
             async function guardarEntrevista() {
-                if (!entrevista.area || !entrevista.fecha) {
-                    alert('Completá al menos el área y la fecha.');
+                if (!entrevista || !entrevista.area) {
+                    alert('Error: entrevista no cargada');
                     return;
                 }
 
                 setLoading(true);
                 try {
-                    const { data: entrevistaData, error: entrevistaError } = await supabase
-                        .from('entrevistas')
-                        .insert([{
-                            area: entrevista.area,
-                            fecha: entrevista.fecha,
-                            responsable: entrevista.responsable,
-                            entrevistador: entrevista.entrevistador,
-                            notas: entrevista.notas,
-                            estado: 'realizada',
-                            cantidad_personal: entrevista.cantidad_personal || null,
-                            ubicacion: entrevista.ubicacion || null,
-                            funcion_principal: entrevista.funcion_principal || null,
-                            depende_de: entrevista.depende_de || null,
-                            publico_usuarios: entrevista.publico_usuarios.length ? entrevista.publico_usuarios : null,
-                            interacciones_externas: complemento.interacciones_externas || null,
-                            sistemas_usados: complemento.sistemas_usados || null,
-                            tiene_manuales: complemento.tiene_manuales,
-                            resolucion_formularios: complemento.resolucion_formularios || null,
-                            entrevistados: complemento.entrevistados || null,
-                            acuerdos: complemento.acuerdos || null,
-                            observaciones_generales: complemento.observaciones_generales || null
-                        }])
-                        .select();
+                    // Actualizar entrevista con datos complementarios
+                    await supabase.from('entrevistas').update({
+                        estado: 'realizada',
+                        interacciones_externas: complemento.interacciones_externas || null,
+                        sistemas_usados: complemento.sistemas_usados || null,
+                        tiene_manuales: complemento.tiene_manuales,
+                        resolucion_formularios: complemento.resolucion_formularios || null,
+                        entrevistados: complemento.entrevistados || null,
+                        acuerdos: complemento.acuerdos || null,
+                        observaciones_generales: complemento.observaciones_generales || null
+                    }).eq('id', entrevista.id);
 
-                    if (entrevistaError) throw entrevistaError;
-                    const entrevistaId = entrevistaData[0].id;
-
+                    // Guardar procesos
                     for (const proc of procesos) {
                         if (!proc.nombre || !proc.area_inicio) continue;
 
-                        const { data: procData, error: procError } = await supabase
+                        const {  procData, error: procError } = await supabase
                             .from('procesos')
                             .insert([{
                                 nombre: proc.nombre,
@@ -159,18 +146,21 @@
                                 area_cierre: proc.area_cierre || null,
                                 frecuencia: proc.frecuencia,
                                 prioridad: proc.prioridad,
-                                estado_relevamiento: 'en_proceso'
+                                estado_relevamiento: 'en_proceso',
+                                entrevista_id: entrevista.id
                             }])
                             .select();
 
                         if (procError) throw procError;
                         const procesoId = procData[0].id;
 
+                        // Guardar pasos
                         for (let i = 0; i < proc.pasos.length; i++) {
                             const paso = proc.pasos[i];
                             if (!paso.descripcion) continue;
                             await supabase.from('pasos_proceso').insert({
                                 proceso_id: procesoId,
+                                entrevista_id: entrevista.id,
                                 orden: i + 1,
                                 descripcion: paso.descripcion,
                                 responsable_rol: paso.responsable_rol,
@@ -192,9 +182,8 @@
                         }
                     }
 
-                    alert('Entrevista guardada exitosamente.');
-                    window.location.reload();
-
+                    alert('Entrevista completada y guardada exitosamente.');
+                    if (onVolver) onVolver();
                 } catch (error) {
                     console.error('Error:', error);
                     alert('Error al guardar: ' + (error.message || 'Desconocido'));
@@ -209,52 +198,43 @@
                 'Organismos nacionales', 'Otros'
             ];
 
+            if (!entrevista) {
+                return (
+                    <div className="bg-white p-6 rounded-lg border shadow-sm max-w-6xl mx-auto">
+                        <h2 className="text-2xl font-bold mb-4">Completar Entrevista</h2>
+                        <p>Cargando entrevista...</p>
+                    </div>
+                );
+            }
+
             return (
                 <div className="bg-white p-6 rounded-lg border shadow-sm max-w-6xl mx-auto">
-                    <h2 className="text-2xl font-bold mb-6">Formulario Completo de Entrevista</h2>
-
-                    {/* Parte 1 */}
-                    <div className="mb-8 p-4 border rounded bg-gray-50">
-                        <h3 className="font-bold text-lg mb-3">Parte 1: Identificación del Área</h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <input type="text" placeholder="Área" className="border p-2 rounded" value={entrevista.area} onChange={e => setEntrevista({...entrevista, area: e.target.value})} />
-                            <input type="date" className="border p-2 rounded" value={entrevista.fecha} onChange={e => setEntrevista({...entrevista, fecha: e.target.value})} />
-                            <input type="text" placeholder="Responsable del área" className="border p-2 rounded" value={entrevista.responsable} onChange={e => setEntrevista({...entrevista, responsable: e.target.value})} />
-                            <input type="text" placeholder="Entrevistador" className="border p-2 rounded" value={entrevista.entrevistador} onChange={e => setEntrevista({...entrevista, entrevistador: e.target.value})} />
-                            <input type="number" placeholder="Cantidad de personal" className="border p-2 rounded" value={entrevista.cantidad_personal} onChange={e => setEntrevista({...entrevista, cantidad_personal: e.target.value})} />
-                            <input type="text" placeholder="Ubicación física" className="border p-2 rounded" value={entrevista.ubicacion} onChange={e => setEntrevista({...entrevista, ubicacion: e.target.value})} />
-                            <input type="text" placeholder="Función principal" className="border p-2 rounded md:col-span-2" value={entrevista.funcion_principal} onChange={e => setEntrevista({...entrevista, funcion_principal: e.target.value})} />
-                            <input type="text" placeholder="Depende de (subsecretaría, etc.)" className="border p-2 rounded md:col-span-2" value={entrevista.depende_de} onChange={e => setEntrevista({...entrevista, depende_de: e.target.value})} />
-                        </div>
-                        <div className="mt-4">
-                            <p className="font-medium mb-2">Público/Usuarios:</p>
-                            <div className="flex flex-wrap gap-2">
-                                {publicoOpciones.map(opt => (
-                                    <label key={opt} className="flex items-center gap-1">
-                                        <input
-                                            type="checkbox"
-                                            checked={entrevista.publico_usuarios.includes(opt)}
-                                            onChange={() => togglePublico(opt)}
-                                            className="rounded"
-                                        />
-                                        <span className="text-sm">{opt}</span>
-                                    </label>
-                                ))}
-                            </div>
-                        </div>
-                        <textarea
-                            placeholder="Notas generales"
-                            className="border p-2 rounded mt-3 w-full"
-                            rows="2"
-                            value={entrevista.notas}
-                            onChange={e => setEntrevista({...entrevista, notas: e.target.value})}
-                        />
+                    <div className="flex justify-between items-center mb-6">
+                        <h2 className="text-2xl font-bold">Completar Entrevista: {entrevista.area}</h2>
+                        <button
+                            onClick={onVolver}
+                            className="text-blue-600 hover:underline"
+                        >
+                            ← Volver al Tracker
+                        </button>
                     </div>
 
-                    {/* Parte 2 y 3 */}
+                    {/* Parte 1: Datos básicos (solo lectura) */}
+                    <div className="mb-6 p-4 border rounded bg-gray-50">
+                        <h3 className="font-bold text-lg mb-2">Datos de la Entrevista</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
+                            <div><strong>Área:</strong> {entrevista.area}</div>
+                            <div><strong>Fecha:</strong> {new Date(entrevista.fecha).toLocaleDateString('es-AR')}</div>
+                            <div><strong>Responsable:</strong> {entrevista.responsable || '–'}</div>
+                            <div><strong>Entrevistador:</strong> {entrevista.entrevistador || '–'}</div>
+                        </div>
+                    </div>
+
+                    {/* Resto del formulario igual que antes, pero sin campos de área/fecha */}
+                    {/* Parte 2 y 3: Procesos y pasos */}
                     <div className="mb-8">
                         <div className="flex justify-between items-center mb-4">
-                            <h3 className="font-bold text-lg">Parte 2 y 3: Procesos y Pasos Detallados</h3>
+                            <h3 className="font-bold text-lg">Procesos y Pasos Detallados</h3>
                             <button
                                 type="button"
                                 onClick={agregarProceso}
@@ -398,17 +378,17 @@
 
                     {/* Parte 4 y 5 */}
                     <div className="mb-8 p-4 border rounded bg-gray-50">
-                        <h3 className="font-bold text-lg mb-3">Parte 4 y 5: Información Complementaria</h3>
+                        <h3 className="font-bold text-lg mb-3">Información Complementaria</h3>
                         <div className="grid grid-cols-1 gap-4">
                             <textarea
-                                placeholder="Interacciones con otras áreas (qué envían/reciben)"
+                                placeholder="Interacciones con otras áreas"
                                 className="border p-2 rounded"
                                 rows="3"
                                 value={complemento.interacciones_externas}
                                 onChange={e => setComplemento({...complemento, interacciones_externas: e.target.value})}
                             />
                             <textarea
-                                placeholder="Sistemas/herramientas que usan (Excel, Word, etc.)"
+                                placeholder="Sistemas/herramientas que usan"
                                 className="border p-2 rounded"
                                 rows="2"
                                 value={complemento.sistemas_usados}
@@ -427,7 +407,7 @@
                             </div>
                             <input
                                 type="text"
-                                placeholder="Resolución/Formularios oficiales (número de resolución)"
+                                placeholder="Resolución/Formularios oficiales"
                                 className="border p-2 rounded"
                                 value={complemento.resolucion_formularios}
                                 onChange={e => setComplemento({...complemento, resolucion_formularios: e.target.value})}
@@ -440,7 +420,7 @@
                                 onChange={e => setComplemento({...complemento, entrevistados: e.target.value})}
                             />
                             <textarea
-                                placeholder="Acuerdos (ej: enviar resumen en 3 días)"
+                                placeholder="Acuerdos"
                                 className="border p-2 rounded"
                                 rows="2"
                                 value={complemento.acuerdos}
@@ -471,8 +451,8 @@
             );
         }
 
-        // =============== COMPONENTES ORIGINALES (sin cambios) ===============
-        function TrackerEntrevistas({ entrevistas, setEntrevistas }) {
+        // =============== COMPONENTES ACTUALIZADOS ===============
+        function TrackerEntrevistas({ entrevistas, setEntrevistas, onCompletarEntrevista }) {
             const [form, setForm] = useState({
                 area: '', fecha: '', responsable: '', entrevistador: '', estado: 'pendiente', notas: ''
             });
@@ -565,6 +545,14 @@
                                             <option value="validada">Validada</option>
                                             <option value="requiere_seguimiento">Requiere Seguimiento</option>
                                         </select>
+                                        {e.estado === 'pendiente' && (
+                                            <button 
+                                                onClick={() => onCompletarEntrevista(e.id)}
+                                                className="bg-green-600 text-white px-2 py-1 rounded text-xs hover:bg-green-700"
+                                            >
+                                                Completar
+                                            </button>
+                                        )}
                                         <button onClick={() => eliminar(e.id)} className="text-red-600 hover:bg-red-50 p-2 rounded">
                                             <Icons.Trash />
                                         </button>
@@ -577,30 +565,12 @@
             );
         }
 
-        function MatrizProcesos({ procesos, setProcesos }) {
-            const [form, setForm] = useState({
-                nombre: '', area_inicio: '', areas_intermedias: '', area_cierre: '', 
-                frecuencia: 'mensual', prioridad: 'media', estado_relevamiento: 'sin_iniciar'
-            });
-            async function agregar() {
-                if (!form.nombre || !form.area_inicio) return alert('Completá nombre y área inicio');
-                const { data, error } = await supabase.from('procesos').insert([form]).select();
-                if (error) {
-                    alert('Error guardando: ' + error.message);
-                } else {
-                    setProcesos([...procesos, data[0]]);
-                    setForm({ nombre: '', area_inicio: '', areas_intermedias: '', area_cierre: '', frecuencia: 'mensual', prioridad: 'media', estado_relevamiento: 'sin_iniciar' });
-                }
-            }
-            async function eliminar(id) {
-                if (!confirm('¿Eliminar este proceso?')) return;
-                const { error } = await supabase.from('procesos').delete().eq('id', id);
-                if (!error) setProcesos(procesos.filter(p => p.id !== id));
-            }
+        function MatrizProcesos({ procesos }) {
+            const [selectedProceso, setSelectedProceso] = useState(null);
             async function actualizarEstado(id, nuevoEstado) {
                 const { error } = await supabase.from('procesos').update({ estado_relevamiento: nuevoEstado }).eq('id', id);
                 if (!error) {
-                    setProcesos(procesos.map(p => p.id === id ? { ...p, estado_relevamiento: nuevoEstado } : p));
+                    // Actualizar localmente
                 }
             }
             const estadoColor = (estado) => {
@@ -622,29 +592,6 @@
             };
             return (
                 <div className="space-y-6">
-                    <div className="bg-white p-4 rounded-lg border shadow-sm">
-                        <h3 className="font-semibold mb-3">Nuevo Proceso</h3>
-                        <div className="grid grid-cols-2 gap-3">
-                            <input type="text" placeholder="Nombre del proceso" className="border p-2 rounded col-span-2" value={form.nombre} onChange={(e) => setForm({ ...form, nombre: e.target.value })} />
-                            <input type="text" placeholder="Área que inicia" className="border p-2 rounded" value={form.area_inicio} onChange={(e) => setForm({ ...form, area_inicio: e.target.value })} />
-                            <input type="text" placeholder="Áreas intermedias (separadas por coma)" className="border p-2 rounded" value={form.areas_intermedias} onChange={(e) => setForm({ ...form, areas_intermedias: e.target.value })} />
-                            <input type="text" placeholder="Área que cierra" className="border p-2 rounded" value={form.area_cierre} onChange={(e) => setForm({ ...form, area_cierre: e.target.value })} />
-                            <select className="border p-2 rounded" value={form.frecuencia} onChange={(e) => setForm({ ...form, frecuencia: e.target.value })}>
-                                <option value="diaria">Diaria</option>
-                                <option value="semanal">Semanal</option>
-                                <option value="mensual">Mensual</option>
-                                <option value="eventual">Eventual</option>
-                            </select>
-                            <select className="border p-2 rounded" value={form.prioridad} onChange={(e) => setForm({ ...form, prioridad: e.target.value })}>
-                                <option value="baja">Prioridad Baja</option>
-                                <option value="media">Prioridad Media</option>
-                                <option value="alta">Prioridad Alta</option>
-                            </select>
-                        </div>
-                        <button onClick={agregar} className="mt-3 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 flex items-center gap-2">
-                            <Icons.Plus /> Agregar Proceso
-                        </button>
-                    </div>
                     <div className="bg-white rounded-lg border shadow-sm overflow-hidden">
                         <table className="w-full">
                             <thead className="bg-gray-50">
@@ -654,7 +601,6 @@
                                     <th className="text-left p-3 text-sm font-semibold">Frecuencia</th>
                                     <th className="text-left p-3 text-sm font-semibold">Prioridad</th>
                                     <th className="text-left p-3 text-sm font-semibold">Estado</th>
-                                    <th className="text-left p-3 text-sm font-semibold">Acciones</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -692,11 +638,6 @@
                                                 <option value="completo">Completo</option>
                                             </select>
                                         </td>
-                                        <td className="p-3">
-                                            <button onClick={() => eliminar(p.id)} className="text-red-600 hover:bg-red-50 p-2 rounded">
-                                                <Icons.Trash />
-                                            </button>
-                                        </td>
                                     </tr>
                                 ))}
                             </tbody>
@@ -706,33 +647,9 @@
             );
         }
 
-        function ValidacionHandoffs({ handoffs, setHandoffs }) {
-            const [form, setForm] = useState({
-                proceso: '', area_origen: '', area_destino: '', que_se_envia: '', 
-                como_se_envia: '', que_esperan_recibir: '', discrepancias: ''
-            });
-            async function agregar() {
-                if (!form.proceso || !form.area_origen || !form.area_destino) {
-                    return alert('Completá proceso, área origen y área destino');
-                }
-                const { data, error } = await supabase.from('handoffs').insert([form]).select();
-                if (error) {
-                    alert('Error guardando: ' + error.message);
-                } else {
-                    setHandoffs([...handoffs, data[0]]);
-                    setForm({ proceso: '', area_origen: '', area_destino: '', que_se_envia: '', como_se_envia: '', que_esperan_recibir: '', discrepancias: '' });
-                }
-            }
-            async function eliminar(id) {
-                if (!confirm('¿Eliminar este handoff?')) return;
-                const { error } = await supabase.from('handoffs').delete().eq('id', id);
-                if (!error) setHandoffs(handoffs.filter(h => h.id !== id));
-            }
+        function ValidacionHandoffs({ handoffs }) {
             async function toggleValidacion(id, campo, valorActual) {
                 const { error } = await supabase.from('handoffs').update({ [campo]: !valorActual }).eq('id', id);
-                if (!error) {
-                    setHandoffs(handoffs.map(h => h.id === id ? { ...h, [campo]: !valorActual } : h));
-                }
             }
             const handoffsIncompletos = handoffs.filter(h => !h.validado_por_origen || !h.validado_por_destino);
             return (
@@ -748,23 +665,6 @@
                             </div>
                         </div>
                     )}
-                    <div className="bg-white p-4 rounded-lg border shadow-sm">
-                        <h3 className="font-semibold mb-3">Nueva Transición entre Áreas</h3>
-                        <div className="space-y-3">
-                            <input type="text" placeholder="Proceso al que pertenece" className="border p-2 rounded w-full" value={form.proceso} onChange={(e) => setForm({ ...form, proceso: e.target.value })} />
-                            <div className="grid grid-cols-2 gap-3">
-                                <input type="text" placeholder="Área origen (envía)" className="border p-2 rounded" value={form.area_origen} onChange={(e) => setForm({ ...form, area_origen: e.target.value })} />
-                                <input type="text" placeholder="Área destino (recibe)" className="border p-2 rounded" value={form.area_destino} onChange={(e) => setForm({ ...form, area_destino: e.target.value })} />
-                            </div>
-                            <textarea placeholder="¿Qué se envía?" className="border p-2 rounded w-full" value={form.que_se_envia} onChange={(e) => setForm({ ...form, que_se_envia: e.target.value })} rows="2" />
-                            <input type="text" placeholder="¿Cómo se envía?" className="border p-2 rounded w-full" value={form.como_se_envia} onChange={(e) => setForm({ ...form, como_se_envia: e.target.value })} />
-                            <textarea placeholder="¿Qué esperan recibir?" className="border p-2 rounded w-full" value={form.que_esperan_recibir} onChange={(e) => setForm({ ...form, que_esperan_recibir: e.target.value })} rows="2" />
-                            <textarea placeholder="Discrepancias" className="border p-2 rounded w-full" value={form.discrepancias} onChange={(e) => setForm({ ...form, discrepancias: e.target.value })} rows="2" />
-                        </div>
-                        <button onClick={agregar} className="mt-3 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 flex items-center gap-2">
-                            <Icons.Plus /> Agregar Handoff
-                        </button>
-                    </div>
                     <div className="space-y-3">
                         {handoffs.map((h) => (
                             <div key={h.id} className="bg-white p-4 rounded-lg border shadow-sm">
@@ -777,9 +677,6 @@
                                             <span className="font-medium">{h.area_destino}</span>
                                         </div>
                                     </div>
-                                    <button onClick={() => eliminar(h.id)} className="text-red-600 hover:bg-red-50 p-2 rounded">
-                                        <Icons.Trash />
-                                    </button>
                                 </div>
                                 <div className="space-y-2 text-sm">
                                     {h.que_se_envia && (
@@ -847,6 +744,7 @@
             const [procesos, setProcesos] = useState([]);
             const [handoffs, setHandoffs] = useState([]);
             const [loading, setLoading] = useState(true);
+            const [entrevistaEnProgreso, setEntrevistaEnProgreso] = useState(null);
 
             useEffect(() => {
                 loadData();
@@ -864,10 +762,21 @@
                     if (handoffsData.data) setHandoffs(handoffsData.data);
                 } catch (error) {
                     console.error('Error cargando datos:', error);
-                    alert('Error conectando con la base de datos. Verificá la configuración de Supabase.');
+                    alert('Error conectando con la base de datos.');
                 } finally {
                     setLoading(false);
                 }
+            }
+
+            function iniciarCompletarEntrevista(id) {
+                setEntrevistaEnProgreso(id);
+                setActiveTab('completar');
+            }
+
+            function volverAlTracker() {
+                setEntrevistaEnProgreso(null);
+                setActiveTab('tracker');
+                loadData(); // Recargar para ver cambios
             }
 
             if (loading) {
@@ -892,7 +801,7 @@
                             <button
                                 onClick={() => setActiveTab('tracker')}
                                 className={`px-4 py-2 font-medium border-b-2 transition-colors ${
-                                    activeTab === 'tracker'
+                                    activeTab === 'tracker' || activeTab === 'completar'
                                         ? 'border-blue-600 text-blue-600'
                                         : 'border-transparent text-gray-600 hover:text-gray-900'
                                 }`}
@@ -919,22 +828,12 @@
                             >
                                 Validación de Handoffs
                             </button>
-                            <button
-                                onClick={() => setActiveTab('plantilla')}
-                                className={`px-4 py-2 font-medium border-b-2 transition-colors ${
-                                    activeTab === 'plantilla'
-                                        ? 'border-blue-600 text-blue-600'
-                                        : 'border-transparent text-gray-600 hover:text-gray-900'
-                                }`}
-                            >
-                                Formulario de Entrevista
-                            </button>
                         </div>
                         <div>
-                            {activeTab === 'tracker' && <TrackerEntrevistas entrevistas={entrevistas} setEntrevistas={setEntrevistas} />}
-                            {activeTab === 'procesos' && <MatrizProcesos procesos={procesos} setProcesos={setProcesos} />}
-                            {activeTab === 'handoffs' && <ValidacionHandoffs handoffs={handoffs} setHandoffs={setHandoffs} />}
-                            {activeTab === 'plantilla' && <FormularioEntrevistaCompleto />}
+                            {activeTab === 'tracker' && <TrackerEntrevistas entrevistas={entrevistas} setEntrevistas={setEntrevistas} onCompletarEntrevista={iniciarCompletarEntrevista} />}
+                            {activeTab === 'completar' && <FormularioEntrevistaCompleto entrevistaId={entrevistaEnProgreso} onVolver={volverAlTracker} />}
+                            {activeTab === 'procesos' && <MatrizProcesos procesos={procesos} />}
+                            {activeTab === 'handoffs' && <ValidacionHandoffs handoffs={handoffs} />}
                         </div>
                     </div>
                 </div>

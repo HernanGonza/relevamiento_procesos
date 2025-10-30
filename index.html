@@ -139,13 +139,12 @@
 
                     for (const proc of procesos) {
                         if (!proc.nombre || !proc.area_inicio) continue;
-                     const { nombre, frecuencia, tipo, prioridad, area_inicio, areas_intermedias, area_cierre } = proc;
+                    const { nombre, frecuencia, prioridad, area_inicio, areas_intermedias, area_cierre } = proc;
 const { data, error } = await supabase
     .from('procesos')
     .insert([{
         nombre,
         frecuencia,
-        tipo,
         prioridad,
         area_inicio,
         areas_intermedias,
@@ -738,4 +737,5 @@ const { data, error } = await supabase
     </script>
 </body>
 </html>
+
 

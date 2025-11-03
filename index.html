@@ -9,7 +9,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Mermaid para diagramas UML/flujo -->
+    <!-- Mermaid para diagramas UML -->
     <script type="module">
         import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
         mermaid.initialize({ startOnLoad: true, theme: 'default' });
@@ -374,7 +374,7 @@
             useEffect(() => {
                 async function cargar() {
                     const { data: entData } = await supabase.from('entrevistas').select('*').eq('id', entrevistaId).single();
-                    const { data: procData } = await supabase.from('procesos').select('*').eq('entrevista_id', entrevistaId);
+                    const {  procData } = await supabase.from('procesos').select('*').eq('entrevista_id', entrevistaId);
                     if (entData) setEntrevista(entData);
                     if (procData) setProcesos(procData);
                     setLoading(false);
@@ -450,7 +450,7 @@
             useEffect(() => {
                 async function cargar() {
                     const { data: procData } = await supabase.from('procesos').select('*').eq('id', procesoId).single();
-                    const { data: pasosData } = await supabase.from('pasos_proceso').select('*').eq('proceso_id', procesoId).order('orden');
+                    const {  pasosData } = await supabase.from('pasos_proceso').select('*').eq('proceso_id', procesoId).order('orden');
                     if (procData) setProceso(procData);
                     if (pasosData) setPasos(pasosData);
                     setLoading(false);
@@ -461,28 +461,51 @@
             if (loading) return <div className="p-6 text-center">Cargando...</div>;
             if (!proceso) return <div className="p-6 text-center">No encontrado</div>;
 
-            // Generar código Mermaid
-            let mermaidCode = 'flowchart TD\n';
-            pasos.forEach((paso, idx) => {
-                const nodeId = `P${paso.orden}`;
-                const nextId = idx < pasos.length - 1 ? `P${pasos[idx + 1].orden}` : null;
+            // === Generar código Mermaid con formas UML ===
+            let mermaidCode = 'graph TD\n';
+            const nodoInicio = 'Inicio((Inicio))';
+            const nodoFin = 'Fin((Fin))';
+            mermaidCode += `  ${nodoInicio}\n`;
 
-                // Nodo principal
-                mermaidCode += `  ${nodeId}["${paso.descripcion.replace(/"/g, '\\"')}"]\n`;
+            if (pasos.length === 0) {
+                mermaidCode += `  ${nodoInicio} --> ${nodoFin}\n`;
+            } else {
+                const primerId = `P1`;
+                mermaidCode += `  ${primerId}[${pasos[0].descripcion.replace(/"/g, '\\"')}]\n`;
+                mermaidCode += `  ${nodoInicio} --> ${primerId}\n`;
 
-                if (paso.tiene_decision) {
-                    const condId = `C${paso.orden}`;
-                    mermaidCode += `  ${nodeId} --> ${condId}{"${paso.condicion_decision.replace(/"/g, '\\"')}"}\n`;
-                    if (paso.destino_si_cumple) {
-                        mermaidCode += `  ${condId} -->|Sí| S${paso.orden}["${paso.destino_si_cumple.replace(/"/g, '\\"')}"]\n`;
+                pasos.forEach((paso, idx) => {
+                    const nodoActual = `P${idx + 1}`;
+                    const nodoSiguiente = idx < pasos.length - 1 ? `P${idx + 2}` : null;
+
+                    if (paso.tiene_decision) {
+                        const condId = `C${idx + 1}`;
+                        mermaidCode += `  ${condId}{${paso.condicion_decision.replace(/"/g, '\\"')}}\n`;
+                        mermaidCode += `  ${nodoActual} --> ${condId}\n`;
+
+                        if (paso.destino_si_cumple) {
+                            const siId = `SI${idx + 1}`;
+                            mermaidCode += `  ${siId}[${paso.destino_si_cumple.replace(/"/g, '\\"')}]\n`;
+                            mermaidCode += `  ${condId} -->|Sí| ${siId}\n`;
+                            mermaidCode += `  ${siId} --> ${nodoFin}\n`;
+                        }
+                        if (paso.destino_si_no_cumple) {
+                            const noId = `NO${idx + 1}`;
+                            mermaidCode += `  ${noId}[${paso.destino_si_no_cumple.replace(/"/g, '\\"')}]\n`;
+                            mermaidCode += `  ${condId} -->|No| ${noId}\n`;
+                            mermaidCode += `  ${noId} --> ${nodoFin}\n`;
+                        }
+                    } else {
+                        if (nodoSiguiente) {
+                            mermaidCode += `  ${nodoSiguiente}[${pasos[idx + 1].descripcion.replace(/"/g, '\\"')}]\n`;
+                            mermaidCode += `  ${nodoActual} --> ${nodoSiguiente}\n`;
+                        } else {
+                            mermaidCode += `  ${nodoActual} --> ${nodoFin}\n`;
+                        }
                     }
-                    if (paso.destino_si_no_cumple) {
-                        mermaidCode += `  ${condId} -->|No| N${paso.orden}["${paso.destino_si_no_cumple.replace(/"/g, '\\"')}"]\n`;
-                    }
-                } else if (nextId) {
-                    mermaidCode += `  ${nodeId} --> ${nextId}\n`;
-                }
-            });
+                });
+            }
+            mermaidCode += `  ${nodoFin}\n`;
 
             return (
                 <div className="bg-white p-6 rounded border max-w-6xl mx-auto">
@@ -504,9 +527,100 @@
                         <div><span className="text-sm text-gray-600">Estado:</span> <p className="font-medium capitalize">{proceso.estado_relevamiento?.replace('_', ' ')}</p></div>
                     </div>
 
-                    {/* Diagrama Mermaid */}
-                    <div className="mb-6">
-                        <h3 className="font-bold text-lg mb-2">Diagrama de Flujo (UML-style)</h3>
+                    {/* === Diagrama visual original === */}
+                    <div className="mb-8">
+                        <h3 className="font-bold text-lg mb-4">Diagrama Visual (Interactivo)</h3>
+                        <div className="space-y-4">
+                            {pasos.map((paso, idx) => (
+                                <div key={paso.id}>
+                                    <div className="flex items-start gap-4">
+                                        <div className="flex-shrink-0 w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center font-bold">
+                                            {paso.orden}
+                                        </div>
+                                        <div className="flex-1 border-2 border-blue-200 rounded-lg p-4 bg-blue-50">
+                                            <h4 className="font-semibold mb-2">{paso.descripcion}</h4>
+                                            <div className="grid grid-cols-2 gap-3 text-sm">
+                                                {paso.responsable_rol && (
+                                                    <div>
+                                                        <span className="text-gray-600">Responsable:</span> {paso.responsable_rol}
+                                                    </div>
+                                                )}
+                                                {paso.area && (
+                                                    <div>
+                                                        <span className="text-gray-600">Área:</span> <span className="font-medium">{paso.area}</span>
+                                                    </div>
+                                                )}
+                                                {paso.herramienta && (
+                                                    <div>
+                                                        <span className="text-gray-600">Herramienta:</span> {paso.herramienta}
+                                                    </div>
+                                                )}
+                                                {paso.plazos && (
+                                                    <div>
+                                                        <span className="text-gray-600">Plazo:</span> {paso.plazos}
+                                                    </div>
+                                                )}
+                                            </div>
+                                            {paso.datos_necesarios && (
+                                                <div className="mt-2 text-sm">
+                                                    <span className="text-gray-600">Datos necesarios:</span> {paso.datos_necesarios}
+                                                </div>
+                                            )}
+                                            {paso.documentos_generados && (
+                                                <div className="mt-1 text-sm">
+                                                    <span className="text-gray-600">Documentos:</span> {paso.documentos_generados}
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {paso.tiene_decision && (
+                                        <div className="ml-12 mt-2 mb-2">
+                                            <div className="border-2 border-yellow-400 rounded-lg p-3 bg-yellow-50">
+                                                <div className="font-semibold text-sm mb-2">❓ Decisión: {paso.condicion_decision}</div>
+                                                <div className="flex gap-4 text-sm">
+                                                    {paso.destino_si_cumple && (
+                                                        <div className="flex-1">
+                                                            <span className="text-green-700">✓ Si cumple:</span> {paso.destino_si_cumple}
+                                                        </div>
+                                                    )}
+                                                    {paso.destino_si_no_cumple && (
+                                                        <div className="flex-1">
+                                                            <span className="text-red-700">✗ Si no cumple:</span> {paso.destino_si_no_cumple}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {paso.pasa_a_otra_area && paso.area_destino && (
+                                        <div className="ml-12 mt-2 mb-2">
+                                            <div className="border-2 border-orange-400 rounded-lg p-3 bg-orange-50">
+                                                <div className="flex items-center gap-2 font-semibold text-sm mb-1">
+                                                    🔄 Pasa a: <span className="text-orange-700">{paso.area_destino}</span>
+                                                </div>
+                                                {paso.que_envia && (
+                                                    <div className="text-sm">Envía: {paso.que_envia}</div>
+                                                )}
+                                                {paso.espera_respuesta && (
+                                                    <div className="text-sm text-orange-700 mt-1">⏳ Espera respuesta</div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {idx < pasos.length - 1 && (
+                                        <div className="ml-4 h-6 w-0.5 bg-blue-300"></div>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* === Diagrama Mermaid UML === */}
+                    <div className="mb-8">
+                        <h3 className="font-bold text-lg mb-2">Diagrama UML (Exportable)</h3>
                         <pre className="mermaid">
                             {mermaidCode}
                         </pre>
@@ -681,8 +795,6 @@
                 </div>
             );
         }
-
-        // ========== APP PRINCIPAL ==========
 
         function App() {
             const [activeTab, setActiveTab] = useState('tracker');

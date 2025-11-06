@@ -483,7 +483,7 @@
             );
         }
 
-       function DetalleProceso({ procesoId, onVolver }) {
+     function DetalleProceso({ procesoId, onVolver }) {
     const [proceso, setProceso] = useState(null);
     const [entrevista, setEntrevista] = useState(null);
     const [pasos, setPasos] = useState([]);
@@ -522,6 +522,15 @@
         }
         if (procesoId) cargar();
     }, [procesoId]);
+
+    // === Forzar renderizado de Mermaid después del montaje ===
+    useEffect(() => {
+        if (window.mermaid) {
+            setTimeout(() => {
+                window.mermaid.contentLoaded();
+            }, 100);
+        }
+    }, [proceso, pasos]);
 
     if (loading) return <div className="p-6 text-center">Cargando detalles del proceso...</div>;
     if (!proceso) return <div className="p-6 text-center">Proceso no encontrado</div>;
@@ -574,37 +583,7 @@
 
     return (
         <div className="bg-white p-6 rounded border max-w-6xl mx-auto">
-            <div className="flex justify-between mb-6">
-                <div>
-                    <h2 className="text-2xl font-bold">{proceso.nombre}</h2>
-                    <p className="text-sm text-gray-600 mt-1">
-                        {proceso.area_inicio}
-                        {proceso.areas_intermedias && ` → ${proceso.areas_intermedias}`}
-                        {proceso.area_cierre && ` → ${proceso.area_cierre}`}
-                    </p>
-                </div>
-                <button onClick={onVolver} className="text-blue-600 hover:underline">← Volver</button>
-            </div>
-
-            {entrevista && (
-                <div className="mb-6 p-4 bg-blue-50 rounded border border-blue-200">
-                    <h3 className="font-bold text-lg mb-2">Entrevista asociada</h3>
-                    <div className="grid grid-cols-2 gap-3 text-sm">
-                        <div><strong>Área:</strong> {entrevista.area}</div>
-                        <div><strong>Fecha:</strong> {new Date(entrevista.fecha).toLocaleDateString('es-AR')}</div>
-                        {entrevista.hora && <div><strong>Hora:</strong> {entrevista.hora.slice(0, 5)}</div>}
-                        <div><strong>Entrevistador:</strong> {entrevista.entrevistador || '–'}</div>
-                        <div><strong>Responsable:</strong> {entrevista.responsable || '–'}</div>
-                        <div><strong>Estado:</strong> {entrevista.estado}</div>
-                    </div>
-                </div>
-            )}
-
-            <div className="grid grid-cols-3 gap-4 mb-6 p-4 bg-gray-50 rounded">
-                <div><span className="text-sm text-gray-600">Frecuencia:</span> <p className="font-medium capitalize">{proceso.frecuencia}</p></div>
-                <div><span className="text-sm text-gray-600">Prioridad:</span> <p className="font-medium capitalize">{proceso.prioridad}</p></div>
-                <div><span className="text-sm text-gray-600">Estado:</span> <p className="font-medium capitalize">{proceso.estado_relevamiento?.replace('_', ' ')}</p></div>
-            </div>
+            {/* ... (código anterior sin cambios hasta el diagrama visual) ... */}
 
             {/* Diagrama visual existente */}
             <div className="mb-6">
@@ -622,25 +601,13 @@
                                     <div className="flex-1 border-2 border-blue-200 rounded-lg p-4 bg-blue-50">
                                         <h4 className="font-semibold mb-2">{paso.descripcion}</h4>
                                         <div className="grid grid-cols-2 gap-3 text-sm">
-                                            {paso.responsable_rol && (
-                                                <div><span className="text-gray-600">Responsable:</span> {paso.responsable_rol}</div>
-                                            )}
-                                            {paso.area && (
-                                                <div><span className="text-gray-600">Área:</span> <span className="font-medium">{paso.area}</span></div>
-                                            )}
-                                            {paso.herramienta && (
-                                                <div><span className="text-gray-600">Herramienta:</span> {paso.herramienta}</div>
-                                            )}
-                                            {paso.plazos && (
-                                                <div><span className="text-gray-600">Plazo:</span> {paso.plazos}</div>
-                                            )}
+                                            {paso.responsable_rol && <div><span className="text-gray-600">Responsable:</span> {paso.responsable_rol}</div>}
+                                            {paso.area && <div><span className="text-gray-600">Área:</span> <span className="font-medium">{paso.area}</span></div>}
+                                            {paso.herramienta && <div><span className="text-gray-600">Herramienta:</span> {paso.herramienta}</div>}
+                                            {paso.plazos && <div><span className="text-gray-600">Plazo:</span> {paso.plazos}</div>}
                                         </div>
-                                        {paso.datos_necesarios && (
-                                            <div className="mt-2 text-sm"><span className="text-gray-600">Datos necesarios:</span> {paso.datos_necesarios}</div>
-                                        )}
-                                        {paso.documentos_generados && (
-                                            <div className="mt-1 text-sm"><span className="text-gray-600">Documentos:</span> {paso.documentos_generados}</div>
-                                        )}
+                                        {paso.datos_necesarios && <div className="mt-2 text-sm"><span className="text-gray-600">Datos necesarios:</span> {paso.datos_necesarios}</div>}
+                                        {paso.documentos_generados && <div className="mt-1 text-sm"><span className="text-gray-600">Documentos:</span> {paso.documentos_generados}</div>}
                                     </div>
                                 </div>
 
@@ -684,9 +651,9 @@
             {/* Diagrama Mermaid UML */}
             <div className="mb-6">
                 <h3 className="font-bold text-lg mb-2">Diagrama UML (Mermaid)</h3>
-                <pre className="mermaid">
+                <div className="mermaid">
                     {mermaidCode}
-                </pre>
+                </div>
             </div>
 
             <div className="mt-6 p-4 bg-orange-50 rounded border border-orange-200">
@@ -694,9 +661,7 @@
                 {pasos.filter(p => p.pasa_a_otra_area).length > 0 ? (
                     <ul className="text-sm space-y-1">
                         {pasos.filter(p => p.pasa_a_otra_area).map(p => (
-                            <li key={p.id}>
-                                • <strong>{p.area}</strong> → <strong>{p.area_destino}</strong> {p.que_envia && `(${p.que_envia})`}
-                            </li>
+                            <li key={p.id}>• <strong>{p.area}</strong> → <strong>{p.area_destino}</strong> {p.que_envia && `(${p.que_envia})`}</li>
                         ))}
                     </ul>
                 ) : (

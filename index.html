@@ -69,7 +69,8 @@
                         }
                     });
                 }
-            }, [entrevistaId]);
+                })();
+}, [entrevistaId]);
 
             const publicoOpciones = ['Ciudadanos', 'Empresas privadas', 'Municipios', 'ONGs', 'Otras áreas del Ministerio', 'Otros organismos provinciales', 'Organismos nacionales', 'Otros'];
             const togglePublico = (valor) => {
@@ -383,7 +384,8 @@
                     setLoading(false);
                 }
                 cargar();
-            }, [entrevistaId]);
+                })();
+}, [entrevistaId]);
 
             if (loading) return <div className="p-6">Cargando...</div>;
             if (!entrevista) return <div className="p-6">No encontrada</div>;
@@ -519,7 +521,8 @@
         }
         cargar();
         return () => (cancelado = true);
-      }, [procesoId]);
+          })();
+}, [procesoId]);
 
       if (loading) return <div className="p-6 text-center">Cargando detalles...</div>;
       if (!proceso) return <div className="p-6 text-center text-red-600">No se encontró el proceso</div>;
@@ -559,7 +562,8 @@ Inicio((Inicio))
             }
           }
         }
-      }, [pasos]);
+          })();
+}, [pasos]);
 
       return (
         <div className="bg-white p-6 rounded border max-w-6xl mx-auto">
@@ -617,7 +621,8 @@ Inicio((Inicio))
                     }
                 }
                 if (procesoId) cargar();
-            }, [procesoId]);
+                })();
+}, [procesoId]);
 
             if (loading) return <div className="p-6 text-center">Cargando detalles del proceso...</div>;
             if (!proceso) return <div className="p-6 text-center">Proceso no encontrado</div>;
@@ -675,7 +680,8 @@ Inicio((Inicio))
                         window.mermaid.contentLoaded();
                     }, 100);
                 }
-            }, [pasos]);
+                })();
+}, [pasos]);
 
             return (
                 <div className="bg-white p-6 rounded border max-w-6xl mx-auto">
@@ -953,7 +959,8 @@ Inicio((Inicio))
 
             useEffect(() => {
                 loadData();
-            }, []);
+                })();
+}, []);
 
             async function loadData() {
                 try {

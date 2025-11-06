@@ -9,10 +9,11 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Mermaid v11 (UMD build compatible with in-browser Babel) -->
-    <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
-    <script>
+    <!-- Mermaid v11 -->
+    <script type="module">
+        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
         mermaid.initialize({ startOnLoad: false });
+        window.mermaid = mermaid;
     </script>
 </head>
 <body>
@@ -69,8 +70,7 @@
                         }
                     });
                 }
-                })();
-}, [entrevistaId]);
+            }, [entrevistaId]);
 
             const publicoOpciones = ['Ciudadanos', 'Empresas privadas', 'Municipios', 'ONGs', 'Otras áreas del Ministerio', 'Otros organismos provinciales', 'Organismos nacionales', 'Otros'];
             const togglePublico = (valor) => {
@@ -207,6 +207,7 @@
                         <button onClick={onVolver} className="text-blue-600 hover:underline">← Volver</button>
                     </div>
 
+                    {/* Parte 1: Identificación */}
                     <div className="mb-8 p-4 border rounded bg-gray-50">
                         <h3 className="font-bold text-lg mb-3 text-blue-900">Parte 1: Identificación del Área</h3>
                         <div className="grid grid-cols-2 gap-4 mb-4">
@@ -229,6 +230,7 @@
                         </div>
                     </div>
 
+                    {/* Parte 2 y 3: Procesos */}
                     <div className="mb-8">
                         <div className="flex justify-between mb-4">
                             <h3 className="font-bold text-lg text-blue-900">Parte 2 y 3: Procesos y Pasos Detallados</h3>
@@ -264,6 +266,7 @@
                                     <input type="text" placeholder="Área que cierra" className="border p-2 rounded" value={proc.area_cierre} onChange={e => actualizarProceso(idx, 'area_cierre', e.target.value)} />
                                 </div>
 
+                                {/* Pasos */}
                                 <div className="mt-4">
                                     <div className="flex justify-between mb-2">
                                         <span className="font-medium text-sm">Pasos del proceso:</span>
@@ -298,6 +301,7 @@
                                                 <input type="text" placeholder="Documentos generados" className="border p-2 rounded w-full text-sm" value={paso.documentos_generados} onChange={e => actualizarPaso(idx, pidx, 'documentos_generados', e.target.value)} />
                                                 <input type="text" placeholder="Plazos" className="border p-2 rounded w-full text-sm" value={paso.plazos} onChange={e => actualizarPaso(idx, pidx, 'plazos', e.target.value)} />
 
+                                                {/* Punto de decisión */}
                                                 <div className="border-t pt-2">
                                                     <label className="flex items-center gap-2 text-sm font-medium">
                                                         <input type="checkbox" checked={paso.tiene_decision} onChange={e => actualizarPaso(idx, pidx, 'tiene_decision', e.target.checked)} className="rounded" />
@@ -312,6 +316,7 @@
                                                     )}
                                                 </div>
 
+                                                {/* Handoff */}
                                                 <div className="border-t pt-2">
                                                     <label className="flex items-center gap-2 text-sm font-medium text-orange-700">
                                                         <input type="checkbox" checked={paso.pasa_a_otra_area} onChange={e => actualizarPaso(idx, pidx, 'pasa_a_otra_area', e.target.checked)} className="rounded" />
@@ -336,6 +341,7 @@
                         ))}
                     </div>
 
+                    {/* Parte 4 y 5: Complementaria */}
                     <div className="mb-8 p-4 border rounded bg-gray-50">
                         <h3 className="font-bold text-lg mb-3 text-blue-900">Parte 4 y 5: Información Complementaria y Cierre</h3>
                         <div className="space-y-3">
@@ -369,8 +375,8 @@
 
             useEffect(() => {
                 async function cargar() {
-                    const {  data: entData } = await supabase.from('entrevistas').select('*').eq('id', entrevistaId).single();
-                    const {  data: procData } = await supabase.from('procesos').select('*').eq('entrevista_id', entrevistaId);
+                    const {   entData } = await supabase.from('entrevistas').select('*').eq('id', entrevistaId).single();
+                    const {   procData } = await supabase.from('procesos').select('*').eq('entrevista_id', entrevistaId);
                     if (entData) setEntrevista(entData);
                     if (procData) {
                         setProcesos(procData);
@@ -384,8 +390,7 @@
                     setLoading(false);
                 }
                 cargar();
-                })();
-}, [entrevistaId]);
+            }, [entrevistaId]);
 
             if (loading) return <div className="p-6">Cargando...</div>;
             if (!entrevista) return <div className="p-6">No encontrada</div>;
@@ -480,135 +485,32 @@
             );
         }
 
-        
-    function DetalleProceso({ procesoId, onVolver }) {
-      const [proceso, setProceso] = useState(null);
-      const [entrevista, setEntrevista] = useState(null);
-      const [pasos, setPasos] = useState([]);
-      const [loading, setLoading] = useState(true);
+        function DetalleProceso({ procesoId, onVolver }) {
+            const [proceso, setProceso] = useState(null);
+            const [entrevista, setEntrevista] = useState(null);
+            const [pasos, setPasos] = useState([]);
+            const [loading, setLoading] = useState(true);
 
-      useEffect(() => {
-        let cancelado = false;
-        async function cargar() {
-          try {
-            const { data: procData } = await supabase
-              .from('procesos')
-              .select('*')
-              .eq('id', procesoId)
-              .single();
-
-            if (!procData || cancelado) return;
-            setProceso(procData);
-
-            const { data: entData } = await supabase
-              .from('entrevistas')
-              .select('*')
-              .eq('id', procData.entrevista_id)
-              .single();
-            if (!cancelado) setEntrevista(entData || null);
-
-            const { data: pasosData } = await supabase
-              .from('pasos_proceso')
-              .select('*')
-              .eq('proceso_id', procesoId)
-              .order('orden', { ascending: true });
-            if (!cancelado) setPasos(pasosData || []);
-          } catch (err) {
-            console.error(err);
-          } finally {
-            if (!cancelado) setLoading(false);
-          }
-        }
-        cargar();
-        return () => (cancelado = true);
-          })();
-}, [procesoId]);
-
-      if (loading) return <div className="p-6 text-center">Cargando detalles...</div>;
-      if (!proceso) return <div className="p-6 text-center text-red-600">No se encontró el proceso</div>;
-
-      // ==== generar diagrama ====
-      let mermaidCode = 'graph TD
-Inicio((Inicio))
-';
-      const fin = 'Fin((Fin))';
-
-      pasos.forEach((p, i) => {
-        const id = `P${i + 1}`;
-        mermaidCode += `  ${id}["${(p.descripcion || '').replace(/"/g, '\\"')}"]
-`;
-        if (i === 0) mermaidCode += `  Inicio --> ${id}
-`;
-        if (i < pasos.length - 1) mermaidCode += `  ${id} --> P${i + 2}
-`;
-        else mermaidCode += `  ${id} --> ${fin}
-`;
-      });
-      mermaidCode += `  ${fin}
-`;
-
-      useEffect(() => {
-        if (window.mermaid) {
-          const el = document.getElementById(`mermaid-diagram-${procesoId}`);
-          if (el) {
-            el.innerHTML = '';
-            try {
-              window.mermaid.render(`graph-${procesoId}`, mermaidCode, (svg) => {
-                el.innerHTML = svg;
-              });
-            } catch (err) {
-              console.error('Error renderizando Mermaid:', err);
-              el.innerHTML = '<div class="text-red-600">No se pudo renderizar el diagrama.</div>';
-            }
-          }
-        }
-          })();
-}, [pasos]);
-
-      return (
-        <div className="bg-white p-6 rounded border max-w-6xl mx-auto">
-          <div className="flex justify-between mb-6">
-            <div>
-              <h2 className="text-2xl font-bold">{proceso.nombre || 'Sin nombre'}</h2>
-              <p className="text-sm text-gray-600 mt-1">
-                {(proceso.area_inicio || '')}
-                {proceso.areas_intermedias && ` → ${proceso.areas_intermedias}`}
-                {proceso.area_cierre && ` → ${proceso.area_cierre}`}
-              </p>
-            </div>
-            <button onClick={onVolver} className="text-blue-600 hover:underline">← Volver</button>
-          </div>
-
-          {entrevista && (
-            <div className="mb-6 p-4 bg-blue-50 rounded border border-blue-200">
-              <h3 className="font-bold text-lg mb-2">Entrevista asociada</h3>
-              <div className="grid grid-cols-2 gap-3 text-sm">
-                <div><strong>Área:</strong> {entrevista.area || '-'}</div>
-                <div><strong>Fecha:</strong> {entrevista.fecha ? new Date(entrevista.fecha).toLocaleDateString('es-AR') : '-'}</div>
-                {entrevista.hora && <div><strong>Hora:</strong> {entrevista.hora.slice(0, 5)}</div>}
-                <div><strong>Entrevistador:</strong> {entrevista.entrevistador || '-'}</div>
-                <div><strong>Responsable:</strong> {entrevista.responsable || '-'}</div>
-                <div><strong>Estado:</strong> {entrevista.estado || '-'}</div>
-              </div>
-            </div>
-          )}
-
-          <div className="mb-6">
-            <h3 className="font-bold text-lg mb-2">Diagrama UML (Mermaid)</h3>
-            <div id={`mermaid-diagram-${procesoId}`} className="mermaid border rounded p-4 bg-gray-50"></div>
-          </div>
-        </div>
-      );
-    }
-
+            useEffect(() => {
+                async function cargar() {
+                    try {
+                        const {   procData } = await supabase
+                            .from('procesos')
+                            .select('*')
+                            .eq('id', procesoId)
+                            .single();
+                        if (!procData) {
+                            setLoading(false);
+                            return;
+                        }
                         setProceso(procData);
-                        const {  data: entData } = await supabase
+                        const {   entData } = await supabase
                             .from('entrevistas')
                             .select('*')
                             .eq('id', procData.entrevista_id)
                             .single();
                         setEntrevista(entData);
-                        const {  data: pasosData } = await supabase
+                        const {   pasosData } = await supabase
                             .from('pasos_proceso')
                             .select('*')
                             .eq('proceso_id', procesoId)
@@ -621,22 +523,23 @@ Inicio((Inicio))
                     }
                 }
                 if (procesoId) cargar();
-                })();
-}, [procesoId]);
+            }, [procesoId]);
 
             if (loading) return <div className="p-6 text-center">Cargando detalles del proceso...</div>;
             if (!proceso) return <div className="p-6 text-center">Proceso no encontrado</div>;
 
-            // Generar código Mermaid
+            // === Generar código Mermaid con formas UML ===
             let mermaidCode = 'graph TD\n';
             const inicio = 'Inicio((Inicio))';
             const fin = 'Fin((Fin))';
             mermaidCode += `  ${inicio}\n`;
 
-            if (pasos.length > 0) {
-                const p1 = `P1`;
-                mermaidCode += `  ${p1}[${pasos[0].descripcion.replace(/"/g, '\\"')}]\n`;
-                mermaidCode += `  ${inicio} --> ${p1}\n`;
+            if (pasos.length === 0) {
+                mermaidCode += `  ${inicio} --> ${fin}\n`;
+            } else {
+                const primero = `P1`;
+                mermaidCode += `  ${primero}[${pasos[0].descripcion.replace(/"/g, '\\"')}]\n`;
+                mermaidCode += `  ${inicio} --> ${primero}\n`;
 
                 pasos.forEach((paso, i) => {
                     const actual = `P${i + 1}`;
@@ -668,20 +571,17 @@ Inicio((Inicio))
                         }
                     }
                 });
-            } else {
-                mermaidCode += `  ${inicio} --> ${fin}\n`;
             }
             mermaidCode += `  ${fin}\n`;
 
-            // Renderizar Mermaid después de cargar
+            // === Renderizado automático de Mermaid ===
             useEffect(() => {
                 if (window.mermaid && pasos.length > 0) {
                     setTimeout(() => {
                         window.mermaid.contentLoaded();
                     }, 100);
                 }
-                })();
-}, [pasos]);
+            }, [pasos]);
 
             return (
                 <div className="bg-white p-6 rounded border max-w-6xl mx-auto">
@@ -777,9 +677,10 @@ Inicio((Inicio))
                     {/* Diagrama Mermaid UML */}
                     <div className="mb-6">
                         <h3 className="font-bold text-lg mb-2">Diagrama UML (Mermaid)</h3>
-  {/* Contenedor donde se inyectará el SVG de Mermaid */}
-  <div id={`mermaid-diagram-${procesoId}`} className="mermaid border rounded p-4 bg-gray-50"></div>
-</div>
+                        <pre className="mermaid">
+                            {mermaidCode}
+                        </pre>
+                    </div>
 
                     <div className="mt-6 p-4 bg-orange-50 rounded border border-orange-200">
                         <h4 className="font-semibold mb-2">🔄 Handoffs en este proceso:</h4>
@@ -959,8 +860,7 @@ Inicio((Inicio))
 
             useEffect(() => {
                 loadData();
-                })();
-}, []);
+            }, []);
 
             async function loadData() {
                 try {

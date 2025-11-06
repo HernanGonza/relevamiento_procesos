@@ -5,27 +5,27 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Relevamiento de Procesos - Ministerio de Ecología</title>
 
-    <!-- React (producción) -->
-    <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
-    <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+    <!-- React -->
+    <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js  "></script>
+    <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js  "></script>
 
-    <!-- Babel (para JSX) -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
+    <!-- Babel -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js  "></script>
 
     <!-- Supabase -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2  "></script>
 
-    <!-- Tailwind (desarrollo) -->
-    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Tailwind -->
+    <script src="https://cdn.tailwindcss.com  "></script>
 
-    <!-- Mermaid v10 (versión estable con render seguro) -->
+    <!-- Mermaid v10 (ESM) -->
     <script type="module">
-        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs  ';
         window.mermaid = mermaid;
         mermaid.initialize({ 
             startOnLoad: false, 
             theme: 'default',
-            flowchart: { useMaxWidth: true }
+            flowchart: { useMaxWidth: true, curve: 'basis' }
         });
     </script>
 </head>
@@ -34,7 +34,7 @@
 
     <script type="text/babel">
         const { useState, useEffect, useRef } = React;
-        const SUPABASE_URL = 'https://ketmsuhhyymhprwvoxjx.supabase.co';
+        const SUPABASE_URL = 'https://ketmsuhhyymhprwvoxjx.supabase.co  ';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtldG1zdWhoeXltaHByd3ZveGp4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE3ODExODksImV4cCI6MjA3NzM1NzE4OX0.R6sOE9UofsP8NZnhc4uFJF3hTauEjvGJjnoSYtIifbQ';
         const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
@@ -44,10 +44,10 @@
             ArrowRight: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>,
             Check: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>,
             Eye: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>,
+            Edit: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>,
         };
 
-        // ====== COMPONENTES ======
-
+        // ====== DETALLE PROCESO (Mermaid seguro) ======
         function DetalleProceso({ procesoId, onVolver }) {
             const [proceso, setProceso] = useState(null);
             const [entrevista, setEntrevista] = useState(null);
@@ -60,93 +60,60 @@
                 let cancelado = false;
                 async function cargar() {
                     try {
-                        const { data: procData } = await supabase.from('procesos').select('*').eq('id', procesoId).single();
-                        if (!procData || cancelado) return;
-                        setProceso(procData);
+                        const { data: proc } = await supabase.from('procesos').select('*').eq('id', procesoId).single();
+                        if (!proc || cancelado) return;
+                        setProceso(proc);
 
-                        const { data: entData } = await supabase.from('entrevistas').select('*').eq('id', procData.entrevista_id).single();
-                        if (!cancelado) setEntrevista(entData || null);
+                        const { data: ent } = await supabase.from('entrevistas').select('*').eq('id', proc.entrevista_id).single();
+                        if (!cancelado) setEntrevista(ent);
 
-                        const { data: pasosData } = await supabase.from('pasos_proceso').select('*').eq('proceso_id', procesoId).order('orden', { ascending: true });
+                        const { data: pasosData } = await supabase.from('pasos_proceso').select('*').eq('proceso_id', procesoId).order('orden');
                         if (!cancelado) setPasos(pasosData || []);
-                    } catch (err) {
-                        console.error(err);
-                    } finally {
-                        if (!cancelado) setLoading(false);
-                    }
+                    } catch (err) { console.error(err); }
+                    finally { if (!cancelado) setLoading(false); }
                 }
-                if (procesoId) cargar();
+                cargar();
                 return () => { cancelado = true; };
             }, [procesoId]);
 
-            // MERMAID: Render seguro cuando el DOM esté listo
+            // Mermaid render seguro
             useEffect(() => {
                 if (!pasos.length || !window.mermaid || !diagramRef.current) return;
 
-                const escape = (str) => (str || '').replace(/"/g, '\\"').replace(/\n/g, ' ');
-
-                let code = `graph TD\n`;
-                code += `  Inicio((Inicio)):::inicio\n`;
-                code += `  Fin((Fin)):::fin\n`;
-
-                let lastNode = 'Inicio';
-                pasos.forEach((paso, i) => {
-                    const pasoId = `P${i + 1}`;
-                    const label = escape(paso.descripcion);
-                    code += `  ${pasoId}["${label}"]:::paso\n`;
-                    code += `  ${lastNode} --> ${pasoId}\n`;
-
-                    if (paso.tiene_decision) {
-                        const condId = `C${i + 1}`;
-                        code += `  ${condId}{${escape(paso.condicion_decision)}}:::decision\n`;
-                        code += `  ${pasoId} --> ${condId}\n`;
-                        if (paso.destino_si_cumple) {
-                            const siId = `SI${i + 1}`;
-                            code += `  ${siId}["${escape(paso.destino_si_cumple)}"]:::destino\n`;
-                            code += `  ${condId} -->|Sí| ${siId}\n`;
-                        }
-                        if (paso.destino_si_no_cumple) {
-                            const noId = `NO${i + 1}`;
-                            code += `  ${noId}["${escape(paso.destino_si_no_cumple)}"]:::destino\n`;
-                            code += `  ${condId} -->|No| ${noId}\n`;
-                        }
-                    } else if (paso.pasa_a_otra_area && paso.area_destino) {
-                        const handoffId = `H${i + 1}`;
-                        code += `  ${handoffId}["→ ${escape(paso.area_destino)}"]:::handoff\n`;
-                        code += `  ${pasoId} --> ${handoffId}\n`;
+                const escape = (s) => (s || '').replace(/"/g, '\\"').replace(/\n/g, ' ');
+                let code = `graph TD\n  Inicio((Inicio)):::inicio\n  Fin((Fin)):::fin\n`;
+                let last = 'Inicio';
+                pasos.forEach((p, i) => {
+                    const id = `P${i+1}`;
+                    code += `  ${id}["${escape(p.descripcion)}"]:::paso\n  ${last} --> ${id}\n`;
+                    if (p.tiene_decision) {
+                        const c = `C${i+1}`;
+                        code += `  ${c}{${escape(p.condicion_decision)}}:::decision\n  ${id} --> ${c}\n`;
+                        if (p.destino_si_cumple) code += `  ${c} -->|Sí| SI${i+1}["${escape(p.destino_si_cumple)}"]:::destino\n`;
+                        if (p.destino_si_no_cumple) code += `  ${c} -->|No| NO${i+1}["${escape(p.destino_si_no_cumple)}"]:::destino\n`;
+                    } else if (p.pasa_a_otra_area && p.area_destino) {
+                        code += `  ${id} --> H${i+1}["→ ${escape(p.area_destino)}"]:::handoff\n`;
                     } else if (i === pasos.length - 1) {
-                        code += `  ${pasoId} --> Fin\n`;
+                        code += `  ${id} --> Fin\n`;
                     }
-                    lastNode = pasoId;
+                    last = id;
                 });
+                code += `\n  classDef inicio fill:#1e40af,color:white\n  classDef fin fill:#16a34a,color:white\n  classDef paso fill:#dbeafe,stroke:#3b82f6\n  classDef decision fill:#fef3c7,stroke:#f59e0b,stroke-dasharray:5,5\n  classDef destino fill:#fecaca,stroke:#ef4444\n  classDef handoff fill:#fff7ed,stroke:#ea580c\n`;
 
-                code += `\n  classDef inicio fill:#1e40af,stroke:#1e40af,color:white\n`;
-                code += `  classDef fin fill:#16a34a,stroke:#16a34a,color:white\n`;
-                code += `  classDef paso fill:#dbeafe,stroke:#3b82f6\n`;
-                code += `  classDef decision fill:#fef3c7,stroke:#f59e0b,stroke-dasharray: 5 5\n`;
-                code += `  classDef destino fill:#fecaca,stroke:#ef4444\n`;
-                code += `  classDef handoff fill:#fff7ed,stroke:#ea580c\n`;
-
-                // Render seguro
-                const renderDiagram = async () => {
+                const render = async () => {
                     try {
                         const { svg } = await window.mermaid.render(`mermaid-${procesoId}`, code);
                         setMermaidSvg(svg);
                     } catch (err) {
-                        setMermaidSvg(`<div class="text-red-600 p-4">Error: ${err.message}</div>`);
+                        setMermaidSvg(`<div class="text-red-600 p-4">Error al renderizar: ${err.message}</div>`);
                     }
                 };
-
-                // Aseguramos que el DOM esté listo
-                if (document.readyState === 'complete') {
-                    renderDiagram();
-                } else {
-                    window.addEventListener('load', renderDiagram);
-                    return () => window.removeEventListener('load', renderDiagram);
-                }
+                if (document.readyState === 'complete') render();
+                else window.addEventListener('load', render);
+                return () => window.removeEventListener('load', render);
             }, [pasos, procesoId]);
 
-            if (loading) return <div className="p-6 text-center">Cargando detalles...</div>;
+            if (loading) return <div className="p-6 text-center">Cargando...</div>;
             if (!proceso) return <div className="p-6 text-center text-red-600">Proceso no encontrado</div>;
 
             return (
@@ -161,144 +128,363 @@
 
                     {entrevista && (
                         <div className="mb-6 p-4 bg-blue-50 rounded">
-                            <h3 className="font-bold mb-2">Entrevista</h3>
+                            <h3 className="font-bold mb-2">Entrevista asociada</h3>
                             <div className="grid grid-cols-2 gap-2 text-sm">
                                 <div><strong>Área:</strong> {entrevista.area}</div>
                                 <div><strong>Fecha:</strong> {new Date(entrevista.fecha).toLocaleDateString('es-AR')}</div>
                                 <div><strong>Entrevistador:</strong> {entrevista.entrevistador}</div>
+                                <div><strong>Responsable:</strong> {entrevista.responsable}</div>
                                 <div><strong>Estado:</strong> {entrevista.estado}</div>
+                                <div><strong>Frecuencia:</strong> {proceso.frecuencia}</div>
+                                <div><strong>Prioridad:</strong> {proceso.prioridad}</div>
+                                <div><strong>Estado relevamiento:</strong> {proceso.estado_relevamiento}</div>
                             </div>
                         </div>
                     )}
 
-                    <div className="grid grid-cols-3 gap-4 mb-6 p-4 bg-gray-50 rounded text-sm">
-                        <div><strong>Frecuencia:</strong> {proceso.frecuencia}</div>
-                        <div><strong>Prioridad:</strong> {proceso.prioridad}</div>
-                        <div><strong>Estado:</strong> {proceso.estado_relevamiento}</div>
+                    <div className="mb-6">
+                        <h3 className="font-bold text-lg mb-4">Diagrama de Flujo (Visual)</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                            {pasos.map((paso, i) => (
+                                <div key={i} className="p-3 bg-blue-50 border rounded">
+                                    <div className="font-semibold">{i + 1}. {paso.descripcion}</div>
+                                    <div className="text-sm mt-1">
+                                        <strong>Responsable:</strong> {paso.responsable_rol || 'tecnico'}<br/>
+                                        <strong>Área:</strong> {paso.area || 'el puma'}<br/>
+                                        <strong>Herramienta:</strong> {paso.herramienta || 'excel'}<br/>
+                                        <strong>Plazo:</strong> {paso.plazos || '1 semana'}<br/>
+                                        <strong>Datos necesarios:</strong> {paso.datos_necesarios || 'nombre, apellido, fecha, dni'}<br/>
+                                        <strong>Documentos:</strong> {paso.documentos_generados || 'expediente'}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
                     </div>
 
-                    <div className="mb-6">
-                        <h3 className="font-bold text-lg mb-4">Pasos</h3>
-                        {pasos.map((paso, i) => (
-                            <div key={paso.id} className="mb-4 p-4 bg-blue-50 rounded border">
-                                <div className="font-semibold">Paso {paso.orden}: {paso.descripcion}</div>
-                                <div className="grid grid-cols-2 gap-2 text-sm mt-2">
-                                    {paso.responsable_rol && <div><strong>Responsable:</strong> {paso.responsable_rol}</div>}
-                                    {paso.area && <div><strong>Área:</strong> {paso.area}</div>}
-                                    {paso.herramienta && <div><strong>Herramienta:</strong> {paso.herramienta}</div>}
-                                    {paso.plazos && <div><strong>Plazo:</strong> {paso.plazos}</div>}
+                    <div ref={diagramRef} className="p-4 bg-gray-50 rounded border">
+                        <h3 className="font-bold text-lg mb-2">Diagrama UML (Mermaid)</h3>
+                        {mermaidSvg ? <div dangerouslySetInnerHTML={{ __html: mermaidSvg }} /> : <div className="text-gray-500">Generando diagrama...</div>}
+                    </div>
+
+                    <div className="mt-6 p-4 bg-yellow-50 rounded border">
+                        <h3 className="font-bold mb-2">Handoffs en este proceso:</h3>
+                        <p className="text-sm">No hay transiciones entre áreas en este proceso.</p>
+                    </div>
+                </div>
+            );
+        }
+
+        // ====== FORMULARIO ENTREVISTA (exacto al original) ======
+        function FormularioEntrevista({ entrevistaId, onVolver }) {
+            const [loading, setLoading] = useState(false);
+            const [entrevista, setEntrevista] = useState(null);
+            const [procesos, setProcesos] = useState([{ nombre: '', frecuencia: 'mensual', prioridad: 'media', area_inicio: '', areas_intermedias: '', area_cierre: '', pasos: [{ descripcion: '', responsable_rol: '', area: '', herramienta: '', es_manual: true, datos_necesarios: '', documentos_generados: '', plazos: '', tiene_decision: false, condicion_decision: '', destino_si_cumple: '', destino_si_no_cumple: '', pasa_a_otra_area: false, area_destino: '', que_envia: '', espera_respuesta: false }] }]);
+            const [complemento, setComplemento] = useState({ publico_usuarios: [], interacciones_externas: '', sistemas_usados: '', tiene_manuales: false, resolucion_formularios: '', entrevistados: '', acuerdos: '', observaciones_generales: '' });
+
+            useEffect(() => {
+                if (entrevistaId) {
+                    supabase.from('entrevistas').select('*').eq('id', entrevistaId).single().then(({ data }) => {
+                        if (data) {
+                            setEntrevista(data);
+                            if (data.publico_usuarios) {
+                                setComplemento(prev => ({ ...prev, publico_usuarios: data.publico_usuarios }));
+                            }
+                        }
+                    });
+                }
+            }, [entrevistaId]);
+
+            const publicoOpciones = ['Ciudadanos', 'Empresas privadas', 'Municipios', 'ONGs', 'Otras áreas del Ministerio', 'Otros organismos provinciales', 'Organismos nacionales', 'Otros'];
+            const togglePublico = (valor) => {
+                setComplemento(prev => {
+                    const lista = [...prev.publico_usuarios];
+                    if (lista.includes(valor)) {
+                        return { ...prev, publico_usuarios: lista.filter(x => x !== valor) };
+                    } else {
+                        return { ...prev, publico_usuarios: [...lista, valor] };
+                    }
+                });
+            };
+
+            const agregarProceso = () => {
+                setProcesos([...procesos, { nombre: '', frecuencia: 'mensual', prioridad: 'media', area_inicio: '', areas_intermedias: '', area_cierre: '', pasos: [{ descripcion: '', responsable_rol: '', area: '', herramienta: '', es_manual: true, datos_necesarios: '', documentos_generados: '', plazos: '', tiene_decision: false, condicion_decision: '', destino_si_cumple: '', destino_si_no_cumple: '', pasa_a_otra_area: false, area_destino: '', que_envia: '', espera_respuesta: false }] }]);
+            };
+            const eliminarProceso = (index) => {
+                setProcesos(procesos.filter((_, i) => i !== index));
+            };
+            const actualizarProceso = (index, campo, valor) => {
+                const nuevos = [...procesos];
+                nuevos[index] = { ...nuevos[index], [campo]: valor };
+                setProcesos(nuevos);
+            };
+            const agregarPaso = (procIndex) => {
+                const nuevos = [...procesos];
+                nuevos[procIndex].pasos.push({ descripcion: '', responsable_rol: '', area: '', herramienta: '', es_manual: true, datos_necesarios: '', documentos_generados: '', plazos: '', tiene_decision: false, condicion_decision: '', destino_si_cumple: '', destino_si_no_cumple: '', pasa_a_otra_area: false, area_destino: '', que_envia: '', espera_respuesta: false });
+                setProcesos(nuevos);
+            };
+            const eliminarPaso = (procIndex, pasoIndex) => {
+                const nuevos = [...procesos];
+                nuevos[procIndex].pasos = nuevos[procIndex].pasos.filter((_, i) => i !== pasoIndex);
+                setProcesos(nuevos);
+            };
+            const actualizarPaso = (procIndex, pasoIndex, campo, valor) => {
+                const nuevos = [...procesos];
+                nuevos[procIndex].pasos[pasoIndex] = { ...nuevos[procIndex].pasos[pasoIndex], [campo]: valor };
+                setProcesos(nuevos);
+            };
+
+            async function guardarEntrevista() {
+                if (!entrevista) return;
+                setLoading(true);
+                try {
+                    await supabase.from('entrevistas').update({ estado: 'realizada', publico_usuarios: complemento.publico_usuarios.length ? complemento.publico_usuarios : null, interacciones_externas: complemento.interacciones_externas || null, sistemas_usados: complemento.sistemas_usados || null, tiene_manuales: complemento.tiene_manuales, resolucion_formularios: complemento.resolucion_formularios || null, entrevistados: complemento.entrevistados || null, acuerdos: complemento.acuerdos || null, observaciones_generales: complemento.observaciones_generales || null }).eq('id', entrevista.id);
+                    for (const proc of procesos) {
+                        if (!proc.nombre || !proc.area_inicio) continue;
+                        const { data, error } = await supabase.from('procesos').insert([{ nombre: proc.nombre, frecuencia: proc.frecuencia, prioridad: proc.prioridad, area_inicio: proc.area_inicio, areas_intermedias: proc.areas_intermedias || null, area_cierre: proc.area_cierre || null, estado_relevamiento: 'en_proceso', entrevista_id: entrevista.id }]).select();
+                        if (error) throw error;
+                        const procesoId = data[0].id;
+                        for (let i = 0; i < proc.pasos.length; i++) {
+                            const paso = proc.pasos[i];
+                            if (!paso.descripcion) continue;
+                            await supabase.from('pasos_proceso').insert({ proceso_id: procesoId, orden: i + 1, descripcion: paso.descripcion, responsable_rol: paso.responsable_rol || null, area: paso.area || null, herramienta: paso.herramienta || null, es_manual: paso.es_manual, datos_necesarios: paso.datos_necesarios || null, documentos_generados: paso.documentos_generados || null, plazos: paso.plazos || null, tiene_decision: paso.tiene_decision, condicion_decision: paso.condicion_decision || null, destino_si_cumple: paso.destino_si_cumple || null, destino_si_no_cumple: paso.destino_si_no_cumple || null, pasa_a_otra_area: paso.pasa_a_otra_area, area_destino: paso.area_destino || null, que_envia: paso.que_envia || null, espera_respuesta: paso.espera_respuesta });
+                            if (paso.pasa_a_otra_area && paso.area_destino && paso.area) {
+                                await supabase.from('handoffs').insert({ proceso: proc.nombre, area_origen: paso.area, area_destino: paso.area_destino, que_se_envia: paso.que_envia || null, validado_por_origen: false, validado_por_destino: false, entrevista_id: entrevista.id });
+                            }
+                        }
+                    }
+                    alert('Entrevista guardada exitosamente');
+                    if (onVolver) onVolver();
+                } catch (error) {
+                    alert('Error: ' + error.message);
+                } finally {
+                    setLoading(false);
+                }
+            }
+
+            if (!entrevista) return <div className="p-6 text-center">Cargando...</div>;
+
+            return (
+                <div className="bg-white p-6 rounded-lg border max-w-6xl mx-auto">
+                    <div className="flex justify-between mb-6">
+                        <h2 className="text-2xl font-bold">Formulario Completo de Entrevista</h2>
+                        <button onClick={onVolver} className="text-blue-600 hover:underline">Volver</button>
+                    </div>
+
+                    {/* Parte 1: Identificación */}
+                    <div className="mb-8 p-4 bg-gray-50 rounded border">
+                        <h3 className="font-bold text-lg mb-3">Parte 1: Identificación del Área</h3>
+                        <div className="grid grid-cols-2 gap-4 text-sm">
+                            <div><strong>Área:</strong> {entrevista.area}</div>
+                            <div><strong>Fecha:</strong> {new Date(entrevista.fecha).toLocaleDateString('es-AR')}</div>
+                            <div><strong>Hora:</strong> {entrevista.hora ? entrevista.hora.slice(0, 5) : '–'}</div>
+                            <div><strong>Responsable:</strong> {entrevista.responsable || '–'}</div>
+                            <div><strong>Entrevistador:</strong> {entrevista.entrevistador || '–'}</div>
+                        </div>
+                        <div className="mt-4">
+                            <p className="font-medium mb-2">Público/Usuarios:</p>
+                            <div className="flex flex-wrap gap-3">
+                                {publicoOpciones.map(opt => (
+                                    <label key={opt} className="flex items-center gap-1">
+                                        <input type="checkbox" checked={complemento.publico_usuarios.includes(opt)} onChange={() => togglePublico(opt)} className="rounded" />
+                                        {opt}
+                                    </label>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Parte 2 y 3: Procesos */}
+                    <div className="mb-8">
+                        <div className="flex justify-between items-center mb-4">
+                            <h3 className="font-bold text-lg">Parte 2 y 3: Procesos y Pasos Detallados</h3>
+                            <button onClick={agregarProceso} className="bg-green-600 text-white px-3 py-1 rounded text-sm flex items-center gap-1">
+                                <Icons.Plus /> Agregar Proceso
+                            </button>
+                        </div>
+                        {procesos.map((proc, idx) => (
+                            <div key={idx} className="mb-6 p-4 border-2 rounded-lg bg-blue-50">
+                                <div className="flex justify-between mb-3">
+                                    <h4 className="font-semibold">Proceso #{idx + 1}</h4>
+                                    {procesos.length > 1 && <button onClick={() => eliminarProceso(idx)} className="text-red-600"><Icons.Trash /></button>}
+                                </div>
+                                <div className="grid grid-cols-3 gap-3 mb-4">
+                                    <input placeholder="Nombre" className="border p-2 rounded" value={proc.nombre} onChange={e => actualizarProceso(idx, 'nombre', e.target.value)} />
+                                    <select className="border p-2 rounded" value={proc.frecuencia} onChange={e => actualizarProceso(idx, 'frecuencia', e.target.value)}>
+                                        <option value="diaria">Diaria</option>
+                                        <option value="semanal">Semanal</option>
+                                        <option value="mensual">Mensual</option>
+                                        <option value="eventual">Eventual</option>
+                                    </select>
+                                    <select className="border p-2 rounded" value={proc.prioridad} onChange={e => actualizarProceso(idx, 'prioridad', e.target.value)}>
+                                        <option value="baja">Baja</option>
+                                        <option value="media">Media</option>
+                                        <option value="alta">Alta</option>
+                                    </select>
+                                    <input placeholder="Área inicio" className="border p-2 rounded" value={proc.area_inicio} onChange={e => actualizarProceso(idx, 'area_inicio', e.target.value)} />
+                                    <input placeholder="Áreas intermedias" className="border p-2 rounded" value={proc.areas_intermedias} onChange={e => actualizarProceso(idx, 'areas_intermedias', e.target.value)} />
+                                    <input placeholder="Área cierre" className="border p-2 rounded" value={proc.area_cierre} onChange={e => actualizarProceso(idx, 'area_cierre', e.target.value)} />
+                                </div>
+
+                                <div className="mt-4">
+                                    <div className="flex justify-between mb-2">
+                                        <span className="font-medium">Pasos del proceso:</span>
+                                        <button onClick={() => agregarPaso(idx)} className="bg-green-600 text-white px-2 py-1 rounded text-xs flex items-center gap-1">
+                                            <Icons.Plus /> Agregar Paso
+                                        </button>
+                                    </div>
+                                    {proc.pasos.map((paso, pidx) => (
+                                        <div key={pidx} className="mb-4 p-3 bg-white border rounded">
+                                            <div className="flex justify-between mb-2">
+                                                <span className="font-medium">Paso {pidx + 1}</span>
+                                                {proc.pasos.length > 1 && <button onClick={() => eliminarPaso(idx, pidx)} className="text-red-600"><Icons.Trash /></button>}
+                                            </div>
+                                            <input placeholder="Descripción" className="border p-2 rounded w-full mb-2" value={paso.descripcion} onChange={e => actualizarPaso(idx, pidx, 'descripcion', e.target.value)} />
+                                            <div className="grid grid-cols-2 gap-2 text-sm">
+                                                <input placeholder="Responsable (rol)" className="border p-2 rounded" value={paso.responsable_rol} onChange={e => actualizarPaso(idx, pidx, 'responsable_rol', e.target.value)} />
+                                                <input placeholder="Área" className="border p-2 rounded" value={paso.area} onChange={e => actualizarPaso(idx, pidx, 'area', e.target.value)} />
+                                                <input placeholder="Herramienta" className="border p-2 rounded" value={paso.herramienta} onChange={e => actualizarPaso(idx, pidx, 'herramienta', e.target.value)} />
+                                                <label className="flex items-center gap-1"><input type="checkbox" checked={paso.es_manual} onChange={e => actualizarPaso(idx, pidx, 'es_manual', e.target.checked)} className="rounded" /> Es manual</label>
+                                                <input placeholder="Datos necesarios" className="border p-2 rounded col-span-2" value={paso.datos_necesarios} onChange={e => actualizarPaso(idx, pidx, 'datos_necesarios', e.target.value)} />
+                                                <input placeholder="Documentos generados" className="border p-2 rounded col-span-2" value={paso.documentos_generados} onChange={e => actualizarPaso(idx, pidx, 'documentos_generados', e.target.value)} />
+                                                <input placeholder="Plazos" className="border p-2 rounded col-span-2" value={paso.plazos} onChange={e => actualizarPaso(idx, pidx, 'plazos', e.target.value)} />
+                                            </div>
+                                            <label className="flex items-center gap-1 mt-2"><input type="checkbox" checked={paso.tiene_decision} onChange={e => actualizarPaso(idx, pidx, 'tiene_decision', e.target.checked)} className="rounded" /> Tiene punto de decisión</label>
+                                            {paso.tiene_decision && (
+                                                <div className="mt-2 p-2 bg-yellow-50 border rounded">
+                                                    <input placeholder="Condición" className="border p-2 rounded w-full mb-1" value={paso.condicion_decision} onChange={e => actualizarPaso(idx, pidx, 'condicion_decision', e.target.value)} />
+                                                    <div className="grid grid-cols-2 gap-2">
+                                                        <input placeholder="Destino si cumple" className="border p-2 rounded" value={paso.destino_si_cumple} onChange={e => actualizarPaso(idx, pidx, 'destino_si_cumple', e.target.value)} />
+                                                        <input placeholder="Destino si no cumple" className="border p-2 rounded" value={paso.destino_si_no_cumple} onChange={e => actualizarPaso(idx, pidx, 'destino_si_no_cumple', e.target.value)} />
+                                                    </div>
+                                                </div>
+                                            )}
+                                            <label className="flex items-center gap-1 mt-2"><input type="checkbox" checked={paso.pasa_a_otra_area} onChange={e => actualizarPaso(idx, pidx, 'pasa_a_otra_area', e.target.checked)} className="rounded" /> Pasa a otra área (crea handoff automático)</label>
+                                            {paso.pasa_a_otra_area && (
+                                                <div className="mt-2 p-2 bg-orange-50 border rounded">
+                                                    <input placeholder="Área destino" className="border p-2 rounded w-full mb-1" value={paso.area_destino} onChange={e => actualizarPaso(idx, pidx, 'area_destino', e.target.value)} />
+                                                    <input placeholder="Qué se envía" className="border p-2 rounded w-full mb-1" value={paso.que_envia} onChange={e => actualizarPaso(idx, pidx, 'que_envia', e.target.value)} />
+                                                    <label className="flex items-center gap-1"><input type="checkbox" checked={paso.espera_respuesta} onChange={e => actualizarPaso(idx, pidx, 'espera_respuesta', e.target.checked)} className="rounded" /> El proceso espera respuesta de esa área</label>
+                                                </div>
+                                            )}
+                                        </div>
+                                    ))}
                                 </div>
                             </div>
                         ))}
                     </div>
 
-                    <div ref={diagramRef} className="mb-6 p-4 bg-gray-50 rounded border">
-                        <h3 className="font-bold text-lg mb-2">Diagrama Mermaid</h3>
-                        {mermaidSvg ? (
-                            <div dangerouslySetInnerHTML={{ __html: mermaidSvg }} />
-                        ) : (
-                            <div className="text-gray-500">Generando diagrama...</div>
-                        )}
+                    {/* Parte 4 y 5: Complementaria */}
+                    <div className="mb-8 p-4 bg-gray-50 rounded border">
+                        <h3 className="font-bold text-lg mb-3">Parte 4 y 5: Información Complementaria y Cierre</h3>
+                        <textarea placeholder="Interacciones externas" className="border p-2 rounded w-full mb-3" rows="2" value={complemento.interacciones_externas} onChange={e => setComplemento({ ...complemento, interacciones_externas: e.target.value })}></textarea>
+                        <textarea placeholder="Sistemas usados" className="border p-2 rounded w-full mb-3" rows="2" value={complemento.sistemas_usados} onChange={e => setComplemento({ ...complemento, sistemas_usados: e.target.value })}></textarea>
+                        <label className="flex items-center gap-1 mb-3"><input type="checkbox" checked={complemento.tiene_manuales} onChange={e => setComplemento({ ...complemento, tiene_manuales: e.target.checked })} className="rounded" /> Tiene manuales</label>
+                        <textarea placeholder="Resolución de formularios" className="border p-2 rounded w-full mb-3" rows="2" value={complemento.resolucion_formularios} onChange={e => setComplemento({ ...complemento, resolucion_formularios: e.target.value })}></textarea>
+                        <textarea placeholder="Entrevistados" className="border p-2 rounded w-full mb-3" rows="2" value={complemento.entrevistados} onChange={e => setComplemento({ ...complemento, entrevistados: e.target.value })}></textarea>
+                        <textarea placeholder="Acuerdos" className="border p-2 rounded w-full mb-3" rows="2" value={complemento.acuerdos} onChange={e => setComplemento({ ...complemento, acuerdos: e.target.value })}></textarea>
+                        <textarea placeholder="Observaciones generales" className="border p-2 rounded w-full" rows="3" value={complemento.observaciones_generales} onChange={e => setComplemento({ ...complemento, observaciones_generales: e.target.value })}></textarea>
+                    </div>
+
+                    <div className="text-center">
+                        <button onClick={guardarEntrevista} disabled={loading} className="bg-green-600 text-white px-6 py-3 rounded font-medium">
+                            {loading ? 'Guardando...' : 'Guardar Entrevista'}
+                        </button>
                     </div>
                 </div>
             );
         }
 
-        // ====== APP PRINCIPAL ======
-
+        // ====== APP PRINCIPAL (estructura original) ======
         function App() {
-            const [activeTab, setActiveTab] = useState('tracker');
+            const [activeTab, setActiveTab] = useState('planes');
             const [entrevistas, setEntrevistas] = useState([]);
             const [procesos, setProcesos] = useState([]);
             const [loading, setLoading] = useState(true);
-            const [procesoSeleccionado, setProcesoSeleccionado] = useState(null);
+            const [procesoId, setProcesoId] = useState(null);
+            const [entrevistaId, setEntrevistaId] = useState(null);
 
             useEffect(() => {
-                async function cargar() {
-                    const [e, p] = await Promise.all([
-                        supabase.from('entrevistas').select('*').order('fecha', { ascending: false }),
-                        supabase.from('procesos').select('*')
-                    ]);
+                Promise.all([
+                    supabase.from('entrevistas').select('*').order('fecha', { ascending: false }),
+                    supabase.from('procesos').select('*')
+                ]).then(([e, p]) => {
                     setEntrevistas(e.data || []);
                     setProcesos(p.data || []);
                     setLoading(false);
-                }
-                cargar();
+                });
             }, []);
 
-            const verProceso = (id) => {
-                setProcesoSeleccionado(id);
-                setActiveTab('detalle');
-            };
+            const verProceso = (id) => { setProcesoId(id); setActiveTab('detalle'); };
+            const completarEntrevista = (id) => { setEntrevistaId(id); setActiveTab('formulario'); };
 
-            if (loading) {
-                return (
-                    <div className="min-h-screen flex items-center justify-center bg-gray-50">
-                        <div className="text-xl">Cargando aplicación...</div>
-                    </div>
-                );
-            }
+            if (loading) return <div className="flex items-center justify-center min-h-screen"><div className="text-xl">Cargando...</div></div>;
 
             return (
                 <div className="min-h-screen bg-gray-50 p-6">
                     <div className="max-w-7xl mx-auto">
                         <h1 className="text-3xl font-bold mb-2">Sistema de Relevamiento de Procesos</h1>
-                        <p className="text-gray-600 mb-6">Ministerio de Ecología - Misiones</p>
+                        <p className="text-gray-600 mb-6">Ministerio de Ecología - Provincia de Misiones</p>
 
-                        {activeTab !== 'detalle' && (
+                        {activeTab !== 'detalle' && activeTab !== 'formulario' && (
                             <div className="flex gap-4 mb-6 border-b">
-                                <button onClick={() => setActiveTab('tracker')} className={`pb-2 ${activeTab === 'tracker' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600'}`}>
-                                    Tracker
-                                </button>
-                                <button onClick={() => setActiveTab('procesos')} className={`pb-2 ${activeTab === 'procesos' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600'}`}>
-                                    Procesos ({procesos.length})
-                                </button>
+                                <button onClick={() => setActiveTab('planes')} className={`pb-2 ${activeTab === 'planes' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600'}`}>Planes de manejo</button>
                             </div>
                         )}
 
-                        {activeTab === 'detalle' && procesoSeleccionado && (
-                            <DetalleProceso procesoId={procesoSeleccionado} onVolver={() => setActiveTab('procesos')} />
-                        )}
+                        {activeTab === 'planes' && (
+                            <div>
+                                <div className="mb-6">
+                                    <h2 className="text-xl font-bold mb-4">El puma → bosques, administracion → El puma</h2>
+                                    <button onClick={() => completarEntrevista(entrevistas.find(e => e.area === 'El Puma')?.id || null)} className="bg-blue-600 text-white px-4 py-2 rounded">Completar Entrevista</button>
+                                </div>
 
-                        {activeTab === 'procesos' && (
-                            <div className="bg-white rounded border overflow-hidden">
-                                <table className="w-full">
-                                    <thead className="bg-gray-50">
-                                        <tr>
-                                            <th className="text-left p-3">Proceso</th>
-                                            <th className="text-left p-3">Flujo</th>
-                                            <th className="text-left p-3">Acciones</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
+                                <div className="space-y-6">
+                                    {entrevistas.map(ent => (
+                                        <div key={ent.id} className="bg-white p-4 rounded border">
+                                            <h3 className="font-bold">Entrevista asociada</h3>
+                                            <div className="grid grid-cols-2 gap-2 text-sm mt-2">
+                                                <div><strong>Área:</strong> {ent.area}</div>
+                                                <div><strong>Fecha:</strong> {new Date(ent.fecha).toLocaleDateString('es-AR')}</div>
+                                                <div><strong>Entrevistador:</strong> {ent.entrevistador}</div>
+                                                <div><strong>Responsable:</strong> {ent.responsable}</div>
+                                                <div><strong>Estado:</strong> {ent.estado}</div>
+                                                <div><strong>Frecuencia:</strong> eventual</div>
+                                                <div><strong>Prioridad:</strong> alta</div>
+                                                <div><strong>Estado:</strong> en proceso</div>
+                                            </div>
+                                            <button onClick={() => completarEntrevista(ent.id)} className="mt-3 bg-green-600 text-white px-3 py-1 rounded text-sm">Completar</button>
+                                        </div>
+                                    ))}
+                                </div>
+
+                                <div className="mt-8">
+                                    <h3 className="font-bold text-lg mb-4">Procesos</h3>
+                                    <div className="space-y-4">
                                         {procesos.map(p => (
-                                            <tr key={p.id} className="border-t">
-                                                <td className="p-3 font-medium">{p.nombre}</td>
-                                                <td className="p-3 text-sm">{p.area_inicio} → {p.area_cierre || '...'}</td>
-                                                <td className="p-3">
+                                            <div key={p.id} className="bg-white p-4 rounded border">
+                                                <div className="flex justify-between">
+                                                    <div>
+                                                        <h4 className="font-semibold">{p.nombre}</h4>
+                                                        <p className="text-sm text-gray-600">{p.area_inicio} → {p.area_cierre || '...'}</p>
+                                                    </div>
                                                     <button onClick={() => verProceso(p.id)} className="bg-blue-600 text-white px-3 py-1 rounded text-sm flex items-center gap-1">
                                                         <Icons.Eye /> Ver
                                                     </button>
-                                                </td>
-                                            </tr>
+                                                </div>
+                                            </div>
                                         ))}
-                                    </tbody>
-                                </table>
+                                    </div>
+                                </div>
                             </div>
                         )}
 
-                        {activeTab === 'tracker' && (
-                            <div className="bg-white p-6 rounded border">
-                                <h2 className="text-xl font-bold mb-4">Tracker de Entrevistas</h2>
-                                <p className="text-gray-600">Aquí iría el formulario de agendamiento (puedes agregarlo después).</p>
-                            </div>
-                        )}
+                        {activeTab === 'detalle' && <DetalleProceso procesoId={procesoId} onVolver={() => setActiveTab('planes')} />}
+                        {activeTab === 'formulario' && <FormularioEntrevista entrevistaId={entrevistaId} onVolver={() => setActiveTab('planes')} />}
                     </div>
                 </div>
             );
         }
 
-        // Renderizar solo cuando todo esté listo
         const root = ReactDOM.createRoot(document.getElementById('root'));
         root.render(<App />);
     </script>

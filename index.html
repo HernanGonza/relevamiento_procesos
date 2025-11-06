@@ -478,24 +478,125 @@
             );
         }
 
-        function DetalleProceso({ procesoId, onVolver }) {
-            const [proceso, setProceso] = useState(null);
-            const [entrevista, setEntrevista] = useState(null);
-            const [pasos, setPasos] = useState([]);
-            const [loading, setLoading] = useState(true);
+        
+    function DetalleProceso({ procesoId, onVolver }) {
+      const [proceso, setProceso] = useState(null);
+      const [entrevista, setEntrevista] = useState(null);
+      const [pasos, setPasos] = useState([]);
+      const [loading, setLoading] = useState(true);
 
-            useEffect(() => {
-                async function cargar() {
-                    try {
-                        const {  data: procData } = await supabase
-                            .from('procesos')
-                            .select('*')
-                            .eq('id', procesoId)
-                            .single();
-                        if (!procData) {
-                            setLoading(false);
-                            return;
-                        }
+      useEffect(() => {
+        let cancelado = false;
+        async function cargar() {
+          try {
+            const { data: procData } = await supabase
+              .from('procesos')
+              .select('*')
+              .eq('id', procesoId)
+              .single();
+
+            if (!procData || cancelado) return;
+            setProceso(procData);
+
+            const { data: entData } = await supabase
+              .from('entrevistas')
+              .select('*')
+              .eq('id', procData.entrevista_id)
+              .single();
+            if (!cancelado) setEntrevista(entData || null);
+
+            const { data: pasosData } = await supabase
+              .from('pasos_proceso')
+              .select('*')
+              .eq('proceso_id', procesoId)
+              .order('orden', { ascending: true });
+            if (!cancelado) setPasos(pasosData || []);
+          } catch (err) {
+            console.error(err);
+          } finally {
+            if (!cancelado) setLoading(false);
+          }
+        }
+        cargar();
+        return () => (cancelado = true);
+      }, [procesoId]);
+
+      if (loading) return <div className="p-6 text-center">Cargando detalles...</div>;
+      if (!proceso) return <div className="p-6 text-center text-red-600">No se encontró el proceso</div>;
+
+      // ==== generar diagrama ====
+      let mermaidCode = 'graph TD
+Inicio((Inicio))
+';
+      const fin = 'Fin((Fin))';
+
+      pasos.forEach((p, i) => {
+        const id = `P${i + 1}`;
+        mermaidCode += `  ${id}["${(p.descripcion || '').replace(/"/g, '\\"')}"]
+`;
+        if (i === 0) mermaidCode += `  Inicio --> ${id}
+`;
+        if (i < pasos.length - 1) mermaidCode += `  ${id} --> P${i + 2}
+`;
+        else mermaidCode += `  ${id} --> ${fin}
+`;
+      });
+      mermaidCode += `  ${fin}
+`;
+
+      useEffect(() => {
+        if (window.mermaid) {
+          const el = document.getElementById(`mermaid-diagram-${procesoId}`);
+          if (el) {
+            el.innerHTML = '';
+            try {
+              window.mermaid.render(`graph-${procesoId}`, mermaidCode, (svg) => {
+                el.innerHTML = svg;
+              });
+            } catch (err) {
+              console.error('Error renderizando Mermaid:', err);
+              el.innerHTML = '<div class="text-red-600">No se pudo renderizar el diagrama.</div>';
+            }
+          }
+        }
+      }, [pasos]);
+
+      return (
+        <div className="bg-white p-6 rounded border max-w-6xl mx-auto">
+          <div className="flex justify-between mb-6">
+            <div>
+              <h2 className="text-2xl font-bold">{proceso.nombre || 'Sin nombre'}</h2>
+              <p className="text-sm text-gray-600 mt-1">
+                {(proceso.area_inicio || '')}
+                {proceso.areas_intermedias && ` → ${proceso.areas_intermedias}`}
+                {proceso.area_cierre && ` → ${proceso.area_cierre}`}
+              </p>
+            </div>
+            <button onClick={onVolver} className="text-blue-600 hover:underline">← Volver</button>
+          </div>
+
+          {entrevista && (
+            <div className="mb-6 p-4 bg-blue-50 rounded border border-blue-200">
+              <h3 className="font-bold text-lg mb-2">Entrevista asociada</h3>
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div><strong>Área:</strong> {entrevista.area || '-'}</div>
+                <div><strong>Fecha:</strong> {entrevista.fecha ? new Date(entrevista.fecha).toLocaleDateString('es-AR') : '-'}</div>
+                {entrevista.hora && <div><strong>Hora:</strong> {entrevista.hora.slice(0, 5)}</div>}
+                <div><strong>Entrevistador:</strong> {entrevista.entrevistador || '-'}</div>
+                <div><strong>Responsable:</strong> {entrevista.responsable || '-'}</div>
+                <div><strong>Estado:</strong> {entrevista.estado || '-'}</div>
+              </div>
+            </div>
+          )}
+
+          <div className="mb-6">
+            <h3 className="font-bold text-lg mb-2">Diagrama UML (Mermaid)</h3>
+            <div id={`mermaid-diagram-${procesoId}`} className="mermaid border rounded p-4 bg-gray-50"></div>
+          </div>
+        </div>
+      );
+    }
+
                         setProceso(procData);
                         const {  data: entData } = await supabase
                             .from('entrevistas')

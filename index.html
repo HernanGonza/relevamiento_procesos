@@ -483,16 +483,17 @@
             );
         }
 
-     function DetalleProceso({ procesoId, onVolver }) {
+    function DetalleProceso({ procesoId, onVolver }) {
     const [proceso, setProceso] = useState(null);
     const [entrevista, setEntrevista] = useState(null);
     const [pasos, setPasos] = useState([]);
     const [loading, setLoading] = useState(true);
+    const mermaidRef = useRef(null);
 
     useEffect(() => {
         async function cargar() {
             try {
-                const {  data: procData } = await supabase
+                const {   procData } = await supabase
                     .from('procesos')
                     .select('*')
                     .eq('id', procesoId)
@@ -502,13 +503,13 @@
                     return;
                 }
                 setProceso(procData);
-                const {  data: entData } = await supabase
+                const {   entData } = await supabase
                     .from('entrevistas')
                     .select('*')
                     .eq('id', procData.entrevista_id)
                     .single();
                 setEntrevista(entData);
-                const {  data: pasosData } = await supabase
+                const {   pasosData } = await supabase
                     .from('pasos_proceso')
                     .select('*')
                     .eq('proceso_id', procesoId)
@@ -523,69 +524,98 @@
         if (procesoId) cargar();
     }, [procesoId]);
 
-    // === Forzar renderizado de Mermaid después del montaje ===
+    // === Renderizar Mermaid manualmente ===
     useEffect(() => {
-        if (window.mermaid) {
-            setTimeout(() => {
-                window.mermaid.contentLoaded();
-            }, 100);
+        if (pasos.length > 0 && window.mermaid && mermaidRef.current) {
+            let mermaidCode = 'graph TD\n';
+            const inicio = 'Inicio((Inicio))';
+            const fin = 'Fin((Fin))';
+            mermaidCode += `  ${inicio}\n`;
+
+            const primero = `P1`;
+            mermaidCode += `  ${primero}[${pasos[0].descripcion.replace(/"/g, '\\"')}]\n`;
+            mermaidCode += `  ${inicio} --> ${primero}\n`;
+
+            pasos.forEach((paso, i) => {
+                const actual = `P${i + 1}`;
+                const siguiente = i < pasos.length - 1 ? `P${i + 2}` : null;
+
+                if (paso.tiene_decision) {
+                    const cond = `C${i + 1}`;
+                    mermaidCode += `  ${cond}{${paso.condicion_decision.replace(/"/g, '\\"')}}\n`;
+                    mermaidCode += `  ${actual} --> ${cond}\n`;
+
+                    if (paso.destino_si_cumple) {
+                        const si = `SI${i + 1}`;
+                        mermaidCode += `  ${si}[${paso.destino_si_cumple.replace(/"/g, '\\"')}]\n`;
+                        mermaidCode += `  ${cond} -->|Sí| ${si}\n`;
+                        mermaidCode += `  ${si} --> ${fin}\n`;
+                    }
+                    if (paso.destino_si_no_cumple) {
+                        const no = `NO${i + 1}`;
+                        mermaidCode += `  ${no}[${paso.destino_si_no_cumple.replace(/"/g, '\\"')}]\n`;
+                        mermaidCode += `  ${cond} -->|No| ${no}\n`;
+                        mermaidCode += `  ${no} --> ${fin}\n`;
+                    }
+                } else {
+                    if (siguiente) {
+                        mermaidCode += `  ${siguiente}[${pasos[i + 1].descripcion.replace(/"/g, '\\"')}]\n`;
+                        mermaidCode += `  ${actual} --> ${siguiente}\n`;
+                    } else {
+                        mermaidCode += `  ${actual} --> ${fin}\n`;
+                    }
+                }
+            });
+            mermaidCode += `  ${fin}\n`;
+
+            mermaid.render('mermaid-diagram', mermaidCode).then(({ svg, bindFunctions }) => {
+                mermaidRef.current.innerHTML = svg;
+                if (bindFunctions) bindFunctions(mermaidRef.current);
+            }).catch(err => {
+                console.error('Error al renderizar Mermaid:', err);
+                mermaidRef.current.innerHTML = '<p class="text-red-500">Error al cargar el diagrama</p>';
+            });
         }
-    }, [proceso, pasos]);
+    }, [pasos]);
 
     if (loading) return <div className="p-6 text-center">Cargando detalles del proceso...</div>;
     if (!proceso) return <div className="p-6 text-center">Proceso no encontrado</div>;
 
-    // === Generar código Mermaid ===
-    let mermaidCode = 'graph TD\n';
-    const inicio = 'Inicio((Inicio))';
-    const fin = 'Fin((Fin))';
-    mermaidCode += `  ${inicio}\n`;
-
-    if (pasos.length === 0) {
-        mermaidCode += `  ${inicio} --> ${fin}\n`;
-    } else {
-        const primero = `P1`;
-        mermaidCode += `  ${primero}[${pasos[0].descripcion.replace(/"/g, '\\"')}]\n`;
-        mermaidCode += `  ${inicio} --> ${primero}\n`;
-
-        pasos.forEach((paso, i) => {
-            const actual = `P${i + 1}`;
-            const siguiente = i < pasos.length - 1 ? `P${i + 2}` : null;
-
-            if (paso.tiene_decision) {
-                const cond = `C${i + 1}`;
-                mermaidCode += `  ${cond}{${paso.condicion_decision.replace(/"/g, '\\"')}}\n`;
-                mermaidCode += `  ${actual} --> ${cond}\n`;
-
-                if (paso.destino_si_cumple) {
-                    const si = `SI${i + 1}`;
-                    mermaidCode += `  ${si}[${paso.destino_si_cumple.replace(/"/g, '\\"')}]\n`;
-                    mermaidCode += `  ${cond} -->|Sí| ${si}\n`;
-                    mermaidCode += `  ${si} --> ${fin}\n`;
-                }
-                if (paso.destino_si_no_cumple) {
-                    const no = `NO${i + 1}`;
-                    mermaidCode += `  ${no}[${paso.destino_si_no_cumple.replace(/"/g, '\\"')}]\n`;
-                    mermaidCode += `  ${cond} -->|No| ${no}\n`;
-                    mermaidCode += `  ${no} --> ${fin}\n`;
-                }
-            } else {
-                if (siguiente) {
-                    mermaidCode += `  ${siguiente}[${pasos[i + 1].descripcion.replace(/"/g, '\\"')}]\n`;
-                    mermaidCode += `  ${actual} --> ${siguiente}\n`;
-                } else {
-                    mermaidCode += `  ${actual} --> ${fin}\n`;
-                }
-            }
-        });
-    }
-    mermaidCode += `  ${fin}\n`;
-
     return (
         <div className="bg-white p-6 rounded border max-w-6xl mx-auto">
-            {/* ... (código anterior sin cambios hasta el diagrama visual) ... */}
+            <div className="flex justify-between mb-6">
+                <div>
+                    <h2 className="text-2xl font-bold">{proceso.nombre}</h2>
+                    <p className="text-sm text-gray-600 mt-1">
+                        {proceso.area_inicio}
+                        {proceso.areas_intermedias && ` → ${proceso.areas_intermedias}`}
+                        {proceso.area_cierre && ` → ${proceso.area_cierre}`}
+                    </p>
+                </div>
+                <button onClick={onVolver} className="text-blue-600 hover:underline">← Volver</button>
+            </div>
 
-            {/* Diagrama visual existente */}
+            {entrevista && (
+                <div className="mb-6 p-4 bg-blue-50 rounded border border-blue-200">
+                    <h3 className="font-bold text-lg mb-2">Entrevista asociada</h3>
+                    <div className="grid grid-cols-2 gap-3 text-sm">
+                        <div><strong>Área:</strong> {entrevista.area}</div>
+                        <div><strong>Fecha:</strong> {new Date(entrevista.fecha).toLocaleDateString('es-AR')}</div>
+                        {entrevista.hora && <div><strong>Hora:</strong> {entrevista.hora.slice(0, 5)}</div>}
+                        <div><strong>Entrevistador:</strong> {entrevista.entrevistador || '–'}</div>
+                        <div><strong>Responsable:</strong> {entrevista.responsable || '–'}</div>
+                        <div><strong>Estado:</strong> {entrevista.estado}</div>
+                    </div>
+                </div>
+            )}
+
+            <div className="grid grid-cols-3 gap-4 mb-6 p-4 bg-gray-50 rounded">
+                <div><span className="text-sm text-gray-600">Frecuencia:</span> <p className="font-medium capitalize">{proceso.frecuencia}</p></div>
+                <div><span className="text-sm text-gray-600">Prioridad:</span> <p className="font-medium capitalize">{proceso.prioridad}</p></div>
+                <div><span className="text-sm text-gray-600">Estado:</span> <p className="font-medium capitalize">{proceso.estado_relevamiento?.replace('_', ' ')}</p></div>
+            </div>
+
+            {/* Diagrama visual interactivo */}
             <div className="mb-6">
                 <h3 className="font-bold text-lg mb-4">Diagrama de Flujo (Visual)</h3>
                 {pasos.length === 0 ? (
@@ -648,11 +678,11 @@
                 )}
             </div>
 
-            {/* Diagrama Mermaid UML */}
+            {/* Diagrama Mermaid UML (renderizado manualmente) */}
             <div className="mb-6">
                 <h3 className="font-bold text-lg mb-2">Diagrama UML (Mermaid)</h3>
-                <div className="mermaid">
-                    {mermaidCode}
+                <div ref={mermaidRef} className="mermaid-diagram-container min-h-[200px]">
+                    {pasos.length === 0 ? 'No hay pasos para generar diagrama.' : 'Cargando diagrama...'}
                 </div>
             </div>
 

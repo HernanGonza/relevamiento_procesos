@@ -9,8 +9,13 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.tailwindcss.com"></script>
-   <script type="module">
-  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs  ';
+   <!-- En el <head>, después de los otros scripts -->
+<script type="module">
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+  // ✅ Configuración según docs: desactivar auto-ejecución
+  mermaid.initialize({ startOnLoad: false });
+  // ✅ Exponer en window para acceso desde Babel/React
+  window.mermaid = mermaid;
 </script>
 </head>
 <body>
@@ -482,17 +487,17 @@
             );
         }
 
-    function DetalleProceso({ procesoId, onVolver }) {
+  function DetalleProceso({ procesoId, onVolver }) {
     const [proceso, setProceso] = useState(null);
     const [entrevista, setEntrevista] = useState(null);
     const [pasos, setPasos] = useState([]);
     const [loading, setLoading] = useState(true);
-    const mermaidRef = useRef(null);
+    const diagramRef = useRef(null);
 
     useEffect(() => {
         async function cargar() {
             try {
-                const {   procData } = await supabase
+                const {  data: procData } = await supabase
                     .from('procesos')
                     .select('*')
                     .eq('id', procesoId)
@@ -502,20 +507,20 @@
                     return;
                 }
                 setProceso(procData);
-                const {   entData } = await supabase
+                const {  data: entData } = await supabase
                     .from('entrevistas')
                     .select('*')
                     .eq('id', procData.entrevista_id)
                     .single();
                 setEntrevista(entData);
-                const {   pasosData } = await supabase
+                const {  data: pasosData } = await supabase
                     .from('pasos_proceso')
                     .select('*')
                     .eq('proceso_id', procesoId)
                     .order('orden', { ascending: true });
                 setPasos(pasosData || []);
             } catch (err) {
-                console.error(err);
+                console.error('Error al cargar:', err);
             } finally {
                 setLoading(false);
             }
@@ -523,17 +528,17 @@
         if (procesoId) cargar();
     }, [procesoId]);
 
-    // === Renderizar Mermaid manualmente ===
+    // Renderizar Mermaid manualmente
     useEffect(() => {
-        if (pasos.length > 0 && window.mermaid && mermaidRef.current) {
-            let mermaidCode = 'graph TD\n';
+        if (pasos.length > 0 && window.mermaid && diagramRef.current) {
+            let code = 'graph TD\n';
             const inicio = 'Inicio((Inicio))';
             const fin = 'Fin((Fin))';
-            mermaidCode += `  ${inicio}\n`;
+            code += `  ${inicio}\n`;
 
-            const primero = `P1`;
-            mermaidCode += `  ${primero}[${pasos[0].descripcion.replace(/"/g, '\\"')}]\n`;
-            mermaidCode += `  ${inicio} --> ${primero}\n`;
+            const p1 = `P1`;
+            code += `  ${p1}[${escapeMermaidText(pasos[0].descripcion)}]\n`;
+            code += `  ${inicio} --> ${p1}\n`;
 
             pasos.forEach((paso, i) => {
                 const actual = `P${i + 1}`;
@@ -541,47 +546,54 @@
 
                 if (paso.tiene_decision) {
                     const cond = `C${i + 1}`;
-                    mermaidCode += `  ${cond}{${paso.condicion_decision.replace(/"/g, '\\"')}}\n`;
-                    mermaidCode += `  ${actual} --> ${cond}\n`;
+                    code += `  ${cond}{${escapeMermaidText(paso.condicion_decision)}}\n`;
+                    code += `  ${actual} --> ${cond}\n`;
 
                     if (paso.destino_si_cumple) {
                         const si = `SI${i + 1}`;
-                        mermaidCode += `  ${si}[${paso.destino_si_cumple.replace(/"/g, '\\"')}]\n`;
-                        mermaidCode += `  ${cond} -->|Sí| ${si}\n`;
-                        mermaidCode += `  ${si} --> ${fin}\n`;
+                        code += `  ${si}[${escapeMermaidText(paso.destino_si_cumple)}]\n`;
+                        code += `  ${cond} -->|Sí| ${si}\n`;
+                        code += `  ${si} --> ${fin}\n`;
                     }
                     if (paso.destino_si_no_cumple) {
                         const no = `NO${i + 1}`;
-                        mermaidCode += `  ${no}[${paso.destino_si_no_cumple.replace(/"/g, '\\"')}]\n`;
-                        mermaidCode += `  ${cond} -->|No| ${no}\n`;
-                        mermaidCode += `  ${no} --> ${fin}\n`;
+                        code += `  ${no}[${escapeMermaidText(paso.destino_si_no_cumple)}]\n`;
+                        code += `  ${cond} -->|No| ${no}\n`;
+                        code += `  ${no} --> ${fin}\n`;
                     }
                 } else {
                     if (siguiente) {
-                        mermaidCode += `  ${siguiente}[${pasos[i + 1].descripcion.replace(/"/g, '\\"')}]\n`;
-                        mermaidCode += `  ${actual} --> ${siguiente}\n`;
+                        code += `  ${siguiente}[${escapeMermaidText(pasos[i + 1].descripcion)}]\n`;
+                        code += `  ${actual} --> ${siguiente}\n`;
                     } else {
-                        mermaidCode += `  ${actual} --> ${fin}\n`;
+                        code += `  ${actual} --> ${fin}\n`;
                     }
                 }
             });
-            mermaidCode += `  ${fin}\n`;
+            code += `  ${fin}\n`;
 
-            mermaid.render('mermaid-diagram', mermaidCode).then(({ svg, bindFunctions }) => {
-                mermaidRef.current.innerHTML = svg;
-                if (bindFunctions) bindFunctions(mermaidRef.current);
+            // Renderizar con Mermaid v11 (API actualizada)
+            window.mermaid.render('mermaid-diagram', code).then(({ svg }) => {
+                diagramRef.current.innerHTML = svg;
             }).catch(err => {
-                console.error('Error al renderizar Mermaid:', err);
-                mermaidRef.current.innerHTML = '<p class="text-red-500">Error al cargar el diagrama</p>';
+                console.error('Error Mermaid:', err);
+                diagramRef.current.innerHTML = '<p class="text-red-500">Error al renderizar diagrama</p>';
             });
         }
     }, [pasos]);
 
-    if (loading) return <div className="p-6 text-center">Cargando detalles del proceso...</div>;
+    // Función para escapar caracteres especiales en Mermaid
+    function escapeMermaidText(text) {
+        if (!text) return '';
+        return text.replace(/([[\]{}()"#])/, '\\$1').replace(/</g, '<').replace(/>/g, '>');
+    }
+
+    if (loading) return <div className="p-6 text-center">Cargando...</div>;
     if (!proceso) return <div className="p-6 text-center">Proceso no encontrado</div>;
 
     return (
         <div className="bg-white p-6 rounded border max-w-6xl mx-auto">
+            {/* ✅ Botón "Volver" SIEMPRE visible */}
             <div className="flex justify-between mb-6">
                 <div>
                     <h2 className="text-2xl font-bold">{proceso.nombre}</h2>
@@ -591,7 +603,9 @@
                         {proceso.area_cierre && ` → ${proceso.area_cierre}`}
                     </p>
                 </div>
-                <button onClick={onVolver} className="text-blue-600 hover:underline">← Volver</button>
+                <button onClick={onVolver} className="text-blue-600 hover:underline flex items-center gap-1">
+                    ← Volver
+                </button>
             </div>
 
             {entrevista && (
@@ -609,92 +623,57 @@
             )}
 
             <div className="grid grid-cols-3 gap-4 mb-6 p-4 bg-gray-50 rounded">
-                <div><span className="text-sm text-gray-600">Frecuencia:</span> <p className="font-medium capitalize">{proceso.frecuencia}</p></div>
-                <div><span className="text-sm text-gray-600">Prioridad:</span> <p className="font-medium capitalize">{proceso.prioridad}</p></div>
-                <div><span className="text-sm text-gray-600">Estado:</span> <p className="font-medium capitalize">{proceso.estado_relevamiento?.replace('_', ' ')}</p></div>
+                <div><span className="text-sm text-gray-600">Frecuencia:</span> <p className="font-medium">{proceso.frecuencia}</p></div>
+                <div><span className="text-sm text-gray-600">Prioridad:</span> <p className="font-medium">{proceso.prioridad}</p></div>
+                <div><span className="text-sm text-gray-600">Estado:</span> <p className="font-medium">{proceso.estado_relevamiento?.replace('_', ' ')}</p></div>
             </div>
 
-            {/* Diagrama visual interactivo */}
+            {/* Diagrama visual original */}
             <div className="mb-6">
-                <h3 className="font-bold text-lg mb-4">Diagrama de Flujo (Visual)</h3>
+                <h3 className="font-bold text-lg mb-2">Diagrama Visual (Interactivo)</h3>
                 {pasos.length === 0 ? (
-                    <p className="text-gray-500 italic">Este proceso no tiene pasos definidos.</p>
+                    <p className="text-gray-500 italic">Sin pasos definidos.</p>
                 ) : (
                     <div className="space-y-4">
                         {pasos.map((paso, idx) => (
-                            <div key={paso.id}>
-                                <div className="flex items-start gap-4">
-                                    <div className="flex-shrink-0 w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center font-bold">
-                                        {paso.orden}
-                                    </div>
-                                    <div className="flex-1 border-2 border-blue-200 rounded-lg p-4 bg-blue-50">
-                                        <h4 className="font-semibold mb-2">{paso.descripcion}</h4>
-                                        <div className="grid grid-cols-2 gap-3 text-sm">
-                                            {paso.responsable_rol && <div><span className="text-gray-600">Responsable:</span> {paso.responsable_rol}</div>}
-                                            {paso.area && <div><span className="text-gray-600">Área:</span> <span className="font-medium">{paso.area}</span></div>}
-                                            {paso.herramienta && <div><span className="text-gray-600">Herramienta:</span> {paso.herramienta}</div>}
-                                            {paso.plazos && <div><span className="text-gray-600">Plazo:</span> {paso.plazos}</div>}
-                                        </div>
-                                        {paso.datos_necesarios && <div className="mt-2 text-sm"><span className="text-gray-600">Datos necesarios:</span> {paso.datos_necesarios}</div>}
-                                        {paso.documentos_generados && <div className="mt-1 text-sm"><span className="text-gray-600">Documentos:</span> {paso.documentos_generados}</div>}
-                                    </div>
+                            <div key={paso.id} className="flex items-start gap-4">
+                                <div className="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center font-bold">
+                                    {paso.orden}
                                 </div>
-
-                                {paso.tiene_decision && (
-                                    <div className="ml-12 mt-2 mb-2">
-                                        <div className="border-2 border-yellow-400 rounded-lg p-3 bg-yellow-50">
-                                            <div className="font-semibold text-sm mb-2">❓ Decisión: {paso.condicion_decision}</div>
-                                            <div className="flex gap-4 text-sm">
-                                                {paso.destino_si_cumple && (
-                                                    <div className="flex-1"><span className="text-green-700">✓ Si cumple:</span> {paso.destino_si_cumple}</div>
-                                                )}
-                                                {paso.destino_si_no_cumple && (
-                                                    <div className="flex-1"><span className="text-red-700">✗ Si no cumple:</span> {paso.destino_si_no_cumple}</div>
-                                                )}
-                                            </div>
+                                <div className="flex-1 border-2 border-blue-200 rounded-lg p-4 bg-blue-50">
+                                    <h4 className="font-semibold">{paso.descripcion}</h4>
+                                    {paso.tiene_decision && (
+                                        <div className="mt-2 p-2 bg-yellow-100 rounded text-sm">
+                                            <div><strong>Decisión:</strong> {paso.condicion_decision}</div>
+                                            {paso.destino_si_cumple && <div>✓ Sí: {paso.destino_si_cumple}</div>}
+                                            {paso.destino_si_no_cumple && <div>✗ No: {paso.destino_si_no_cumple}</div>}
                                         </div>
-                                    </div>
-                                )}
-
-                                {paso.pasa_a_otra_area && paso.area_destino && (
-                                    <div className="ml-12 mt-2 mb-2">
-                                        <div className="border-2 border-orange-400 rounded-lg p-3 bg-orange-50">
-                                            <div className="flex items-center gap-2 font-semibold text-sm mb-1">
-                                                🔄 Pasa a: <span className="text-orange-700">{paso.area_destino}</span>
-                                            </div>
-                                            {paso.que_envia && <div className="text-sm">Envía: {paso.que_envia}</div>}
-                                            {paso.espera_respuesta && <div className="text-sm text-orange-700 mt-1">⏳ Espera respuesta</div>}
-                                        </div>
-                                    </div>
-                                )}
-
-                                {idx < pasos.length - 1 && (
-                                    <div className="ml-4 h-6 w-0.5 bg-blue-300"></div>
-                                )}
+                                    )}
+                                </div>
                             </div>
                         ))}
                     </div>
                 )}
             </div>
 
-            {/* Diagrama Mermaid UML (renderizado manualmente) */}
+            {/* ✅ Diagrama Mermaid renderizado gráficamente */}
             <div className="mb-6">
-                <h3 className="font-bold text-lg mb-2">Diagrama UML (Mermaid)</h3>
-                <div ref={mermaidRef} className="mermaid-diagram-container min-h-[200px]">
-                    {pasos.length === 0 ? 'No hay pasos para generar diagrama.' : 'Cargando diagrama...'}
+                <h3 className="font-bold text-lg mb-2">Diagrama UML (Mermaid v11)</h3>
+                <div ref={diagramRef} className="min-h-[200px] border rounded p-2 bg-gray-50">
+                    {pasos.length === 0 ? 'Sin datos para diagrama.' : 'Renderizando diagrama...'}
                 </div>
             </div>
 
             <div className="mt-6 p-4 bg-orange-50 rounded border border-orange-200">
-                <h4 className="font-semibold mb-2">🔄 Handoffs en este proceso:</h4>
+                <h4 className="font-semibold mb-2">🔄 Handoffs</h4>
                 {pasos.filter(p => p.pasa_a_otra_area).length > 0 ? (
                     <ul className="text-sm space-y-1">
                         {pasos.filter(p => p.pasa_a_otra_area).map(p => (
-                            <li key={p.id}>• <strong>{p.area}</strong> → <strong>{p.area_destino}</strong> {p.que_envia && `(${p.que_envia})`}</li>
+                            <li key={p.id}>• <strong>{p.area}</strong> → <strong>{p.area_destino}</strong></li>
                         ))}
                     </ul>
                 ) : (
-                    <p className="text-sm text-gray-600">No hay transiciones entre áreas en este proceso.</p>
+                    <p className="text-sm text-gray-600">No hay handoffs.</p>
                 )}
             </div>
         </div>

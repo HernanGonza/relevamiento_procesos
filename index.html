@@ -9,11 +9,6 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Mermaid para diagramas UML -->
-    <script type="module">
-        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
-        mermaid.initialize({ startOnLoad: true, theme: 'default' });
-    </script>
 </head>
 <body>
     <div id="root"></div>
@@ -212,7 +207,6 @@
                         <div className="grid grid-cols-2 gap-4 mb-4">
                             <div><strong>Área:</strong> {entrevista.area}</div>
                             <div><strong>Fecha:</strong> {new Date(entrevista.fecha).toLocaleDateString('es-AR')}</div>
-                            <div><strong>Hora:</strong> {entrevista.hora ? entrevista.hora.slice(0, 5) : '–'}</div>
                             <div><strong>Responsable:</strong> {entrevista.responsable || '–'}</div>
                             <div><strong>Entrevistador:</strong> {entrevista.entrevistador || '–'}</div>
                         </div>
@@ -394,9 +388,9 @@
                     <div className="mb-6 p-4 bg-gray-50 rounded">
                         <div className="grid grid-cols-2 gap-4">
                             <div><strong>Fecha:</strong> {new Date(entrevista.fecha).toLocaleDateString('es-AR')}</div>
-                            <div><strong>Hora:</strong> {entrevista.hora ? entrevista.hora.slice(0,5) : '–'}</div>
                             <div><strong>Estado:</strong> {entrevista.estado}</div>
                             <div><strong>Entrevistador:</strong> {entrevista.entrevistador || '–'}</div>
+                            <div><strong>Responsable:</strong> {entrevista.responsable || '–'}</div>
                         </div>
                     </div>
                     {procesos.length > 0 && (
@@ -420,7 +414,7 @@
                         <div key={e.id} className="bg-white p-4 rounded border">
                             <h4 className="font-semibold">{e.area}</h4>
                             <p className="text-sm text-gray-600">
-                                {new Date(e.fecha).toLocaleDateString('es-AR')} {e.hora ? `a las ${e.hora.slice(0,5)}` : ''}
+                                {new Date(e.fecha).toLocaleDateString('es-AR')}
                             </p>
                             <p className="text-sm mt-1">Estado: <span className="font-medium">{e.estado}</span></p>
                             <div className="mt-2 flex gap-2">
@@ -444,68 +438,50 @@
 
         function DetalleProceso({ procesoId, onVolver }) {
             const [proceso, setProceso] = useState(null);
+            const [entrevista, setEntrevista] = useState(null);
             const [pasos, setPasos] = useState([]);
             const [loading, setLoading] = useState(true);
 
             useEffect(() => {
                 async function cargar() {
-                    const { data: procData } = await supabase.from('procesos').select('*').eq('id', procesoId).single();
-                    const {  pasosData } = await supabase.from('pasos_proceso').select('*').eq('proceso_id', procesoId).order('orden');
-                    if (procData) setProceso(procData);
-                    if (pasosData) setPasos(pasosData);
-                    setLoading(false);
+                    try {
+                        const { data: procData, error: procError } = await supabase
+                            .from('procesos')
+                            .select('*')
+                            .eq('id', procesoId)
+                            .single();
+
+                        if (procError || !procData) throw new Error('Proceso no encontrado');
+
+                        setProceso(procData);
+
+                        // Cargar entrevista asociada
+                        const { data: entData } = await supabase
+                            .from('entrevistas')
+                            .select('*')
+                            .eq('id', procData.entrevista_id)
+                            .single();
+                        setEntrevista(entData);
+
+                        // Cargar pasos
+                        const {  pasosData } = await supabase
+                            .from('pasos_proceso')
+                            .select('*')
+                            .eq('proceso_id', procesoId)
+                            .order('orden', { ascending: true });
+                        setPasos(pasosData || []);
+
+                        setLoading(false);
+                    } catch (err) {
+                        console.error('Error en DetalleProceso:', err);
+                        setLoading(false);
+                    }
                 }
                 cargar();
             }, [procesoId]);
 
-            if (loading) return <div className="p-6 text-center">Cargando...</div>;
-            if (!proceso) return <div className="p-6 text-center">No encontrado</div>;
-
-            // === Generar código Mermaid con formas UML ===
-            let mermaidCode = 'graph TD\n';
-            const nodoInicio = 'Inicio((Inicio))';
-            const nodoFin = 'Fin((Fin))';
-            mermaidCode += `  ${nodoInicio}\n`;
-
-            if (pasos.length === 0) {
-                mermaidCode += `  ${nodoInicio} --> ${nodoFin}\n`;
-            } else {
-                const primerId = `P1`;
-                mermaidCode += `  ${primerId}[${pasos[0].descripcion.replace(/"/g, '\\"')}]\n`;
-                mermaidCode += `  ${nodoInicio} --> ${primerId}\n`;
-
-                pasos.forEach((paso, idx) => {
-                    const nodoActual = `P${idx + 1}`;
-                    const nodoSiguiente = idx < pasos.length - 1 ? `P${idx + 2}` : null;
-
-                    if (paso.tiene_decision) {
-                        const condId = `C${idx + 1}`;
-                        mermaidCode += `  ${condId}{${paso.condicion_decision.replace(/"/g, '\\"')}}\n`;
-                        mermaidCode += `  ${nodoActual} --> ${condId}\n`;
-
-                        if (paso.destino_si_cumple) {
-                            const siId = `SI${idx + 1}`;
-                            mermaidCode += `  ${siId}[${paso.destino_si_cumple.replace(/"/g, '\\"')}]\n`;
-                            mermaidCode += `  ${condId} -->|Sí| ${siId}\n`;
-                            mermaidCode += `  ${siId} --> ${nodoFin}\n`;
-                        }
-                        if (paso.destino_si_no_cumple) {
-                            const noId = `NO${idx + 1}`;
-                            mermaidCode += `  ${noId}[${paso.destino_si_no_cumple.replace(/"/g, '\\"')}]\n`;
-                            mermaidCode += `  ${condId} -->|No| ${noId}\n`;
-                            mermaidCode += `  ${noId} --> ${nodoFin}\n`;
-                        }
-                    } else {
-                        if (nodoSiguiente) {
-                            mermaidCode += `  ${nodoSiguiente}[${pasos[idx + 1].descripcion.replace(/"/g, '\\"')}]\n`;
-                            mermaidCode += `  ${nodoActual} --> ${nodoSiguiente}\n`;
-                        } else {
-                            mermaidCode += `  ${nodoActual} --> ${nodoFin}\n`;
-                        }
-                    }
-                });
-            }
-            mermaidCode += `  ${nodoFin}\n`;
+            if (loading) return <div className="p-6 text-center">Cargando detalles...</div>;
+            if (!proceso) return <div className="p-6 text-center">Proceso no encontrado</div>;
 
             return (
                 <div className="bg-white p-6 rounded border max-w-6xl mx-auto">
@@ -521,109 +497,98 @@
                         <button onClick={onVolver} className="text-blue-600 hover:underline">← Volver</button>
                     </div>
 
+                    {/* Datos de la entrevista asociada */}
+                    {entrevista && (
+                        <div className="mb-6 p-4 bg-blue-50 rounded border border-blue-200">
+                            <h3 className="font-bold text-lg mb-2">Entrevista asociada</h3>
+                            <div className="grid grid-cols-2 gap-3 text-sm">
+                                <div><strong>Área:</strong> {entrevista.area}</div>
+                                <div><strong>Fecha:</strong> {new Date(entrevista.fecha).toLocaleDateString('es-AR')}</div>
+                                <div><strong>Entrevistador:</strong> {entrevista.entrevistador || '–'}</div>
+                                <div><strong>Estado:</strong> {entrevista.estado}</div>
+                            </div>
+                        </div>
+                    )}
+
                     <div className="grid grid-cols-3 gap-4 mb-6 p-4 bg-gray-50 rounded">
                         <div><span className="text-sm text-gray-600">Frecuencia:</span> <p className="font-medium capitalize">{proceso.frecuencia}</p></div>
                         <div><span className="text-sm text-gray-600">Prioridad:</span> <p className="font-medium capitalize">{proceso.prioridad}</p></div>
                         <div><span className="text-sm text-gray-600">Estado:</span> <p className="font-medium capitalize">{proceso.estado_relevamiento?.replace('_', ' ')}</p></div>
                     </div>
 
-                    {/* === Diagrama visual original === */}
-                    <div className="mb-8">
-                        <h3 className="font-bold text-lg mb-4">Diagrama Visual (Interactivo)</h3>
-                        <div className="space-y-4">
-                            {pasos.map((paso, idx) => (
-                                <div key={paso.id}>
-                                    <div className="flex items-start gap-4">
-                                        <div className="flex-shrink-0 w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center font-bold">
-                                            {paso.orden}
-                                        </div>
-                                        <div className="flex-1 border-2 border-blue-200 rounded-lg p-4 bg-blue-50">
-                                            <h4 className="font-semibold mb-2">{paso.descripcion}</h4>
-                                            <div className="grid grid-cols-2 gap-3 text-sm">
-                                                {paso.responsable_rol && (
-                                                    <div>
-                                                        <span className="text-gray-600">Responsable:</span> {paso.responsable_rol}
-                                                    </div>
+                    {/* Diagrama visual original */}
+                    <div className="mb-6">
+                        <h3 className="font-bold text-lg mb-4">Diagrama de Flujo</h3>
+                        {pasos.length === 0 ? (
+                            <p className="text-gray-500 italic">Este proceso no tiene pasos definidos.</p>
+                        ) : (
+                            <div className="space-y-4">
+                                {pasos.map((paso, idx) => (
+                                    <div key={paso.id}>
+                                        <div className="flex items-start gap-4">
+                                            <div className="flex-shrink-0 w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center font-bold">
+                                                {paso.orden}
+                                            </div>
+                                            <div className="flex-1 border-2 border-blue-200 rounded-lg p-4 bg-blue-50">
+                                                <h4 className="font-semibold mb-2">{paso.descripcion}</h4>
+                                                <div className="grid grid-cols-2 gap-3 text-sm">
+                                                    {paso.responsable_rol && (
+                                                        <div><span className="text-gray-600">Responsable:</span> {paso.responsable_rol}</div>
+                                                    )}
+                                                    {paso.area && (
+                                                        <div><span className="text-gray-600">Área:</span> <span className="font-medium">{paso.area}</span></div>
+                                                    )}
+                                                    {paso.herramienta && (
+                                                        <div><span className="text-gray-600">Herramienta:</span> {paso.herramienta}</div>
+                                                    )}
+                                                    {paso.plazos && (
+                                                        <div><span className="text-gray-600">Plazo:</span> {paso.plazos}</div>
+                                                    )}
+                                                </div>
+                                                {paso.datos_necesarios && (
+                                                    <div className="mt-2 text-sm"><span className="text-gray-600">Datos necesarios:</span> {paso.datos_necesarios}</div>
                                                 )}
-                                                {paso.area && (
-                                                    <div>
-                                                        <span className="text-gray-600">Área:</span> <span className="font-medium">{paso.area}</span>
-                                                    </div>
-                                                )}
-                                                {paso.herramienta && (
-                                                    <div>
-                                                        <span className="text-gray-600">Herramienta:</span> {paso.herramienta}
-                                                    </div>
-                                                )}
-                                                {paso.plazos && (
-                                                    <div>
-                                                        <span className="text-gray-600">Plazo:</span> {paso.plazos}
-                                                    </div>
+                                                {paso.documentos_generados && (
+                                                    <div className="mt-1 text-sm"><span className="text-gray-600">Documentos:</span> {paso.documentos_generados}</div>
                                                 )}
                                             </div>
-                                            {paso.datos_necesarios && (
-                                                <div className="mt-2 text-sm">
-                                                    <span className="text-gray-600">Datos necesarios:</span> {paso.datos_necesarios}
-                                                </div>
-                                            )}
-                                            {paso.documentos_generados && (
-                                                <div className="mt-1 text-sm">
-                                                    <span className="text-gray-600">Documentos:</span> {paso.documentos_generados}
-                                                </div>
-                                            )}
                                         </div>
+
+                                        {paso.tiene_decision && (
+                                            <div className="ml-12 mt-2 mb-2">
+                                                <div className="border-2 border-yellow-400 rounded-lg p-3 bg-yellow-50">
+                                                    <div className="font-semibold text-sm mb-2">❓ Decisión: {paso.condicion_decision}</div>
+                                                    <div className="flex gap-4 text-sm">
+                                                        {paso.destino_si_cumple && (
+                                                            <div className="flex-1"><span className="text-green-700">✓ Si cumple:</span> {paso.destino_si_cumple}</div>
+                                                        )}
+                                                        {paso.destino_si_no_cumple && (
+                                                            <div className="flex-1"><span className="text-red-700">✗ Si no cumple:</span> {paso.destino_si_no_cumple}</div>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {paso.pasa_a_otra_area && paso.area_destino && (
+                                            <div className="ml-12 mt-2 mb-2">
+                                                <div className="border-2 border-orange-400 rounded-lg p-3 bg-orange-50">
+                                                    <div className="flex items-center gap-2 font-semibold text-sm mb-1">
+                                                        🔄 Pasa a: <span className="text-orange-700">{paso.area_destino}</span>
+                                                    </div>
+                                                    {paso.que_envia && <div className="text-sm">Envía: {paso.que_envia}</div>}
+                                                    {paso.espera_respuesta && <div className="text-sm text-orange-700 mt-1">⏳ Espera respuesta</div>}
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {idx < pasos.length - 1 && (
+                                            <div className="ml-4 h-6 w-0.5 bg-blue-300"></div>
+                                        )}
                                     </div>
-
-                                    {paso.tiene_decision && (
-                                        <div className="ml-12 mt-2 mb-2">
-                                            <div className="border-2 border-yellow-400 rounded-lg p-3 bg-yellow-50">
-                                                <div className="font-semibold text-sm mb-2">❓ Decisión: {paso.condicion_decision}</div>
-                                                <div className="flex gap-4 text-sm">
-                                                    {paso.destino_si_cumple && (
-                                                        <div className="flex-1">
-                                                            <span className="text-green-700">✓ Si cumple:</span> {paso.destino_si_cumple}
-                                                        </div>
-                                                    )}
-                                                    {paso.destino_si_no_cumple && (
-                                                        <div className="flex-1">
-                                                            <span className="text-red-700">✗ Si no cumple:</span> {paso.destino_si_no_cumple}
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    )}
-
-                                    {paso.pasa_a_otra_area && paso.area_destino && (
-                                        <div className="ml-12 mt-2 mb-2">
-                                            <div className="border-2 border-orange-400 rounded-lg p-3 bg-orange-50">
-                                                <div className="flex items-center gap-2 font-semibold text-sm mb-1">
-                                                    🔄 Pasa a: <span className="text-orange-700">{paso.area_destino}</span>
-                                                </div>
-                                                {paso.que_envia && (
-                                                    <div className="text-sm">Envía: {paso.que_envia}</div>
-                                                )}
-                                                {paso.espera_respuesta && (
-                                                    <div className="text-sm text-orange-700 mt-1">⏳ Espera respuesta</div>
-                                                )}
-                                            </div>
-                                        </div>
-                                    )}
-
-                                    {idx < pasos.length - 1 && (
-                                        <div className="ml-4 h-6 w-0.5 bg-blue-300"></div>
-                                    )}
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-
-                    {/* === Diagrama Mermaid UML === */}
-                    <div className="mb-8">
-                        <h3 className="font-bold text-lg mb-2">Diagrama UML (Exportable)</h3>
-                        <pre className="mermaid">
-                            {mermaidCode}
-                        </pre>
+                                ))}
+                            </div>
+                        )}
                     </div>
 
                     <div className="mt-6 p-4 bg-orange-50 rounded border border-orange-200">
@@ -645,7 +610,7 @@
         }
 
         function TrackerEntrevistas({ entrevistas, setEntrevistas, onCompletar }) {
-            const [form, setForm] = useState({ area: '', fecha: '', hora: '', responsable: '', entrevistador: '', estado: 'pendiente', notas: '' });
+            const [form, setForm] = useState({ area: '', fecha: '', responsable: '', entrevistador: '', estado: 'pendiente', notas: '' });
 
             async function agregar() {
                 if (!form.area || !form.fecha) return alert('Completa área y fecha');
@@ -654,7 +619,7 @@
                     alert('Error: ' + error.message);
                 } else {
                     setEntrevistas([data[0], ...entrevistas]);
-                    setForm({ area: '', fecha: '', hora: '', responsable: '', entrevistador: '', estado: 'pendiente', notas: '' });
+                    setForm({ area: '', fecha: '', responsable: '', entrevistador: '', estado: 'pendiente', notas: '' });
                 }
             }
 
@@ -692,9 +657,8 @@
                         <div className="grid grid-cols-2 gap-3">
                             <input type="text" placeholder="Área *" className="border p-2 rounded" value={form.area} onChange={e => setForm({ ...form, area: e.target.value })} />
                             <input type="date" className="border p-2 rounded" value={form.fecha} onChange={e => setForm({ ...form, fecha: e.target.value })} />
-                            <input type="time" className="border p-2 rounded" value={form.hora} onChange={e => setForm({ ...form, hora: e.target.value })} />
                             <input type="text" placeholder="Responsable" className="border p-2 rounded" value={form.responsable} onChange={e => setForm({ ...form, responsable: e.target.value })} />
-                            <input type="text" placeholder="Entrevistador" className="border p-2 rounded col-span-2" value={form.entrevistador} onChange={e => setForm({ ...form, entrevistador: e.target.value })} />
+                            <input type="text" placeholder="Entrevistador" className="border p-2 rounded" value={form.entrevistador} onChange={e => setForm({ ...form, entrevistador: e.target.value })} />
                         </div>
                         <button onClick={agregar} className="mt-3 bg-blue-600 text-white px-4 py-2 rounded flex items-center gap-2">
                             <Icons.Plus /> Agregar
@@ -707,9 +671,7 @@
                                 <div className="flex justify-between">
                                     <div>
                                         <h4 className="font-semibold">{e.area}</h4>
-                                        <p className="text-sm text-gray-600">
-                                            {new Date(e.fecha).toLocaleDateString('es-AR')} {e.hora ? `a las ${e.hora.slice(0,5)}` : ''}
-                                        </p>
+                                        <p className="text-sm text-gray-600">{new Date(e.fecha).toLocaleDateString('es-AR')}</p>
                                     </div>
                                     <div className="flex gap-2">
                                         <button onClick={() => onCompletar(e.id)} className="bg-green-600 text-white px-3 py-1 rounded text-sm">
@@ -842,6 +804,11 @@
                 setActiveTab('ver-entrevista');
             }
 
+            function verDetalleProceso(id) {
+                setProcesoSeleccionado(id);
+                setActiveTab('detalle-proceso');
+            }
+
             if (loading) return <div className="p-6 text-center">Cargando...</div>;
 
             return (
@@ -899,10 +866,7 @@
                             {activeTab === 'procesos' && (
                                 <MatrizProcesos
                                     procesos={procesos}
-                                    onVerDetalle={(id) => {
-                                        setProcesoSeleccionado(id);
-                                        setActiveTab('detalle-proceso');
-                                    }}
+                                    onVerDetalle={verDetalleProceso}
                                 />
                             )}
                             {activeTab === 'detalle-proceso' && (

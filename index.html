@@ -9,19 +9,15 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.tailwindcss.com"></script>
-   <!-- En el <head>, después de los otros scripts -->
-<script type="module">
-  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
-  // ✅ Configuración según docs: desactivar auto-ejecución
-  mermaid.initialize({ startOnLoad: false });
-  // ✅ Exponer en window para acceso desde Babel/React
-  window.mermaid = mermaid;
-</script>
+   <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+
 </head>
 <body>
     <div id="root"></div>
     <script type="text/babel">
+        const { useState, useEffect } = React;
         const { useState, useEffect, useRef } = React;
+mermaid.initialize({ startOnLoad: false, theme: 'default' });
         const SUPABASE_URL = 'https://ketmsuhhyymhprwvoxjx.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtldG1zdWhoeXltaHByd3ZveGp4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE3ODExODksImV4cCI6MjA3NzM1NzE4OX0.R6sOE9UofsP8NZnhc4uFJF3hTauEjvGJjnoSYtIifbQ';
         const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -36,7 +32,105 @@
         };
 
         // ========== COMPONENTES ==========
+ // Inicializar Mermaid
+        mermaid.initialize({ startOnLoad: false, theme: 'default', securityLevel: 'loose' });
 
+        const Icons = {
+            Plus: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>,
+            Trash: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>,
+            ArrowRight: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>,
+            Alert: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>,
+            Check: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>,
+            Eye: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>,
+            Edit: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>,
+        };
+
+        // Componente para diagrama Mermaid
+        function MermaidDiagram({ chart }) {
+            const elementRef = useRef(null);
+            const [svg, setSvg] = useState('');
+
+            useEffect(() => {
+                if (chart && elementRef.current) {
+                    mermaid.render('mermaid-' + Date.now(), chart).then(result => {
+                        setSvg(result.svg);
+                    }).catch(err => {
+                        console.error('Error rendering mermaid:', err);
+                    });
+                }
+            }, [chart]);
+
+            return (
+                <div ref={elementRef} dangerouslySetInnerHTML={{ __html: svg }} />
+            );
+        }
+
+        // Generar código Mermaid desde pasos
+        function generarMermaidDesdePasos(pasos, proceso) {
+            if (!pasos || pasos.length === 0) return null;
+
+            let mermaid = 'graph TD\n';
+            mermaid += `    Start([Inicio: ${proceso.area_inicio}])\n`;
+            
+            pasos.forEach((paso, idx) => {
+                const nodeId = `P${paso.orden}`;
+                const nextNodeId = idx < pasos.length - 1 ? `P${pasos[idx + 1].orden}` : 'End';
+                
+                // Nodo del paso
+                const desc = paso.descripcion.replace(/"/g, "'").substring(0, 50);
+                mermaid += `    ${nodeId}["${paso.orden}. ${desc}${paso.descripcion.length > 50 ? '...' : ''}"]\n`;
+                
+                // Conexión desde el anterior
+                if (idx === 0) {
+                    mermaid += `    Start --> ${nodeId}\n`;
+                } else {
+                    const prevNodeId = `P${pasos[idx - 1].orden}`;
+                    if (!pasos[idx - 1].tiene_decision && !pasos[idx - 1].pasa_a_otra_area) {
+                        // Solo conectar si el anterior no tiene decisión ni handoff
+                    }
+                }
+                
+                // Decisión
+                if (paso.tiene_decision) {
+                    const decisionId = `D${paso.orden}`;
+                    mermaid += `    ${decisionId}{${paso.condicion_decision || 'Decisión'}}\n`;
+                    mermaid += `    ${nodeId} --> ${decisionId}\n`;
+                    if (paso.destino_si_cumple) {
+                        mermaid += `    ${decisionId} -->|Sí| ${paso.destino_si_cumple.substring(0, 20)}\n`;
+                    }
+                    if (paso.destino_si_no_cumple) {
+                        mermaid += `    ${decisionId} -->|No| ${paso.destino_si_no_cumple.substring(0, 20)}\n`;
+                    }
+                    if (idx < pasos.length - 1) {
+                        mermaid += `    ${decisionId} --> ${nextNodeId}\n`;
+                    }
+                }
+                
+                // Handoff
+                if (paso.pasa_a_otra_area && paso.area_destino) {
+                    const handoffId = `H${paso.orden}`;
+                    mermaid += `    ${handoffId}[/"🔄 ${paso.area_destino}"/]\n`;
+                    mermaid += `    ${nodeId} --> ${handoffId}\n`;
+                    if (idx < pasos.length - 1) {
+                        mermaid += `    ${handoffId} --> ${nextNodeId}\n`;
+                    }
+                } else if (!paso.tiene_decision && idx < pasos.length - 1) {
+                    mermaid += `    ${nodeId} --> ${nextNodeId}\n`;
+                }
+            });
+            
+            mermaid += `    End([Fin: ${proceso.area_cierre || proceso.area_inicio}])\n`;
+            if (pasos.length > 0) {
+                const lastNode = `P${pasos[pasos.length - 1].orden}`;
+                if (!pasos[pasos.length - 1].tiene_decision && !pasos[pasos.length - 1].pasa_a_otra_area) {
+                    mermaid += `    ${lastNode} --> End\n`;
+                } else if (pasos[pasos.length - 1].pasa_a_otra_area) {
+                    mermaid += `    H${pasos[pasos.length - 1].orden} --> End\n`;
+                }
+            }
+            
+            return mermaid;
+        }
         function FormularioEntrevista({ entrevistaId, onVolver }) {
             const [loading, setLoading] = useState(false);
             const [entrevista, setEntrevista] = useState(null);
@@ -369,93 +463,116 @@
             );
         }
 
-        function VerEntrevista({ entrevistaId, onVolver }) {
+         function VerEntrevista({ entrevistaId, onVolver }) {
             const [entrevista, setEntrevista] = useState(null);
             const [procesos, setProcesos] = useState([]);
-            const [pasosPorProceso, setPasosPorProceso] = useState({});
             const [loading, setLoading] = useState(true);
 
             useEffect(() => {
                 async function cargar() {
-                    const {  data: entData } = await supabase.from('entrevistas').select('*').eq('id', entrevistaId).single();
-                    const {  data: procData } = await supabase.from('procesos').select('*').eq('entrevista_id', entrevistaId);
+                    const { data: entData } = await supabase.from('entrevistas').select('*').eq('id', entrevistaId).single();
+                    const { data: procData } = await supabase.from('procesos').select('*').eq('entrevista_id', entrevistaId);
                     if (entData) setEntrevista(entData);
-                    if (procData) {
-                        setProcesos(procData);
-                        const pasosMap = {};
-                        for (const p of procData) {
-                            const {  data: pasosData } = await supabase.from('pasos_proceso').select('*').eq('proceso_id', p.id).order('orden', { ascending: true });
-                            pasosMap[p.id] = pasosData || [];
-                        }
-                        setPasosPorProceso(pasosMap);
-                    }
+                    if (procData) setProcesos(procData);
                     setLoading(false);
                 }
                 cargar();
             }, [entrevistaId]);
 
-            if (loading) return <div className="p-6">Cargando...</div>;
-            if (!entrevista) return <div className="p-6">No encontrada</div>;
+            if (loading) return <div className="p-6 text-center">Cargando...</div>;
+            if (!entrevista) return <div className="p-6 text-center">No encontrada</div>;
 
             return (
                 <div className="bg-white p-6 rounded-lg border max-w-6xl mx-auto">
                     <div className="flex justify-between mb-6">
-                        <h2 className="text-2xl font-bold">Entrevista: {entrevista.area}</h2>
+                        <h2 className="text-2xl font-bold">Detalle de Entrevista: {entrevista.area}</h2>
                         <button onClick={onVolver} className="text-blue-600 hover:underline">← Volver</button>
                     </div>
-                    <div className="mb-6 p-4 bg-gray-50 rounded">
+
+                    {/* Parte 1: Datos básicos */}
+                    <div className="mb-6 p-4 bg-gray-50 rounded border">
+                        <h3 className="font-bold text-lg mb-3">Datos de la Entrevista</h3>
                         <div className="grid grid-cols-2 gap-4">
+                            <div><strong>Área:</strong> {entrevista.area}</div>
                             <div><strong>Fecha:</strong> {new Date(entrevista.fecha).toLocaleDateString('es-AR')}</div>
-                            <div><strong>Hora:</strong> {entrevista.hora ? entrevista.hora.slice(0,5) : '–'}</div>
+                            <div><strong>Estado:</strong> <span className="capitalize">{entrevista.estado}</span></div>
                             <div><strong>Entrevistador:</strong> {entrevista.entrevistador || '–'}</div>
                             <div><strong>Responsable:</strong> {entrevista.responsable || '–'}</div>
-                            <div><strong>Estado:</strong> {entrevista.estado}</div>
+                            <div><strong>Entrevistados:</strong> {entrevista.entrevistados || '–'}</div>
                         </div>
                     </div>
-                    {(entrevista.interacciones_externas || entrevista.sistemas_usados || entrevista.entrevistados || entrevista.acuerdos || entrevista.observaciones_generales) && (
-                        <div className="mb-6 p-4 bg-blue-50 rounded">
-                            <h3 className="font-bold mb-2">Información complementaria</h3>
-                            {entrevista.interacciones_externas && <p><strong>Interacciones:</strong> {entrevista.interacciones_externas}</p>}
-                            {entrevista.sistemas_usados && <p><strong>Sistemas:</strong> {entrevista.sistemas_usados}</p>}
-                            {entrevista.entrevistados && <p><strong>Entrevistados:</strong> {entrevista.entrevistados}</p>}
-                            {entrevista.acuerdos && <p><strong>Acuerdos:</strong> {entrevista.acuerdos}</p>}
-                            {entrevista.observaciones_generales && <p><strong>Observaciones:</strong> {entrevista.observaciones_generales}</p>}
+
+                    {/* Público/Usuarios */}
+                    {entrevista.publico_usuarios && entrevista.publico_usuarios.length > 0 && (
+                        <div className="mb-6 p-4 bg-blue-50 rounded border border-blue-200">
+                            <h3 className="font-bold mb-2">Público/Usuarios</h3>
+                            <div className="flex flex-wrap gap-2">
+                                {entrevista.publico_usuarios.map((p, i) => (
+                                    <span key={i} className="bg-blue-100 px-3 py-1 rounded-full text-sm">{p}</span>
+                                ))}
+                            </div>
                         </div>
                     )}
-                    {procesos.length > 0 && (
-                        <div>
-                            <h3 className="font-bold text-lg mb-4">Procesos relevados</h3>
-                            {procesos.map(p => (
-                                <div key={p.id} className="mb-6 p-4 border rounded bg-white">
-                                    <h4 className="font-semibold text-lg">{p.nombre}</h4>
-                                    <div className="text-sm text-gray-600 mb-2">{p.area_inicio} → {p.area_cierre || '...'}</div>
-                                    <div className="space-y-3 mt-3">
-                                        {pasosPorProceso[p.id]?.map(paso => (
-                                            <div key={paso.id} className="p-3 bg-gray-50 rounded">
-                                                <div><span className="font-medium">Paso {paso.orden}:</span> {paso.descripcion}</div>
-                                                {paso.responsable_rol && <div>Responsable: {paso.responsable_rol}</div>}
-                                                {paso.area && <div>Área: {paso.area}</div>}
-                                                {paso.herramienta && <div>Herramienta: {paso.herramienta}</div>}
-                                                {paso.tiene_decision && (
-                                                    <div className="mt-2 p-2 bg-yellow-100 rounded">
-                                                        <div><strong>Decisión:</strong> {paso.condicion_decision}</div>
-                                                        {paso.destino_si_cumple && <div>✓ Sí: {paso.destino_si_cumple}</div>}
-                                                        {paso.destino_si_no_cumple && <div>✗ No: {paso.destino_si_no_cumple}</div>}
-                                                    </div>
-                                                )}
-                                                {paso.pasa_a_otra_area && (
-                                                    <div className="mt-2 p-2 bg-orange-100 rounded">
-                                                        <div>🔄 Pasa a: {paso.area_destino}</div>
-                                                        {paso.que_envia && <div>Envía: {paso.que_envia}</div>}
-                                                    </div>
-                                                )}
-                                            </div>
-                                        ))}
-                                    </div>
+
+                    {/* Información complementaria */}
+                    <div className="mb-6 p-4 bg-gray-50 rounded border">
+                        <h3 className="font-bold text-lg mb-3">Información Complementaria</h3>
+                        <div className="space-y-3 text-sm">
+                            {entrevista.interacciones_externas && (
+                                <div>
+                                    <strong>Interacciones con otras áreas:</strong>
+                                    <p className="mt-1 text-gray-700">{entrevista.interacciones_externas}</p>
                                 </div>
-                            ))}
+                            )}
+                            {entrevista.sistemas_usados && (
+                                <div>
+                                    <strong>Sistemas/herramientas:</strong>
+                                    <p className="mt-1 text-gray-700">{entrevista.sistemas_usados}</p>
+                                </div>
+                            )}
+                            {entrevista.tiene_manuales !== null && (
+                                <div>
+                                    <strong>Tienen manuales:</strong> {entrevista.tiene_manuales ? 'Sí' : 'No'}
+                                </div>
+                            )}
+                            {entrevista.resolucion_formularios && (
+                                <div>
+                                    <strong>Resolución/Formularios:</strong> {entrevista.resolucion_formularios}
+                                </div>
+                            )}
+                            {entrevista.acuerdos && (
+                                <div>
+                                    <strong>Acuerdos:</strong>
+                                    <p className="mt-1 text-gray-700">{entrevista.acuerdos}</p>
+                                </div>
+                            )}
+                            {entrevista.observaciones_generales && (
+                                <div>
+                                    <strong>Observaciones:</strong>
+                                    <p className="mt-1 text-gray-700">{entrevista.observaciones_generales}</p>
+                                </div>
+                            )}
                         </div>
-                    )}
+                    </div>
+
+                    {/* Procesos relevados */}
+                    <div className="p-4 bg-green-50 rounded border border-green-200">
+                        <h3 className="font-bold text-lg mb-3">Procesos Relevados ({procesos.length})</h3>
+                        {procesos.length > 0 ? (
+                            <div className="space-y-2">
+                                {procesos.map(p => (
+                                    <div key={p.id} className="bg-white p-3 rounded border">
+                                        <div className="font-medium">{p.nombre}</div>
+                                        <div className="text-sm text-gray-600 mt-1">
+                                            Frecuencia: {p.frecuencia} | Prioridad: {p.prioridad} | Estado: {p.estado_relevamiento?.replace('_', ' ')}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <p className="text-gray-600 italic">No se relevaron procesos en esta entrevista</p>
+                        )}
+                    </div>
                 </div>
             );
         }
@@ -488,100 +605,193 @@
         }
 
   function DetalleProceso({ procesoId, onVolver }) {
-    const [proceso, setProceso] = useState(null);
-    const [entrevista, setEntrevista] = useState(null);
-    const [pasos, setPasos] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const diagramRef = useRef(null);
+            const [proceso, setProceso] = useState(null);
+            const [entrevista, setEntrevista] = useState(null);
+            const [pasos, setPasos] = useState([]);
+            const [loading, setLoading] = useState(true);
+            const [vistaActiva, setVistaActiva] = useState('diagrama'); // 'diagrama' o 'lista'
 
-    useEffect(() => {
-        async function cargar() {
-            try {
-                const {  data: procData } = await supabase
-                    .from('procesos')
-                    .select('*')
-                    .eq('id', procesoId)
-                    .single();
-                if (!procData) {
-                    setLoading(false);
-                    return;
-                }
-                setProceso(procData);
-                const {  data: entData } = await supabase
-                    .from('entrevistas')
-                    .select('*')
-                    .eq('id', procData.entrevista_id)
-                    .single();
-                setEntrevista(entData);
-                const {  data: pasosData } = await supabase
-                    .from('pasos_proceso')
-                    .select('*')
-                    .eq('proceso_id', procesoId)
-                    .order('orden', { ascending: true });
-                setPasos(pasosData || []);
-            } catch (err) {
-                console.error('Error al cargar:', err);
-            } finally {
-                setLoading(false);
-            }
-        }
-        if (procesoId) cargar();
-    }, [procesoId]);
+            useEffect(() => {
+                async function cargar() {
+                    try {
+                        const { data: procData } = await supabase.from('procesos').select('*').eq('id', procesoId).single();
+                        if (!procData) throw new Error('Proceso no encontrado');
+                        setProceso(procData);
 
-    // Renderizar Mermaid manualmente
-    useEffect(() => {
-        if (pasos.length > 0 && window.mermaid && diagramRef.current) {
-            let code = 'graph TD\n';
-            const inicio = 'Inicio((Inicio))';
-            const fin = 'Fin((Fin))';
-            code += `  ${inicio}\n`;
+                        const { data: entData } = await supabase.from('entrevistas').select('*').eq('id', procData.entrevista_id).single();
+                        setEntrevista(entData);
 
-            const p1 = `P1`;
-            code += `  ${p1}[${escapeMermaidText(pasos[0].descripcion)}]\n`;
-            code += `  ${inicio} --> ${p1}\n`;
+                        const { data: pasosData } = await supabase.from('pasos_proceso').select('*').eq('proceso_id', procesoId).order('orden');
+                        setPasos(pasosData || []);
 
-            pasos.forEach((paso, i) => {
-                const actual = `P${i + 1}`;
-                const siguiente = i < pasos.length - 1 ? `P${i + 2}` : null;
-
-                if (paso.tiene_decision) {
-                    const cond = `C${i + 1}`;
-                    code += `  ${cond}{${escapeMermaidText(paso.condicion_decision)}}\n`;
-                    code += `  ${actual} --> ${cond}\n`;
-
-                    if (paso.destino_si_cumple) {
-                        const si = `SI${i + 1}`;
-                        code += `  ${si}[${escapeMermaidText(paso.destino_si_cumple)}]\n`;
-                        code += `  ${cond} -->|Sí| ${si}\n`;
-                        code += `  ${si} --> ${fin}\n`;
-                    }
-                    if (paso.destino_si_no_cumple) {
-                        const no = `NO${i + 1}`;
-                        code += `  ${no}[${escapeMermaidText(paso.destino_si_no_cumple)}]\n`;
-                        code += `  ${cond} -->|No| ${no}\n`;
-                        code += `  ${no} --> ${fin}\n`;
-                    }
-                } else {
-                    if (siguiente) {
-                        code += `  ${siguiente}[${escapeMermaidText(pasos[i + 1].descripcion)}]\n`;
-                        code += `  ${actual} --> ${siguiente}\n`;
-                    } else {
-                        code += `  ${actual} --> ${fin}\n`;
+                        setLoading(false);
+                    } catch (err) {
+                        console.error('Error:', err);
+                        setLoading(false);
                     }
                 }
-            });
-            code += `  ${fin}\n`;
+                cargar();
+            }, [procesoId]);
 
-            // Renderizar con Mermaid v11 (API actualizada)
-            window.mermaid.render('mermaid-diagram', code).then(({ svg }) => {
-                diagramRef.current.innerHTML = svg;
-            }).catch(err => {
-                console.error('Error Mermaid:', err);
-                diagramRef.current.innerHTML = '<p class="text-red-500">Error al renderizar diagrama</p>';
-            });
+            if (loading) return <div className="p-6 text-center">Cargando...</div>;
+            if (!proceso) return <div className="p-6 text-center">Proceso no encontrado</div>;
+
+            const mermaidChart = generarMermaidDesdePasos(pasos, proceso);
+
+            return (
+                <div className="bg-white p-6 rounded border max-w-6xl mx-auto">
+                    <div className="flex justify-between mb-6">
+                        <div>
+                            <h2 className="text-2xl font-bold">{proceso.nombre}</h2>
+                            <p className="text-sm text-gray-600 mt-1">
+                                {proceso.area_inicio}
+                                {proceso.areas_intermedias && ` → ${proceso.areas_intermedias}`}
+                                {proceso.area_cierre && ` → ${proceso.area_cierre}`}
+                            </p>
+                        </div>
+                        <button onClick={onVolver} className="text-blue-600 hover:underline">← Volver</button>
+                    </div>
+
+                    {entrevista && (
+                        <div className="mb-6 p-4 bg-blue-50 rounded border border-blue-200">
+                            <h3 className="font-bold mb-2">Entrevista asociada</h3>
+                            <div className="grid grid-cols-2 gap-3 text-sm">
+                                <div><strong>Área:</strong> {entrevista.area}</div>
+                                <div><strong>Fecha:</strong> {new Date(entrevista.fecha).toLocaleDateString('es-AR')}</div>
+                            </div>
+                        </div>
+                    )}
+
+                    <div className="grid grid-cols-3 gap-4 mb-6 p-4 bg-gray-50 rounded">
+                        <div><span className="text-sm text-gray-600">Frecuencia:</span> <p className="font-medium capitalize">{proceso.frecuencia}</p></div>
+                        <div><span className="text-sm text-gray-600">Prioridad:</span> <p className="font-medium capitalize">{proceso.prioridad}</p></div>
+                        <div><span className="text-sm text-gray-600">Estado:</span> <p className="font-medium capitalize">{proceso.estado_relevamiento?.replace('_', ' ')}</p></div>
+                    </div>
+
+                    {/* Toggle entre vistas */}
+                    <div className="flex gap-2 mb-4 border-b">
+                        <button
+                            onClick={() => setVistaActiva('diagrama')}
+                            className={'px-4 py-2 font-medium ' + (vistaActiva === 'diagrama' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600')}
+                        >
+                            Diagrama Mermaid
+                        </button>
+                        <button
+                            onClick={() => setVistaActiva('lista')}
+                            className={'px-4 py-2 font-medium ' + (vistaActiva === 'lista' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600')}
+                        >
+                            Vista Detallada
+                        </button>
+                    </div>
+
+                    {vistaActiva === 'diagrama' && (
+                        <div className="mb-6">
+                            <h3 className="font-bold text-lg mb-4">Diagrama de Flujo</h3>
+                            {pasos.length === 0 ? (
+                                <p className="text-gray-500 italic">Este proceso no tiene pasos definidos.</p>
+                            ) : mermaidChart ? (
+                                <div className="border rounded p-4 bg-gray-50 overflow-x-auto">
+                                    <MermaidDiagram chart={mermaidChart} />
+                                </div>
+                            ) : (
+                                <p className="text-gray-500">No se pudo generar el diagrama</p>
+                            )}
+                        </div>
+                    )}
+
+                    {vistaActiva === 'lista' && (
+                        <div className="mb-6">
+                            <h3 className="font-bold text-lg mb-4">Pasos Detallados</h3>
+                            {pasos.length === 0 ? (
+                                <p className="text-gray-500 italic">Este proceso no tiene pasos definidos.</p>
+                            ) : (
+                                <div className="space-y-4">
+                                    {pasos.map((paso, idx) => (
+                                        <div key={paso.id}>
+                                            <div className="flex items-start gap-4">
+                                                <div className="flex-shrink-0 w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center font-bold">
+                                                    {paso.orden}
+                                                </div>
+                                                <div className="flex-1 border-2 border-blue-200 rounded-lg p-4 bg-blue-50">
+                                                    <h4 className="font-semibold mb-2">{paso.descripcion}</h4>
+                                                    <div className="grid grid-cols-2 gap-3 text-sm">
+                                                        {paso.responsable_rol && (
+                                                            <div><span className="text-gray-600">Responsable:</span> {paso.responsable_rol}</div>
+                                                        )}
+                                                        {paso.area && (
+                                                            <div><span className="text-gray-600">Área:</span> <span className="font-medium">{paso.area}</span></div>
+                                                        )}
+                                                        {paso.herramienta && (
+                                                            <div><span className="text-gray-600">Herramienta:</span> {paso.herramienta}</div>
+                                                        )}
+                                                        {paso.plazos && (
+                                                            <div><span className="text-gray-600">Plazo:</span> {paso.plazos}</div>
+                                                        )}
+                                                    </div>
+                                                    {paso.datos_necesarios && (
+                                                        <div className="mt-2 text-sm"><span className="text-gray-600">Datos necesarios:</span> {paso.datos_necesarios}</div>
+                                                    )}
+                                                    {paso.documentos_generados && (
+                                                        <div className="mt-1 text-sm"><span className="text-gray-600">Documentos:</span> {paso.documentos_generados}</div>
+                                                    )}
+                                                </div>
+                                            </div>
+
+                                            {paso.tiene_decision && (
+                                                <div className="ml-12 mt-2 mb-2">
+                                                    <div className="border-2 border-yellow-400 rounded-lg p-3 bg-yellow-50">
+                                                        <div className="font-semibold text-sm mb-2">❓ Decisión: {paso.condicion_decision}</div>
+                                                        <div className="flex gap-4 text-sm">
+                                                            {paso.destino_si_cumple && (
+                                                                <div className="flex-1"><span className="text-green-700">✓ Si cumple:</span> {paso.destino_si_cumple}</div>
+                                                            )}
+                                                            {paso.destino_si_no_cumple && (
+                                                                <div className="flex-1"><span className="text-red-700">✗ Si no cumple:</span> {paso.destino_si_no_cumple}</div>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {paso.pasa_a_otra_area && paso.area_destino && (
+                                                <div className="ml-12 mt-2 mb-2">
+                                                    <div className="border-2 border-orange-400 rounded-lg p-3 bg-orange-50">
+                                                        <div className="flex items-center gap-2 font-semibold text-sm mb-1">
+                                                            🔄 Pasa a: <span className="text-orange-700">{paso.area_destino}</span>
+                                                        </div>
+                                                        {paso.que_envia && <div className="text-sm">Envía: {paso.que_envia}</div>}
+                                                        {paso.espera_respuesta && <div className="text-sm text-orange-700 mt-1">⏳ Espera respuesta</div>}
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {idx < pasos.length - 1 && (
+                                                <div className="ml-4 h-6 w-0.5 bg-blue-300"></div>
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    <div className="mt-6 p-4 bg-orange-50 rounded border border-orange-200">
+                        <h4 className="font-semibold mb-2">🔄 Handoffs en este proceso:</h4>
+                        {pasos.filter(p => p.pasa_a_otra_area).length > 0 ? (
+                            <ul className="text-sm space-y-1">
+                                {pasos.filter(p => p.pasa_a_otra_area).map(p => (
+                                    <li key={p.id}>
+                                        • <strong>{p.area}</strong> → <strong>{p.area_destino}</strong> {p.que_envia && `(${p.que_envia})`}
+                                    </li>
+                                ))}
+                            </ul>
+                        ) : (
+                            <p className="text-sm text-gray-600">No hay transiciones entre áreas en este proceso.</p>
+                        )}
+                    </div>
+                </div>
+            );
         }
-    }, [pasos]);
-
     // Función para escapar caracteres especiales en Mermaid
     function escapeMermaidText(text) {
         if (!text) return '';

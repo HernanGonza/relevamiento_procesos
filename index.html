@@ -207,6 +207,7 @@
                         <div className="grid grid-cols-2 gap-4 mb-4">
                             <div><strong>Área:</strong> {entrevista.area}</div>
                             <div><strong>Fecha:</strong> {new Date(entrevista.fecha).toLocaleDateString('es-AR')}</div>
+                            <div><strong>Hora:</strong> {entrevista.hora ? entrevista.hora.slice(0, 5) : '–'}</div>
                             <div><strong>Responsable:</strong> {entrevista.responsable || '–'}</div>
                             <div><strong>Entrevistador:</strong> {entrevista.entrevistador || '–'}</div>
                         </div>
@@ -363,14 +364,23 @@
         function VerEntrevista({ entrevistaId, onVolver }) {
             const [entrevista, setEntrevista] = useState(null);
             const [procesos, setProcesos] = useState([]);
+            const [pasosPorProceso, setPasosPorProceso] = useState({});
             const [loading, setLoading] = useState(true);
 
             useEffect(() => {
                 async function cargar() {
-                    const { data: entData } = await supabase.from('entrevistas').select('*').eq('id', entrevistaId).single();
+                    const {  entData } = await supabase.from('entrevistas').select('*').eq('id', entrevistaId).single();
                     const {  procData } = await supabase.from('procesos').select('*').eq('entrevista_id', entrevistaId);
                     if (entData) setEntrevista(entData);
-                    if (procData) setProcesos(procData);
+                    if (procData) {
+                        setProcesos(procData);
+                        const pasosMap = {};
+                        for (const p of procData) {
+                            const {  pasosData } = await supabase.from('pasos_proceso').select('*').eq('proceso_id', p.id).order('orden', { ascending: true });
+                            pasosMap[p.id] = pasosData || [];
+                        }
+                        setPasosPorProceso(pasosMap);
+                    }
                     setLoading(false);
                 }
                 cargar();
@@ -385,22 +395,64 @@
                         <h2 className="text-2xl font-bold">Entrevista: {entrevista.area}</h2>
                         <button onClick={onVolver} className="text-blue-600 hover:underline">← Volver</button>
                     </div>
+
                     <div className="mb-6 p-4 bg-gray-50 rounded">
                         <div className="grid grid-cols-2 gap-4">
                             <div><strong>Fecha:</strong> {new Date(entrevista.fecha).toLocaleDateString('es-AR')}</div>
-                            <div><strong>Estado:</strong> {entrevista.estado}</div>
+                            <div><strong>Hora:</strong> {entrevista.hora ? entrevista.hora.slice(0,5) : '–'}</div>
                             <div><strong>Entrevistador:</strong> {entrevista.entrevistador || '–'}</div>
                             <div><strong>Responsable:</strong> {entrevista.responsable || '–'}</div>
+                            <div><strong>Estado:</strong> {entrevista.estado}</div>
                         </div>
                     </div>
+
+                    {/* Complemento */}
+                    {(entrevista.interacciones_externas || entrevista.sistemas_usados || entrevista.entrevistados || entrevista.acuerdos || entrevista.observaciones_generales) && (
+                        <div className="mb-6 p-4 bg-blue-50 rounded">
+                            <h3 className="font-bold mb-2">Información complementaria</h3>
+                            {entrevista.interacciones_externas && <p><strong>Interacciones:</strong> {entrevista.interacciones_externas}</p>}
+                            {entrevista.sistemas_usados && <p><strong>Sistemas:</strong> {entrevista.sistemas_usados}</p>}
+                            {entrevista.entrevistados && <p><strong>Entrevistados:</strong> {entrevista.entrevistados}</p>}
+                            {entrevista.acuerdos && <p><strong>Acuerdos:</strong> {entrevista.acuerdos}</p>}
+                            {entrevista.observaciones_generales && <p><strong>Observaciones:</strong> {entrevista.observaciones_generales}</p>}
+                        </div>
+                    )}
+
+                    {/* Procesos y pasos */}
                     {procesos.length > 0 && (
                         <div>
-                            <h3 className="font-bold mb-3">Procesos relevados:</h3>
-                            <ul className="list-disc pl-5 space-y-1">
-                                {procesos.map(p => (
-                                    <li key={p.id}>{p.nombre} ({p.frecuencia})</li>
-                                ))}
-                            </ul>
+                            <h3 className="font-bold text-lg mb-4">Procesos relevados</h3>
+                            {procesos.map(p => (
+                                <div key={p.id} className="mb-6 p-4 border rounded bg-white">
+                                    <h4 className="font-semibold text-lg">{p.nombre}</h4>
+                                    <div className="text-sm text-gray-600 mb-2">
+                                        {p.area_inicio} → {p.area_cierre || '...'}
+                                    </div>
+                                    <div className="space-y-3 mt-3">
+                                        {pasosPorProceso[p.id]?.map(paso => (
+                                            <div key={paso.id} className="p-3 bg-gray-50 rounded">
+                                                <div><span className="font-medium">Paso {paso.orden}:</span> {paso.descripcion}</div>
+                                                {paso.responsable_rol && <div>Responsable: {paso.responsable_rol}</div>}
+                                                {paso.area && <div>Área: {paso.area}</div>}
+                                                {paso.herramienta && <div>Herramienta: {paso.herramienta}</div>}
+                                                {paso.tiene_decision && (
+                                                    <div className="mt-2 p-2 bg-yellow-100 rounded">
+                                                        <div><strong>Decisión:</strong> {paso.condicion_decision}</div>
+                                                        {paso.destino_si_cumple && <div>✓ Sí: {paso.destino_si_cumple}</div>}
+                                                        {paso.destino_si_no_cumple && <div>✗ No: {paso.destino_si_no_cumple}</div>}
+                                                    </div>
+                                                )}
+                                                {paso.pasa_a_otra_area && (
+                                                    <div className="mt-2 p-2 bg-orange-100 rounded">
+                                                        <div>🔄 Pasa a: {paso.area_destino}</div>
+                                                        {paso.que_envia && <div>Envía: {paso.que_envia}</div>}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            ))}
                         </div>
                     )}
                 </div>
@@ -414,7 +466,7 @@
                         <div key={e.id} className="bg-white p-4 rounded border">
                             <h4 className="font-semibold">{e.area}</h4>
                             <p className="text-sm text-gray-600">
-                                {new Date(e.fecha).toLocaleDateString('es-AR')}
+                                {new Date(e.fecha).toLocaleDateString('es-AR')} {e.hora ? `a las ${e.hora.slice(0,5)}` : ''}
                             </p>
                             <p className="text-sm mt-1">Estado: <span className="font-medium">{e.estado}</span></p>
                             <div className="mt-2 flex gap-2">
@@ -451,11 +503,13 @@
                             .eq('id', procesoId)
                             .single();
 
-                        if (procError || !procData) throw new Error('Proceso no encontrado');
+                        if (procError || !procData) {
+                            setLoading(false);
+                            return;
+                        }
 
                         setProceso(procData);
 
-                        // Cargar entrevista asociada
                         const { data: entData } = await supabase
                             .from('entrevistas')
                             .select('*')
@@ -463,24 +517,23 @@
                             .single();
                         setEntrevista(entData);
 
-                        // Cargar pasos
                         const {  pasosData } = await supabase
                             .from('pasos_proceso')
                             .select('*')
                             .eq('proceso_id', procesoId)
-                            .order('orden', { ascending: true });
-                        setPasos(pasosData || []);
+                            .order('orden', { ascending: true }); // ✅ Corrección clave
 
-                        setLoading(false);
+                        setPasos(pasosData || []);
                     } catch (err) {
-                        console.error('Error en DetalleProceso:', err);
+                        console.error(err);
+                    } finally {
                         setLoading(false);
                     }
                 }
-                cargar();
+                if (procesoId) cargar();
             }, [procesoId]);
 
-            if (loading) return <div className="p-6 text-center">Cargando detalles...</div>;
+            if (loading) return <div className="p-6 text-center">Cargando detalles del proceso...</div>;
             if (!proceso) return <div className="p-6 text-center">Proceso no encontrado</div>;
 
             return (
@@ -488,23 +541,20 @@
                     <div className="flex justify-between mb-6">
                         <div>
                             <h2 className="text-2xl font-bold">{proceso.nombre}</h2>
-                            <p className="text-sm text-gray-600 mt-1">
-                                {proceso.area_inicio}
-                                {proceso.areas_intermedias && ` → ${proceso.areas_intermedias}`}
-                                {proceso.area_cierre && ` → ${proceso.area_cierre}`}
-                            </p>
+                            <p className="text-sm text-gray-600 mt-1">{proceso.area_inicio} → {proceso.area_cierre || '...'}</p>
                         </div>
                         <button onClick={onVolver} className="text-blue-600 hover:underline">← Volver</button>
                     </div>
 
-                    {/* Datos de la entrevista asociada */}
                     {entrevista && (
                         <div className="mb-6 p-4 bg-blue-50 rounded border border-blue-200">
                             <h3 className="font-bold text-lg mb-2">Entrevista asociada</h3>
                             <div className="grid grid-cols-2 gap-3 text-sm">
                                 <div><strong>Área:</strong> {entrevista.area}</div>
                                 <div><strong>Fecha:</strong> {new Date(entrevista.fecha).toLocaleDateString('es-AR')}</div>
+                                {entrevista.hora && <div><strong>Hora:</strong> {entrevista.hora.slice(0, 5)}</div>}
                                 <div><strong>Entrevistador:</strong> {entrevista.entrevistador || '–'}</div>
+                                <div><strong>Responsable:</strong> {entrevista.responsable || '–'}</div>
                                 <div><strong>Estado:</strong> {entrevista.estado}</div>
                             </div>
                         </div>
@@ -516,7 +566,6 @@
                         <div><span className="text-sm text-gray-600">Estado:</span> <p className="font-medium capitalize">{proceso.estado_relevamiento?.replace('_', ' ')}</p></div>
                     </div>
 
-                    {/* Diagrama visual original */}
                     <div className="mb-6">
                         <h3 className="font-bold text-lg mb-4">Diagrama de Flujo</h3>
                         {pasos.length === 0 ? (
@@ -532,25 +581,13 @@
                                             <div className="flex-1 border-2 border-blue-200 rounded-lg p-4 bg-blue-50">
                                                 <h4 className="font-semibold mb-2">{paso.descripcion}</h4>
                                                 <div className="grid grid-cols-2 gap-3 text-sm">
-                                                    {paso.responsable_rol && (
-                                                        <div><span className="text-gray-600">Responsable:</span> {paso.responsable_rol}</div>
-                                                    )}
-                                                    {paso.area && (
-                                                        <div><span className="text-gray-600">Área:</span> <span className="font-medium">{paso.area}</span></div>
-                                                    )}
-                                                    {paso.herramienta && (
-                                                        <div><span className="text-gray-600">Herramienta:</span> {paso.herramienta}</div>
-                                                    )}
-                                                    {paso.plazos && (
-                                                        <div><span className="text-gray-600">Plazo:</span> {paso.plazos}</div>
-                                                    )}
+                                                    {paso.responsable_rol && <div><span className="text-gray-600">Responsable:</span> {paso.responsable_rol}</div>}
+                                                    {paso.area && <div><span className="text-gray-600">Área:</span> <span className="font-medium">{paso.area}</span></div>}
+                                                    {paso.herramienta && <div><span className="text-gray-600">Herramienta:</span> {paso.herramienta}</div>}
+                                                    {paso.plazos && <div><span className="text-gray-600">Plazo:</span> {paso.plazos}</div>}
                                                 </div>
-                                                {paso.datos_necesarios && (
-                                                    <div className="mt-2 text-sm"><span className="text-gray-600">Datos necesarios:</span> {paso.datos_necesarios}</div>
-                                                )}
-                                                {paso.documentos_generados && (
-                                                    <div className="mt-1 text-sm"><span className="text-gray-600">Documentos:</span> {paso.documentos_generados}</div>
-                                                )}
+                                                {paso.datos_necesarios && <div className="mt-2 text-sm"><span className="text-gray-600">Datos necesarios:</span> {paso.datos_necesarios}</div>}
+                                                {paso.documentos_generados && <div className="mt-1 text-sm"><span className="text-gray-600">Documentos:</span> {paso.documentos_generados}</div>}
                                             </div>
                                         </div>
 
@@ -559,12 +596,8 @@
                                                 <div className="border-2 border-yellow-400 rounded-lg p-3 bg-yellow-50">
                                                     <div className="font-semibold text-sm mb-2">❓ Decisión: {paso.condicion_decision}</div>
                                                     <div className="flex gap-4 text-sm">
-                                                        {paso.destino_si_cumple && (
-                                                            <div className="flex-1"><span className="text-green-700">✓ Si cumple:</span> {paso.destino_si_cumple}</div>
-                                                        )}
-                                                        {paso.destino_si_no_cumple && (
-                                                            <div className="flex-1"><span className="text-red-700">✗ Si no cumple:</span> {paso.destino_si_no_cumple}</div>
-                                                        )}
+                                                        {paso.destino_si_cumple && <div className="flex-1"><span className="text-green-700">✓ Si cumple:</span> {paso.destino_si_cumple}</div>}
+                                                        {paso.destino_si_no_cumple && <div className="flex-1"><span className="text-red-700">✗ Si no cumple:</span> {paso.destino_si_no_cumple}</div>}
                                                     </div>
                                                 </div>
                                             </div>
@@ -582,9 +615,7 @@
                                             </div>
                                         )}
 
-                                        {idx < pasos.length - 1 && (
-                                            <div className="ml-4 h-6 w-0.5 bg-blue-300"></div>
-                                        )}
+                                        {idx < pasos.length - 1 && <div className="ml-4 h-6 w-0.5 bg-blue-300"></div>}
                                     </div>
                                 ))}
                             </div>
@@ -596,9 +627,7 @@
                         {pasos.filter(p => p.pasa_a_otra_area).length > 0 ? (
                             <ul className="text-sm space-y-1">
                                 {pasos.filter(p => p.pasa_a_otra_area).map(p => (
-                                    <li key={p.id}>
-                                        • <strong>{p.area}</strong> → <strong>{p.area_destino}</strong> {p.que_envia && `(${p.que_envia})`}
-                                    </li>
+                                    <li key={p.id}>• <strong>{p.area}</strong> → <strong>{p.area_destino}</strong> {p.que_envia && `(${p.que_envia})`}</li>
                                 ))}
                             </ul>
                         ) : (
@@ -610,7 +639,7 @@
         }
 
         function TrackerEntrevistas({ entrevistas, setEntrevistas, onCompletar }) {
-            const [form, setForm] = useState({ area: '', fecha: '', responsable: '', entrevistador: '', estado: 'pendiente', notas: '' });
+            const [form, setForm] = useState({ area: '', fecha: '', hora: '', responsable: '', entrevistador: '', estado: 'pendiente', notas: '' });
 
             async function agregar() {
                 if (!form.area || !form.fecha) return alert('Completa área y fecha');
@@ -619,7 +648,7 @@
                     alert('Error: ' + error.message);
                 } else {
                     setEntrevistas([data[0], ...entrevistas]);
-                    setForm({ area: '', fecha: '', responsable: '', entrevistador: '', estado: 'pendiente', notas: '' });
+                    setForm({ area: '', fecha: '', hora: '', responsable: '', entrevistador: '', estado: 'pendiente', notas: '' });
                 }
             }
 
@@ -657,8 +686,9 @@
                         <div className="grid grid-cols-2 gap-3">
                             <input type="text" placeholder="Área *" className="border p-2 rounded" value={form.area} onChange={e => setForm({ ...form, area: e.target.value })} />
                             <input type="date" className="border p-2 rounded" value={form.fecha} onChange={e => setForm({ ...form, fecha: e.target.value })} />
+                            <input type="time" className="border p-2 rounded" value={form.hora} onChange={e => setForm({ ...form, hora: e.target.value })} />
                             <input type="text" placeholder="Responsable" className="border p-2 rounded" value={form.responsable} onChange={e => setForm({ ...form, responsable: e.target.value })} />
-                            <input type="text" placeholder="Entrevistador" className="border p-2 rounded" value={form.entrevistador} onChange={e => setForm({ ...form, entrevistador: e.target.value })} />
+                            <input type="text" placeholder="Entrevistador" className="border p-2 rounded col-span-2" value={form.entrevistador} onChange={e => setForm({ ...form, entrevistador: e.target.value })} />
                         </div>
                         <button onClick={agregar} className="mt-3 bg-blue-600 text-white px-4 py-2 rounded flex items-center gap-2">
                             <Icons.Plus /> Agregar
@@ -671,7 +701,7 @@
                                 <div className="flex justify-between">
                                     <div>
                                         <h4 className="font-semibold">{e.area}</h4>
-                                        <p className="text-sm text-gray-600">{new Date(e.fecha).toLocaleDateString('es-AR')}</p>
+                                        <p className="text-sm text-gray-600">{new Date(e.fecha).toLocaleDateString('es-AR')} {e.hora ? `a las ${e.hora.slice(0,5)}` : ''}</p>
                                     </div>
                                     <div className="flex gap-2">
                                         <button onClick={() => onCompletar(e.id)} className="bg-green-600 text-white px-3 py-1 rounded text-sm">

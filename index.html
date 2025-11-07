@@ -16,7 +16,7 @@
         mermaid.initialize({ startOnLoad: false });
     </script>
 </head>
-<body>
+<body class="bg-gray-50 dark:bg-gray-900 dark:text-white">
     <div id="root"></div>
     <script type="text/babel">
         const { useState, useEffect, useRef } = React;
@@ -1111,6 +1111,24 @@
         </div>
     );
 }
+
+        function DarkModeToggle() {
+        const [darkMode, setDarkMode] = useState(false);
+        
+        useEffect(() => {
+        if (darkMode) {
+        document.documentElement.classList.add('dark');
+           } else {
+           document.documentElement.classList.remove('dark');
+            }
+         }, [darkMode]);
+
+         return (
+            <button onClick={() => setDarkMode(!darkMode)} className="text-gray-600 dark:text-gray-300">
+              {darkMode ? '☀️' : '🌙'}
+         </button>
+    );
+        }
       function App() {
     const [activeTab, setActiveTab] = useState('tracker');
     const [entrevistas, setEntrevistas] = useState([]);
@@ -1173,12 +1191,17 @@
     if (loading) return <div className="p-6 text-center">Cargando...</div>;
 
     return (
-        <div className="min-h-screen bg-gray-50 p-6">
-            <div className="max-w-7xl mx-auto">
-                <div className="mb-6">
-                    <h1 className="text-3xl font-bold">Sistema de Relevamiento de Procesos</h1>
-                    <p className="text-gray-600 mt-1">Ministerio de Ecología - Provincia de Misiones</p>
+        
+        <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6">
+        <div className="max-w-7xl mx-auto">
+            <div className="flex justify-between items-center mb-6">
+                <div>
+                    <h1 className="text-3xl font-bold dark:text-white">Sistema de Relevamiento de Procesos</h1>
+                    <p className="text-gray-600 dark:text-gray-300 mt-1">Ministerio de Ecología - Provincia de Misiones</p>
                 </div>
+                {/* ✅ Agregamos el botón de modo oscuro aquí */}
+                <DarkModeToggle />
+            </div>
 
                 {activeTab !== 'completar' && activeTab !== 'detalle-proceso' && activeTab !== 'ver-entrevista-modal' && activeTab !== 'editar-proceso' && (
                     <div className="flex gap-2 mb-6 border-b">

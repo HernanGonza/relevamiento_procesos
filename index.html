@@ -336,7 +336,7 @@
                 </div>
             );
         }
-        function VerEntrevista({ entrevistaId, onCerrar }) {
+        function VerEntrevista({ entrevistaId, onCerrar, onVerDetalle }) {
     const [entrevista, setEntrevista] = useState(null);
     const [procesos, setProcesos] = useState([]);
     const [pasosPorProceso, setPasosPorProceso] = useState({});
@@ -475,15 +475,13 @@
                                         <h4 className="font-semibold text-lg">{p.nombre}</h4>
                                         <div className="text-sm text-gray-600 mb-2">{p.area_inicio} → {p.area_cierre || '...'}</div>
                                     </div>
-                                    <button onClick={() => {
-                                        // Abrir DetalleProceso en una nueva pestaña/modal si lo deseas
-                                        // Por ahora, simulamos ir a detalle
-                                        window.open(`/detalle-proceso/${p.id}`, '_blank');
-                                        // O si tienes un estado global para abrir modales, cámbialo aquí
-                                        // Ej: setProcesoSeleccionado(p.id); setActiveTab('detalle-proceso');
-                                    }} className="bg-blue-600 text-white px-3 py-1 rounded text-sm flex items-center gap-1">
-                                        <Icons.Eye /> Ver Detalle
-                                    </button>
+                                   <button onClick={() => {
+    onCerrar(); // Cierra el modal actual
+    setProcesoSeleccionado(p.id); // Guarda el ID del proceso
+    setActiveTab('detalle-proceso'); // Cambia a la vista de detalle
+}} className="bg-blue-600 text-white px-3 py-1 rounded text-sm flex items-center gap-1">
+    <Icons.Eye /> Ver Detalle
+</button>
                                 </div>
                                 <div className="space-y-3 mt-3">
                                     {pasosPorProceso[p.id]?.map(paso => (
@@ -1225,15 +1223,20 @@
                         />
                     )}
                     {/* NUEVO: Modal de Ver Entrevista */}
-                    {activeTab === 'ver-entrevista-modal' && (
-                        <VerEntrevista
-                            entrevistaId={entrevistaAVer}
-                            onCerrar={() => {
-                                setEntrevistaAVer(null);
-                                setActiveTab('entrevistas');
-                            }}
-                        />
-                    )}
+                   {activeTab === 'ver-entrevista-modal' && (
+    <VerEntrevista
+        entrevistaId={entrevistaAVer}
+        onCerrar={() => {
+            setEntrevistaAVer(null);
+            setActiveTab('entrevistas');
+        }}
+        // Pasa las funciones necesarias para ir a detalle
+        onVerDetalle={(id) => {
+            setProcesoSeleccionado(id);
+            setActiveTab('detalle-proceso');
+        }}
+    />
+)}
                     {activeTab === 'detalle-proceso' && (
                         <DetalleProceso
                             procesoId={procesoSeleccionado}

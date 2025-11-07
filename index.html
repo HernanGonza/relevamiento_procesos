@@ -1113,22 +1113,38 @@
 }
 
         function DarkModeToggle() {
-        const [darkMode, setDarkMode] = useState(false);
-        
-        useEffect(() => {
-        if (darkMode) {
-        document.documentElement.classList.add('dark');
-           } else {
-           document.documentElement.classList.remove('dark');
-            }
-         }, [darkMode]);
-
-         return (
-            <button onClick={() => setDarkMode(!darkMode)} className="text-gray-600 dark:text-gray-300">
-              {darkMode ? '☀️' : '🌙'}
-         </button>
-    );
+    const [darkMode, setDarkMode] = useState(() => {
+        // Detectar si el usuario prefiere modo oscuro por defecto
+        const saved = localStorage.getItem('darkMode');
+        if (saved !== null) {
+            return JSON.parse(saved);
         }
+        return window.matchMedia('(prefers-color-scheme: dark)').matches;
+    });
+
+    useEffect(() => {
+        if (darkMode) {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
+        // Guardar preferencia en localStorage
+        localStorage.setItem('darkMode', JSON.stringify(darkMode));
+    }, [darkMode]);
+
+    const toggleDarkMode = () => {
+        setDarkMode(!darkMode);
+    };
+
+    return (
+        <button
+            onClick={toggleDarkMode}
+            className="text-gray-600 dark:text-gray-300 ml-4"
+        >
+            {darkMode ? '☀️' : '🌙'}
+        </button>
+    );
+}
       function App() {
     const [activeTab, setActiveTab] = useState('tracker');
     const [entrevistas, setEntrevistas] = useState([]);

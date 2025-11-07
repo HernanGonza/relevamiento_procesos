@@ -1051,7 +1051,7 @@
         </div>
     );
 }
-       function App() {
+      function App() {
     const [activeTab, setActiveTab] = useState('tracker');
     const [entrevistas, setEntrevistas] = useState([]);
     const [procesos, setProcesos] = useState([]);
@@ -1059,9 +1059,9 @@
     const [loading, setLoading] = useState(true);
     const [entrevistaEnProgreso, setEntrevistaEnProgreso] = useState(null);
     const [procesoSeleccionado, setProcesoSeleccionado] = useState(null);
-    const [entrevistaSeleccionada, setEntrevistaSeleccionada] = useState(null);
-    const [procesoAEliminar, setProcesoAEliminar] = useState(null); // Estado para edición
-    const [entrevistaAVer, setEntrevistaAVer] = useState(null);
+    const [entrevistaSeleccionada, setEntrevistaSeleccionada] = useState(null); // Puedes mantenerla si se usa en otro lado
+    const [entrevistaAVer, setEntrevistaAVer] = useState(null); // Nuevo estado para el modal
+    const [procesoAEliminar, setProcesoAEliminar] = useState(null); // Reutilizado para edición
 
     useEffect(() => {
         loadData();
@@ -1095,9 +1095,9 @@
     }
 
     function verEntrevista(id) {
-    setEntrevistaAVer(id);
-    setActiveTab('ver-entrevista-modal');
-}
+        setEntrevistaAVer(id);
+        setActiveTab('ver-entrevista-modal');
+    }
 
     function verDetalleProceso(id) {
         setProcesoSeleccionado(id);
@@ -1105,7 +1105,7 @@
     }
 
     function editarProceso(id) {
-        setProcesoAEliminar(id); // Reutilizamos estado temporal
+        setProcesoAEliminar(id);
         setActiveTab('editar-proceso');
     }
 
@@ -1119,7 +1119,7 @@
                     <p className="text-gray-600 mt-1">Ministerio de Ecología - Provincia de Misiones</p>
                 </div>
 
-                {activeTab !== 'completar' && activeTab !== 'detalle-proceso' && activeTab !== 'ver-entrevista' && activeTab !== 'editar-proceso' && (
+                {activeTab !== 'completar' && activeTab !== 'detalle-proceso' && activeTab !== 'ver-entrevista-modal' && activeTab !== 'editar-proceso' && (
                     <div className="flex gap-2 mb-6 border-b">
                         <button onClick={() => setActiveTab('tracker')} className={'px-4 py-2 font-medium ' + (activeTab === 'tracker' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600')}>
                             Agendar Entrevistas
@@ -1147,7 +1147,7 @@
                     {activeTab === 'entrevistas' && (
                         <ListaEntrevistas
                             entrevistas={entrevistas}
-                            onVer={verEntrevista}
+                            onVer={verEntrevista} // <-- Ahora llama a la nueva función
                             onEditarEstado={editarEstadoEntrevista}
                         />
                     )}
@@ -1157,20 +1157,14 @@
                             onVolver={() => setActiveTab('tracker')}
                         />
                     )}
-                   {activeTab === 'ver-entrevista-modal' && (
-    <VerEntrevista
-        entrevistaId={entrevistaAVer}
-        onCerrar={() => {
-            setEntrevistaAVer(null);
-            setActiveTab('entrevistas');
-        }}
-    />
-)}
-                    {activeTab === 'procesos' && (
-                        <MatrizProcesos
-                            procesos={procesos}
-                            onVerDetalle={verDetalleProceso}
-                            onEditar={editarProceso}
+                    {/* NUEVO: Modal de Ver Entrevista */}
+                    {activeTab === 'ver-entrevista-modal' && (
+                        <VerEntrevista
+                            entrevistaId={entrevistaAVer}
+                            onCerrar={() => {
+                                setEntrevistaAVer(null);
+                                setActiveTab('entrevistas');
+                            }}
                         />
                     )}
                     {activeTab === 'detalle-proceso' && (
@@ -1189,6 +1183,13 @@
                             }}
                         />
                     )}
+                    {activeTab === 'procesos' && (
+                        <MatrizProcesos
+                            procesos={procesos}
+                            onVerDetalle={verDetalleProceso}
+                            onEditar={editarProceso}
+                        />
+                    )}
                     {activeTab === 'handoffs' && (
                         <ValidacionHandoffs
                             handoffs={handoffs}
@@ -1199,7 +1200,7 @@
             </div>
         </div>
     );
-}   
+}
         ReactDOM.render(<App />, document.getElementById('root'));
     </script>
 </body>

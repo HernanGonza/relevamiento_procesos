@@ -343,21 +343,77 @@
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
+        console.log("VerEntrevista: useEffect ejecutado. ID recibido:", entrevistaId, typeof entrevistaId);
+
+        if (!entrevistaId || typeof entrevistaId !== 'number') {
+            console.error("VerEntrevista: ID inválido o no numérico. Valor:", entrevistaId);
+            setLoading(false);
+            return;
+        }
+
         async function cargar() {
-            const {  entData } = await supabase.from('entrevistas').select('*').eq('id', entrevistaId).single();
-            const {  procData } = await supabase.from('procesos').select('*').eq('entrevista_id', entrevistaId);
-            if (entData) setEntrevista(entData);
-            if (procData) {
-                setProcesos(procData);
+            console.log("VerEntrevista: Consultando entrevista con ID:", entrevistaId);
+            try {
+                const { data: entData, error: entError } = await supabase
+                    .from('entrevistas')
+                    .select('*')
+                    .eq('id', entrevistaId)
+                    .single();
+
+                if (entError) {
+                    console.error("VerEntrevista: Error de Supabase al cargar entrevista:", entError);
+                    alert("Error al cargar la entrevista: " + entError.message);
+                    return;
+                }
+
+                if (!entData) {
+                    console.error("VerEntrevista: Entrevista no encontrada en la base de datos para ID:", entrevistaId);
+                    return;
+                }
+
+                console.log("VerEntrevista: Entrevista encontrada:", entData);
+                setEntrevista(entData);
+
+                // Cargar procesos asociados
+                const { data: procData, error: procError } = await supabase
+                    .from('procesos')
+                    .select('*')
+                    .eq('entrevista_id', entrevistaId);
+
+                if (procError) {
+                    console.error("VerEntrevista: Error al cargar procesos:", procError);
+                    alert("Error al cargar los procesos: " + procError.message);
+                    return;
+                }
+
+                setProcesos(procData || []);
+
+                // Cargar pasos de cada proceso
                 const pasosMap = {};
-                for (const p of procData) {
-                    const {  pasosData } = await supabase.from('pasos_proceso').select('*').eq('proceso_id', p.id).order('orden', { ascending: true });
-                    pasosMap[p.id] = pasosData || [];
+                if (procData) {
+                    for (const p of procData) {
+                        const { data: pasosData, error: pasosError } = await supabase
+                            .from('pasos_proceso')
+                            .select('*')
+                            .eq('proceso_id', p.id)
+                            .order('orden', { ascending: true });
+
+                        if (pasosError) {
+                            console.error(`VerEntrevista: Error al cargar pasos del proceso ${p.id}:`, pasosError);
+                        } else {
+                            pasosMap[p.id] = pasosData || [];
+                        }
+                    }
                 }
                 setPasosPorProceso(pasosMap);
+            } catch (err) {
+                console.error("VerEntrevista: Error general:", err);
+                alert("Error inesperado: " + err.message);
+            } finally {
+                setLoading(false);
             }
-            setLoading(false);
         }
+
         cargar();
     }, [entrevistaId]);
 
@@ -466,32 +522,42 @@
         </div>
     );
 }
-        function ListaEntrevistas({ entrevistas, onVer, onEditarEstado }) {
-            return (
-                <div className="space-y-3">
-                    {entrevistas.map(e => (
-                        <div key={e.id} className="bg-white p-4 rounded border">
-                            <h4 className="font-semibold">{e.area}</h4>
-                            <p className="text-sm text-gray-600">{new Date(e.fecha).toLocaleDateString('es-AR')} {e.hora ? `a las ${e.hora.slice(0,5)}` : ''}</p>
-                            <p className="text-sm mt-1">Estado: <span className="font-medium">{e.estado}</span></p>
-                            <div className="mt-2 flex gap-2">
-                                <button onClick={() => onVer(e.id)} className="text-blue-600 text-sm">Ver</button>
-                                <select
-                                    value={e.estado}
-                                    onChange={ev => onEditarEstado(e.id, ev.target.value)}
-                                    className="text-sm border rounded px-2"
-                                >
-                                    <option value="pendiente">Pendiente</option>
-                                    <option value="realizada">Realizada</option>
-                                    <option value="validada">Validada</option>
-                                    <option value="requiere_seguimiento">Seguimiento</option>
-                                </select>
-                            </div>
-                        </div>
-                    ))}
+       function ListaEntrevistas({ entrevistas, onVer, onEditarEstado }) {
+    return (
+        <div className="space-y-3">
+            {entrevistas.map(e => (
+                <div key={e.id} className="bg-white p-4 rounded border">
+                    <h4 className="font-semibold">{e.area}</h4>
+                    <p className="text-sm text-gray-600">
+                        {new Date(e.fecha).toLocaleDateString('es-AR')} {e.hora ? `a las ${e.hora.slice(0,5)}` : ''}
+                    </p>
+                    <p className="text-sm mt-1">Estado: <span className="font-medium">{e.estado}</span></p>
+                    <div className="mt-2 flex gap-2">
+                        <button
+                            onClick={() => {
+                                console.log("Botón Ver clickeado, ID enviado:", e.id, typeof e.id);
+                                onVer(e.id);
+                            }}
+                            className="text-blue-600 text-sm"
+                        >
+                            Ver
+                        </button>
+                        <select
+                            value={e.estado}
+                            onChange={ev => onEditarEstado(e.id, ev.target.value)}
+                            className="text-sm border rounded px-2"
+                        >
+                            <option value="pendiente">Pendiente</option>
+                            <option value="realizada">Realizada</option>
+                            <option value="validada">Validada</option>
+                            <option value="requiere_seguimiento">Seguimiento</option>
+                        </select>
+                    </div>
                 </div>
-            );
-        }
+            ))}
+        </div>
+    );
+}
         function DetalleProceso({ procesoId, onVolver }) {
             const [proceso, setProceso] = useState(null);
             const [entrevista, setEntrevista] = useState(null);
@@ -1095,9 +1161,10 @@
     }
 
     function verEntrevista(id) {
-        setEntrevistaAVer(id);
-        setActiveTab('ver-entrevista-modal');
-    }
+    console.log("App.verEntrevista: ID recibido:", id, typeof id);
+    setEntrevistaAVer(id);
+    setActiveTab('ver-entrevista-modal');
+}
 
     function verDetalleProceso(id) {
         setProcesoSeleccionado(id);

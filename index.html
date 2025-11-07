@@ -16,121 +16,177 @@
         mermaid.initialize({ startOnLoad: false });
     </script>
     <style>
-        :root {
-            --color-bg: #f9fafb;
-            --color-surface: #ffffff;
-            --color-text: #1f2937;
-            --color-text-secondary: #6b7280;
-            --color-border: #e5e7eb;
-            --color-primary: #3b82f6;
-            --color-primary-dark: #2563eb;
-            --color-success: #10b981;
-            --color-warning: #f59e0b;
-            --color-danger: #ef4444;
-            --color-info: #0ea5e9;
-        }
-        .dark {
-            --color-bg: #111827;
-            --color-surface: #1f2937;
-            --color-text: #f9fafb;
-            --color-text-secondary: #9ca3af;
-            --color-border: #374151;
-            --color-primary: #60a5fa;
-            --color-primary-dark: #3b82f6;
-            --color-success: #34d399;
-            --color-warning: #fbbf24;
-            --color-danger: #f87171;
-            --color-info: #3b82f6;
-        }
-        body {
-            background-color: var(--color-bg);
-            color: var(--color-text);
-        }
-        .toggle-container {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin: 0 1rem;
-        }
-        .toggle-switch {
-            position: relative;
-            display: inline-block;
-            width: 60px;
-            height: 30px;
-        }
-        .toggle-switch input {
-            opacity: 0;
-            width: 0;
-            height: 0;
-        }
-        .toggle-slider {
-            position: absolute;
-            cursor: pointer;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background-color: #e5e7eb;
-            transition: .4s;
-            border-radius: 34px;
-        }
-        .toggle-slider:before {
-            position: absolute;
-            content: "";
-            height: 22px;
-            width: 22px;
-            left: 4px;
-            bottom: 4px;
-            background-color: white;
-            transition: .4s;
-            border-radius: 50%;
-        }
-        input:checked + .toggle-slider {
-            background-color: #374151;
-        }
-        input:checked + .toggle-slider:before {
-            transform: translateX(30px);
-        }
-        .toggle-icons {
-            position: absolute;
-            display: flex;
-            justify-content: space-between;
-            width: 100%;
-            top: 5px;
-            pointer-events: none;
-        }
-        .toggle-icons .sun {
-            left: 7px;
-            color: #f59e0b;
-        }
-        .toggle-icons .moon {
-            right: 7px;
-            color: #6b7280;
-        }
-        input:checked + .toggle-slider .sun {
-            color: #6b7280;
-        }
-        input:checked + .toggle-slider .moon {
-            color: #60a5fa;
-        }
-        /* Estilos para select en modo oscuro */
-        select {
-            background-color: var(--color-surface);
-            color: var(--color-text);
-            border-color: var(--color-border);
-        }
-        option {
-            background-color: var(--color-surface);
-            color: var(--color-text);
-        }
-        /* Estilos para tabla en modo oscuro */
-        table {
-            color: var(--color-text);
-        }
-        th, td {
-            border-color: var(--color-border);
-        }
-    </style>
+    :root {
+        --color-bg: #f9fafb;
+        --color-surface: #ffffff;
+        --color-text: #111827;
+        --color-text-secondary: #6b7280;
+        --color-border: #e5e7eb;
+        --color-primary: #3b82f6;
+        --color-primary-dark: #2563eb;
+        --color-success: #10b981;
+        --color-warning: #f59e0b;
+        --color-danger: #ef4444;
+        --color-info: #0ea5e9;
+    }
+
+    .dark {
+        /* ✅ Fondos más suaves y oscuros */
+        --color-bg: #0f172a; /* Fondo principal: azul oscuro profundo */
+        --color-surface: #1e293b; /* Fondo de cards: slate-800 */
+        --color-surface-light: #334155; /* Fondo de secciones suaves: slate-700 */
+
+        /* ✅ Textos con mejor contraste */
+        --color-text: #f8fafc; /* Texto principal: slate-50 */
+        --color-text-secondary: #cbd5e1; /* Texto secundario: slate-300 */
+        --color-text-muted: #94a3b8; /* Texto más bajo contraste: slate-400 */
+
+        /* ✅ Bordes suaves */
+        --color-border: #334155; /* slate-700 */
+        --color-border-light: #475569; /* slate-600 */
+
+        /* ✅ Colores primarios suaves */
+        --color-primary: #93c5fd; /* slate-300 */
+        --color-primary-dark: #60a5fa; /* slate-400 */
+
+        /* ✅ Estados con mejor visibilidad */
+        --color-success: #86efac; /* green-300 */
+        --color-warning: #fde68a; /* amber-200 */
+        --color-danger: #fca5a5; /* red-300 */
+        --color-info: #a5b4fc; /* indigo-300 */
+    }
+
+    body {
+        background-color: var(--color-bg);
+        color: var(--color-text);
+    }
+
+    /* ✅ Estilos para contadores en modo oscuro */
+    .counter-card {
+        background-color: var(--color-surface-light);
+        border: 1px solid var(--color-border-light);
+        color: var(--color-text);
+    }
+
+    .counter-number {
+        color: var(--color-primary);
+    }
+
+    .counter-label {
+        color: var(--color-text-secondary);
+    }
+
+    /* ✅ Estilos para inputs/selects en modo oscuro */
+    input, select, textarea {
+        background-color: var(--color-surface);
+        color: var(--color-text);
+        border: 1px solid var(--color-border);
+    }
+
+    input:focus, select:focus, textarea:focus {
+        border-color: var(--color-primary);
+        outline: none;
+    }
+
+    option {
+        background-color: var(--color-surface);
+        color: var(--color-text);
+    }
+
+    /* ✅ Estilos para botones en modo oscuro */
+    button {
+        color: var(--color-text);
+    }
+
+    /* ✅ Estilos para tablas */
+    table {
+        color: var(--color-text);
+    }
+
+    th, td {
+        border-color: var(--color-border);
+    }
+
+    /* ✅ Estilos para el toggle de modo oscuro */
+    .toggle-switch {
+        position: relative;
+        display: inline-block;
+        width: 60px;
+        height: 30px;
+    }
+
+    .toggle-switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+    }
+
+    .toggle-slider {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: var(--color-surface-light);
+        border: 1px solid var(--color-border);
+        transition: .4s;
+        border-radius: 30px;
+        cursor: pointer;
+    }
+
+    .toggle-slider:before {
+        position: absolute;
+        content: "";
+        height: 22px;
+        width: 22px;
+        left: 4px;
+        bottom: 4px;
+        background-color: var(--color-text);
+        transition: .4s;
+        border-radius: 50%;
+    }
+
+    input:checked + .toggle-slider {
+        background-color: var(--color-primary-dark);
+    }
+
+    input:checked + .toggle-slider:before {
+        transform: translateX(30px);
+    }
+
+    .toggle-icons {
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 8px;
+        pointer-events: none;
+    }
+
+    .toggle-icons span {
+        font-size: 12px;
+    }
+
+    .toggle-icons .sun {
+        color: #fbbf24; /* amber-400 */
+    }
+
+    .toggle-icons .moon {
+        color: #93c5fd; /* blue-300 */
+    }
+
+    input:checked + .toggle-slider .sun {
+        color: #9ca3af; /* gray-400 */
+    }
+
+    input:checked + .toggle-slider .moon {
+        color: #fde047; /* yellow-300 */
+    }
+</style>
 </head>
 <body class="dark">
     <div id="root"></div>
@@ -839,24 +895,24 @@
             const contarPorEstado = (estado) => entrevistas.filter(e => e.estado === estado).length;
             return (
                 <div className="space-y-6">
-                    <div className="grid grid-cols-4 gap-4">
-                        <div className="bg-yellow-50 dark:bg-yellow-900/20 p-4 rounded border border-yellow-200 dark:border-yellow-700">
-                            <div className="text-2xl font-bold text-yellow-800 dark:text-yellow-400">{contarPorEstado('pendiente')}</div>
-                            <div className="text-sm">Pendientes</div>
-                        </div>
-                        <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded border border-blue-200 dark:border-blue-700">
-                            <div className="text-2xl font-bold text-blue-800 dark:text-blue-400">{contarPorEstado('realizada')}</div>
-                            <div className="text-sm">Realizadas</div>
-                        </div>
-                        <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded border border-green-200 dark:border-green-700">
-                            <div className="text-2xl font-bold text-green-800 dark:text-green-400">{contarPorEstado('validada')}</div>
-                            <div className="text-sm">Validadas</div>
-                        </div>
-                        <div className="bg-orange-50 dark:bg-orange-900/20 p-4 rounded border border-orange-200 dark:border-orange-700">
-                            <div className="text-2xl font-bold text-orange-800 dark:text-orange-400">{contarPorEstado('requiere_seguimiento')}</div>
-                            <div className="text-sm">Seguimiento</div>
-                        </div>
-                    </div>
+                   <div className="grid grid-cols-4 gap-4">
+    <div className="counter-card p-4 rounded border">
+        <div className="text-2xl font-bold counter-number">{contarPorEstado('pendiente')}</div>
+        <div className="text-sm counter-label">Pendientes</div>
+    </div>
+    <div className="counter-card p-4 rounded border">
+        <div className="text-2xl font-bold counter-number">{contarPorEstado('realizada')}</div>
+        <div className="text-sm counter-label">Realizadas</div>
+    </div>
+    <div className="counter-card p-4 rounded border">
+        <div className="text-2xl font-bold counter-number">{contarPorEstado('validada')}</div>
+        <div className="text-sm counter-label">Validadas</div>
+    </div>
+    <div className="counter-card p-4 rounded border">
+        <div className="text-2xl font-bold counter-number">{contarPorEstado('requiere_seguimiento')}</div>
+        <div className="text-sm counter-label">Seguimiento</div>
+    </div>
+</div>
                     <div className="bg-surface p-4 rounded border">
                         <h3 className="font-semibold mb-3">Nueva Entrevista</h3>
                         <div className="grid grid-cols-2 gap-3">

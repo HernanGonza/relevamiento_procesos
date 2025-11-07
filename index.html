@@ -475,11 +475,7 @@
                                         <h4 className="font-semibold text-lg">{p.nombre}</h4>
                                         <div className="text-sm text-gray-600 mb-2">{p.area_inicio} → {p.area_cierre || '...'}</div>
                                     </div>
-                                   <button onClick={() => {
-    onCerrar(); // Cierra el modal actual
-    setProcesoSeleccionado(p.id); // Guarda el ID del proceso
-    setActiveTab('detalle-proceso'); // Cambia a la vista de detalle
-}} className="bg-blue-600 text-white px-3 py-1 rounded text-sm flex items-center gap-1">
+                                   <button onClick={() => onVerDetalle(p.id)} className="bg-blue-600 text-white px-3 py-1 rounded text-sm flex items-center gap-1">
     <Icons.Eye /> Ver Detalle
 </button>
                                 </div>
@@ -1223,17 +1219,17 @@
                         />
                     )}
                     {/* NUEVO: Modal de Ver Entrevista */}
-                   {activeTab === 'ver-entrevista-modal' && (
+                  {activeTab === 'ver-entrevista-modal' && (
     <VerEntrevista
         entrevistaId={entrevistaAVer}
         onCerrar={() => {
             setEntrevistaAVer(null);
             setActiveTab('entrevistas');
         }}
-        // Pasa las funciones necesarias para ir a detalle
+        // ✅ PASAMOS LAS FUNCIONES NECESARIAS
         onVerDetalle={(id) => {
-            setProcesoSeleccionado(id);
-            setActiveTab('detalle-proceso');
+            setProcesoSeleccionado(id); // Guarda el ID del proceso
+            setActiveTab('detalle-proceso'); // Cambia a la vista de detalle
         }}
     />
 )}

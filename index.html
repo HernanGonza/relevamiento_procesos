@@ -113,6 +113,23 @@
         input:checked + .toggle-slider .moon {
             color: #60a5fa;
         }
+        /* Estilos para select en modo oscuro */
+        select {
+            background-color: var(--color-surface);
+            color: var(--color-text);
+            border-color: var(--color-border);
+        }
+        option {
+            background-color: var(--color-surface);
+            color: var(--color-text);
+        }
+        /* Estilos para tabla en modo oscuro */
+        table {
+            color: var(--color-text);
+        }
+        th, td {
+            border-color: var(--color-border);
+        }
     </style>
 </head>
 <body class="dark">
@@ -132,7 +149,6 @@
             Edit: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>,
         };
 
-        // ========== COMPONENTES ==========
         function DarkModeToggle({ darkMode, setDarkMode }) {
             return (
                 <label className="toggle-switch">
@@ -621,7 +637,7 @@
                                 <select
                                     value={e.estado}
                                     onChange={ev => onEditarEstado(e.id, ev.target.value)}
-                                    className="text-sm border rounded px-2 bg-surface"
+                                    className="text-sm border rounded px-2 bg-surface text-text"
                                 >
                                     <option value="pendiente">Pendiente</option>
                                     <option value="realizada">Realizada</option>
@@ -824,19 +840,19 @@
             return (
                 <div className="space-y-6">
                     <div className="grid grid-cols-4 gap-4">
-                        <div className="bg-yellow-50 dark:bg-yellow-900/20 p-4 rounded border">
+                        <div className="bg-yellow-50 dark:bg-yellow-900/20 p-4 rounded border border-yellow-200 dark:border-yellow-700">
                             <div className="text-2xl font-bold text-yellow-800 dark:text-yellow-400">{contarPorEstado('pendiente')}</div>
                             <div className="text-sm">Pendientes</div>
                         </div>
-                        <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded border">
+                        <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded border border-blue-200 dark:border-blue-700">
                             <div className="text-2xl font-bold text-blue-800 dark:text-blue-400">{contarPorEstado('realizada')}</div>
                             <div className="text-sm">Realizadas</div>
                         </div>
-                        <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded border">
+                        <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded border border-green-200 dark:border-green-700">
                             <div className="text-2xl font-bold text-green-800 dark:text-green-400">{contarPorEstado('validada')}</div>
                             <div className="text-sm">Validadas</div>
                         </div>
-                        <div className="bg-orange-50 dark:bg-orange-900/20 p-4 rounded border">
+                        <div className="bg-orange-50 dark:bg-orange-900/20 p-4 rounded border border-orange-200 dark:border-orange-700">
                             <div className="text-2xl font-bold text-orange-800 dark:text-orange-400">{contarPorEstado('requiere_seguimiento')}</div>
                             <div className="text-sm">Seguimiento</div>
                         </div>
@@ -844,11 +860,11 @@
                     <div className="bg-surface p-4 rounded border">
                         <h3 className="font-semibold mb-3">Nueva Entrevista</h3>
                         <div className="grid grid-cols-2 gap-3">
-                            <input type="text" placeholder="Área *" className="border p-2 rounded bg-surface" value={form.area} onChange={e => setForm({ ...form, area: e.target.value })} />
-                            <input type="date" className="border p-2 rounded bg-surface" value={form.fecha} onChange={e => setForm({ ...form, fecha: e.target.value })} />
-                            <input type="time" className="border p-2 rounded bg-surface" value={form.hora} onChange={e => setForm({ ...form, hora: e.target.value })} />
-                            <input type="text" placeholder="Responsable" className="border p-2 rounded bg-surface" value={form.responsable} onChange={e => setForm({ ...form, responsable: e.target.value })} />
-                            <input type="text" placeholder="Entrevistador" className="border p-2 rounded col-span-2 bg-surface" value={form.entrevistador} onChange={e => setForm({ ...form, entrevistador: e.target.value })} />
+                            <input type="text" placeholder="Área *" className="border p-2 rounded bg-surface text-text" value={form.area} onChange={e => setForm({ ...form, area: e.target.value })} />
+                            <input type="date" className="border p-2 rounded bg-surface text-text" value={form.fecha} onChange={e => setForm({ ...form, fecha: e.target.value })} />
+                            <input type="time" className="border p-2 rounded bg-surface text-text" value={form.hora} onChange={e => setForm({ ...form, hora: e.target.value })} />
+                            <input type="text" placeholder="Responsable" className="border p-2 rounded bg-surface text-text" value={form.responsable} onChange={e => setForm({ ...form, responsable: e.target.value })} />
+                            <input type="text" placeholder="Entrevistador" className="border p-2 rounded col-span-2 bg-surface text-text" value={form.entrevistador} onChange={e => setForm({ ...form, entrevistador: e.target.value })} />
                         </div>
                         <button onClick={agregar} className="mt-3 bg-primary text-white px-4 py-2 rounded flex items-center gap-2">
                             <Icons.Plus /> Agregar
@@ -884,18 +900,18 @@
                     <table className="w-full">
                         <thead className="bg-gray-50 dark:bg-gray-800">
                             <tr>
-                                <th className="text-left p-3">Proceso</th>
-                                <th className="text-left p-3">Flujo</th>
-                                <th className="text-left p-3">Frecuencia</th>
-                                <th className="text-left p-3">Acciones</th>
+                                <th className="text-left p-3 text-text">Proceso</th>
+                                <th className="text-left p-3 text-text">Flujo</th>
+                                <th className="text-left p-3 text-text">Frecuencia</th>
+                                <th className="text-left p-3 text-text">Acciones</th>
                             </tr>
                         </thead>
                         <tbody>
                             {procesos.map(p => (
-                                <tr key={p.id} className="border-t">
-                                    <td className="p-3 font-medium">{p.nombre}</td>
-                                    <td className="p-3 text-sm">{p.area_inicio} → {p.area_cierre || '...'}</td>
-                                    <td className="p-3 text-sm">{p.frecuencia}</td>
+                                <tr key={p.id} className="border-t border-border">
+                                    <td className="p-3 font-medium text-text">{p.nombre}</td>
+                                    <td className="p-3 text-sm text-text-secondary">{p.area_inicio} → {p.area_cierre || '...'}</td>
+                                    <td className="p-3 text-sm text-text-secondary">{p.frecuencia}</td>
                                     <td className="p-3">
                                         <div className="flex gap-2">
                                             <button onClick={() => onVerDetalle(p.id)} className="bg-primary text-white px-3 py-1 rounded text-sm flex items-center gap-1">
@@ -922,20 +938,20 @@
             return (
                 <div className="space-y-3">
                     {handoffs.map(h => (
-                        <div key={h.id} className="bg-surface p-4 rounded border">
-                            <h4 className="font-semibold">{h.proceso}</h4>
+                        <div key={h.id} className="bg-surface p-4 rounded border border-border">
+                            <h4 className="font-semibold text-text">{h.proceso}</h4>
                             <div className="flex items-center gap-2 text-sm text-text-secondary mt-1">
                                 <span className="font-medium">{h.area_origen}</span>
                                 <Icons.ArrowRight />
                                 <span className="font-medium">{h.area_destino}</span>
                             </div>
-                            {h.que_se_envia && <p className="text-sm mt-2">Envía: {h.que_se_envia}</p>}
+                            {h.que_se_envia && <p className="text-sm mt-2 text-text">{h.que_se_envia}</p>}
                             <div className="mt-3 flex gap-4">
-                                <label className="flex items-center gap-2 text-sm cursor-pointer">
+                                <label className="flex items-center gap-2 text-sm cursor-pointer text-text">
                                     <input type="checkbox" checked={h.validado_por_origen} onChange={() => toggleValidacion(h.id, 'validado_por_origen', h.validado_por_origen)} />
                                     Validado por {h.area_origen}
                                 </label>
-                                <label className="flex items-center gap-2 text-sm cursor-pointer">
+                                <label className="flex items-center gap-2 text-sm cursor-pointer text-text">
                                     <input type="checkbox" checked={h.validado_por_destino} onChange={() => toggleValidacion(h.id, 'validado_por_destino', h.validado_por_destino)} />
                                     Validado por {h.area_destino}
                                 </label>
@@ -1068,82 +1084,82 @@
             if (!proceso) return <div className="p-6 text-center">Proceso no encontrado</div>;
             return (
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-                    <div className="bg-surface p-6 rounded-lg border max-w-6xl w-full max-h-[90vh] overflow-y-auto">
+                    <div className="bg-surface p-6 rounded-lg border border-border max-w-6xl w-full max-h-[90vh] overflow-y-auto">
                         <div className="flex justify-between mb-6">
-                            <h2 className="text-2xl font-bold">Editar Proceso</h2>
+                            <h2 className="text-2xl font-bold text-text">Editar Proceso</h2>
                             <button onClick={onCerrar} className="text-text-secondary hover:text-text">
                                 ✕
                             </button>
                         </div>
-                        <div className="mb-6 p-4 bg-gray-50 dark:bg-gray-800 rounded border">
-                            <h3 className="font-bold text-lg mb-3">Datos del Proceso</h3>
+                        <div className="mb-6 p-4 bg-gray-50 dark:bg-gray-800 rounded border border-border">
+                            <h3 className="font-bold text-lg mb-3 text-text">Datos del Proceso</h3>
                             <div className="grid grid-cols-3 gap-3">
-                                <input type="text" placeholder="Nombre" className="border p-2 rounded bg-surface" value={proceso.nombre || ''} onChange={e => handleChangeProceso('nombre', e.target.value)} />
-                                <select className="border p-2 rounded bg-surface" value={proceso.frecuencia || 'mensual'} onChange={e => handleChangeProceso('frecuencia', e.target.value)}>
+                                <input type="text" placeholder="Nombre" className="border p-2 rounded bg-surface text-text" value={proceso.nombre || ''} onChange={e => handleChangeProceso('nombre', e.target.value)} />
+                                <select className="border p-2 rounded bg-surface text-text" value={proceso.frecuencia || 'mensual'} onChange={e => handleChangeProceso('frecuencia', e.target.value)}>
                                     <option value="diaria">Diaria</option>
                                     <option value="semanal">Semanal</option>
                                     <option value="mensual">Mensual</option>
                                     <option value="eventual">Eventual</option>
                                 </select>
-                                <select className="border p-2 rounded bg-surface" value={proceso.prioridad || 'media'} onChange={e => handleChangeProceso('prioridad', e.target.value)}>
+                                <select className="border p-2 rounded bg-surface text-text" value={proceso.prioridad || 'media'} onChange={e => handleChangeProceso('prioridad', e.target.value)}>
                                     <option value="baja">Baja</option>
                                     <option value="media">Media</option>
                                     <option value="alta">Alta</option>
                                 </select>
-                                <input type="text" placeholder="Área inicio" className="border p-2 rounded bg-surface" value={proceso.area_inicio || ''} onChange={e => handleChangeProceso('area_inicio', e.target.value)} />
-                                <input type="text" placeholder="Áreas intermedias" className="border p-2 rounded bg-surface" value={proceso.areas_intermedias || ''} onChange={e => handleChangeProceso('areas_intermedias', e.target.value)} />
-                                <input type="text" placeholder="Área cierre" className="border p-2 rounded bg-surface" value={proceso.area_cierre || ''} onChange={e => handleChangeProceso('area_cierre', e.target.value)} />
+                                <input type="text" placeholder="Área inicio" className="border p-2 rounded bg-surface text-text" value={proceso.area_inicio || ''} onChange={e => handleChangeProceso('area_inicio', e.target.value)} />
+                                <input type="text" placeholder="Áreas intermedias" className="border p-2 rounded bg-surface text-text" value={proceso.areas_intermedias || ''} onChange={e => handleChangeProceso('areas_intermedias', e.target.value)} />
+                                <input type="text" placeholder="Área cierre" className="border p-2 rounded bg-surface text-text" value={proceso.area_cierre || ''} onChange={e => handleChangeProceso('area_cierre', e.target.value)} />
                             </div>
                         </div>
                         <div className="mb-6">
                             <div className="flex justify-between mb-4">
-                                <h3 className="font-bold text-lg">Pasos del Proceso</h3>
+                                <h3 className="font-bold text-lg text-text">Pasos del Proceso</h3>
                                 <button onClick={handleAgregarPaso} className="bg-primary text-white px-3 py-1 rounded text-sm flex items-center gap-1">
                                     <Icons.Plus /> Agregar Paso
                                 </button>
                             </div>
                             {pasos.map((paso, idx) => (
-                                <div key={idx} className="mb-4 p-4 border rounded bg-surface shadow-sm">
+                                <div key={idx} className="mb-4 p-4 border rounded bg-surface shadow-sm border-border">
                                     <div className="flex justify-between mb-3">
-                                        <h4 className="font-semibold">Paso {idx + 1}</h4>
+                                        <h4 className="font-semibold text-text">Paso {idx + 1}</h4>
                                         <button onClick={() => handleEliminarPaso(idx)} className="text-danger">
                                             <Icons.Trash />
                                         </button>
                                     </div>
                                     <div className="grid grid-cols-2 gap-3 text-sm">
-                                        <input type="text" placeholder="Descripción" className="border p-2 rounded bg-surface" value={paso.descripcion || ''} onChange={e => handleActualizarPaso(idx, 'descripcion', e.target.value)} />
-                                        <input type="text" placeholder="Responsable (rol)" className="border p-2 rounded bg-surface" value={paso.responsable_rol || ''} onChange={e => handleActualizarPaso(idx, 'responsable_rol', e.target.value)} />
-                                        <input type="text" placeholder="Área" className="border p-2 rounded bg-surface" value={paso.area || ''} onChange={e => handleActualizarPaso(idx, 'area', e.target.value)} />
-                                        <input type="text" placeholder="Herramienta" className="border p-2 rounded bg-surface" value={paso.herramienta || ''} onChange={e => handleActualizarPaso(idx, 'herramienta', e.target.value)} />
-                                        <input type="text" placeholder="Datos necesarios" className="border p-2 rounded bg-surface" value={paso.datos_necesarios || ''} onChange={e => handleActualizarPaso(idx, 'datos_necesarios', e.target.value)} />
-                                        <input type="text" placeholder="Documentos generados" className="border p-2 rounded bg-surface" value={paso.documentos_generados || ''} onChange={e => handleActualizarPaso(idx, 'documentos_generados', e.target.value)} />
-                                        <input type="text" placeholder="Plazos" className="border p-2 rounded bg-surface" value={paso.plazos || ''} onChange={e => handleActualizarPaso(idx, 'plazos', e.target.value)} />
+                                        <input type="text" placeholder="Descripción" className="border p-2 rounded bg-surface text-text" value={paso.descripcion || ''} onChange={e => handleActualizarPaso(idx, 'descripcion', e.target.value)} />
+                                        <input type="text" placeholder="Responsable (rol)" className="border p-2 rounded bg-surface text-text" value={paso.responsable_rol || ''} onChange={e => handleActualizarPaso(idx, 'responsable_rol', e.target.value)} />
+                                        <input type="text" placeholder="Área" className="border p-2 rounded bg-surface text-text" value={paso.area || ''} onChange={e => handleActualizarPaso(idx, 'area', e.target.value)} />
+                                        <input type="text" placeholder="Herramienta" className="border p-2 rounded bg-surface text-text" value={paso.herramienta || ''} onChange={e => handleActualizarPaso(idx, 'herramienta', e.target.value)} />
+                                        <input type="text" placeholder="Datos necesarios" className="border p-2 rounded bg-surface text-text" value={paso.datos_necesarios || ''} onChange={e => handleActualizarPaso(idx, 'datos_necesarios', e.target.value)} />
+                                        <input type="text" placeholder="Documentos generados" className="border p-2 rounded bg-surface text-text" value={paso.documentos_generados || ''} onChange={e => handleActualizarPaso(idx, 'documentos_generados', e.target.value)} />
+                                        <input type="text" placeholder="Plazos" className="border p-2 rounded bg-surface text-text" value={paso.plazos || ''} onChange={e => handleActualizarPaso(idx, 'plazos', e.target.value)} />
                                     </div>
                                     <div className="mt-3">
-                                        <label className="flex items-center gap-2 text-sm">
+                                        <label className="flex items-center gap-2 text-sm text-text">
                                             <input type="checkbox" checked={paso.tiene_decision} onChange={e => handleActualizarPaso(idx, 'tiene_decision', e.target.checked)} className="rounded" />
                                             Tiene punto de decisión
                                         </label>
                                         {paso.tiene_decision && (
                                             <div className="mt-2 p-2 bg-yellow-50 dark:bg-yellow-900/20 rounded">
-                                                <input type="text" placeholder="Condición a evaluar" className="border p-2 rounded w-full mb-1 bg-surface" value={paso.condicion_decision || ''} onChange={e => handleActualizarPaso(idx, 'condicion_decision', e.target.value)} />
+                                                <input type="text" placeholder="Condición a evaluar" className="border p-2 rounded w-full mb-1 bg-surface text-text" value={paso.condicion_decision || ''} onChange={e => handleActualizarPaso(idx, 'condicion_decision', e.target.value)} />
                                                 <div className="grid grid-cols-2 gap-2">
-                                                    <input type="text" placeholder="Destino si cumple" className="border p-2 rounded bg-surface" value={paso.destino_si_cumple || ''} onChange={e => handleActualizarPaso(idx, 'destino_si_cumple', e.target.value)} />
-                                                    <input type="text" placeholder="Destino si no cumple" className="border p-2 rounded bg-surface" value={paso.destino_si_no_cumple || ''} onChange={e => handleActualizarPaso(idx, 'destino_si_no_cumple', e.target.value)} />
+                                                    <input type="text" placeholder="Destino si cumple" className="border p-2 rounded bg-surface text-text" value={paso.destino_si_cumple || ''} onChange={e => handleActualizarPaso(idx, 'destino_si_cumple', e.target.value)} />
+                                                    <input type="text" placeholder="Destino si no cumple" className="border p-2 rounded bg-surface text-text" value={paso.destino_si_no_cumple || ''} onChange={e => handleActualizarPaso(idx, 'destino_si_no_cumple', e.target.value)} />
                                                 </div>
                                             </div>
                                         )}
                                     </div>
                                     <div className="mt-3">
-                                        <label className="flex items-center gap-2 text-sm text-warning">
+                                        <label className="flex items-center gap-2 text-sm text-warning text-text">
                                             <input type="checkbox" checked={paso.pasa_a_otra_area} onChange={e => handleActualizarPaso(idx, 'pasa_a_otra_area', e.target.checked)} className="rounded" />
                                             🔄 Pasa a otra área
                                         </label>
                                         {paso.pasa_a_otra_area && (
                                             <div className="mt-2 p-2 bg-orange-50 dark:bg-orange-900/20 rounded border border-orange-200 dark:border-orange-700">
-                                                <input type="text" placeholder="Área destino" className="border p-2 rounded w-full mb-1 bg-surface" value={paso.area_destino || ''} onChange={e => handleActualizarPaso(idx, 'area_destino', e.target.value)} />
-                                                <input type="text" placeholder="Qué envía" className="border p-2 rounded w-full mb-1 bg-surface" value={paso.que_envia || ''} onChange={e => handleActualizarPaso(idx, 'que_envia', e.target.value)} />
-                                                <label className="flex items-center gap-2 text-sm">
+                                                <input type="text" placeholder="Área destino" className="border p-2 rounded w-full mb-1 bg-surface text-text" value={paso.area_destino || ''} onChange={e => handleActualizarPaso(idx, 'area_destino', e.target.value)} />
+                                                <input type="text" placeholder="Qué envía" className="border p-2 rounded w-full mb-1 bg-surface text-text" value={paso.que_envia || ''} onChange={e => handleActualizarPaso(idx, 'que_envia', e.target.value)} />
+                                                <label className="flex items-center gap-2 text-sm text-text">
                                                     <input type="checkbox" checked={paso.espera_respuesta} onChange={e => handleActualizarPaso(idx, 'espera_respuesta', e.target.checked)} className="rounded" />
                                                     El proceso espera respuesta
                                                 </label>
@@ -1228,14 +1244,14 @@
                         <div className="mb-6">
                             <div className="flex justify-between items-center">
                                 <div>
-                                    <h1 className="text-3xl font-bold">Sistema de Relevamiento de Procesos</h1>
+                                    <h1 className="text-3xl font-bold text-text">Sistema de Relevamiento de Procesos</h1>
                                     <p className="text-text-secondary mt-1">Ministerio de Ecología - Provincia de Misiones</p>
                                 </div>
                                 <DarkModeToggle darkMode={darkMode} setDarkMode={setDarkMode} />
                             </div>
                         </div>
                         {activeTab !== 'completar' && activeTab !== 'detalle-proceso' && activeTab !== 'ver-entrevista-modal' && activeTab !== 'editar-proceso' && (
-                            <div className="flex gap-2 mb-6 border-b">
+                            <div className="flex gap-2 mb-6 border-b border-border">
                                 <button onClick={() => setActiveTab('tracker')} className={'px-4 py-2 font-medium ' + (activeTab === 'tracker' ? 'border-b-2 border-primary text-primary' : 'text-text-secondary')}>
                                     Agendar Entrevistas
                                 </button>

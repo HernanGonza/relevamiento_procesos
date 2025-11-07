@@ -336,93 +336,136 @@
                 </div>
             );
         }
-        function VerEntrevista({ entrevistaId, onVolver }) {
-            const [entrevista, setEntrevista] = useState(null);
-            const [procesos, setProcesos] = useState([]);
-            const [pasosPorProceso, setPasosPorProceso] = useState({});
-            const [loading, setLoading] = useState(true);
-            useEffect(() => {
-                async function cargar() {
-                    const { data: entData } = await supabase.from('entrevistas').select('*').eq('id', entrevistaId).single();
-                    const { data: procData } = await supabase.from('procesos').select('*').eq('entrevista_id', entrevistaId);
-                    if (entData) setEntrevista(entData);
-                    if (procData) {
-                        setProcesos(procData);
-                        const pasosMap = {};
-                        for (const p of procData) {
-                            const { data: pasosData } = await supabase.from('pasos_proceso').select('*').eq('proceso_id', p.id).order('orden', { ascending: true });
-                            pasosMap[p.id] = pasosData || [];
-                        }
-                        setPasosPorProceso(pasosMap);
-                    }
-                    setLoading(false);
+        function VerEntrevista({ entrevistaId, onCerrar }) {
+    const [entrevista, setEntrevista] = useState(null);
+    const [procesos, setProcesos] = useState([]);
+    const [pasosPorProceso, setPasosPorProceso] = useState({});
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        async function cargar() {
+            const {  entData } = await supabase.from('entrevistas').select('*').eq('id', entrevistaId).single();
+            const {  procData } = await supabase.from('procesos').select('*').eq('entrevista_id', entrevistaId);
+            if (entData) setEntrevista(entData);
+            if (procData) {
+                setProcesos(procData);
+                const pasosMap = {};
+                for (const p of procData) {
+                    const {  pasosData } = await supabase.from('pasos_proceso').select('*').eq('proceso_id', p.id).order('orden', { ascending: true });
+                    pasosMap[p.id] = pasosData || [];
                 }
-                cargar();
-            }, [entrevistaId]);
-            if (loading) return <div className="p-6">Cargando...</div>;
-            if (!entrevista) return <div className="p-6">No encontrada</div>;
-            return (
-                <div className="bg-white p-6 rounded-lg border max-w-6xl mx-auto">
-                    <div className="flex justify-between mb-6">
-                        <h2 className="text-2xl font-bold">Entrevista: {entrevista.area}</h2>
-                        <button onClick={onVolver} className="text-blue-600 hover:underline">Volver</button>
-                    </div>
-                    <div className="mb-6 p-4 bg-gray-50 rounded">
-                        <div className="grid grid-cols-2 gap-4">
-                            <div><strong>Fecha:</strong> {new Date(entrevista.fecha).toLocaleDateString('es-AR')}</div>
-                            <div><strong>Hora:</strong> {entrevista.hora ? entrevista.hora.slice(0,5) : '–'}</div>
-                            <div><strong>Entrevistador:</strong> {entrevista.entrevistador || '–'}</div>
-                            <div><strong>Responsable:</strong> {entrevista.responsable || '–'}</div>
-                            <div><strong>Estado:</strong> {entrevista.estado}</div>
-                        </div>
-                    </div>
-                    {(entrevista.interacciones_externas || entrevista.sistemas_usados || entrevista.entrevistados || entrevista.acuerdos || entrevista.observaciones_generales) && (
-                        <div className="mb-6 p-4 bg-blue-50 rounded">
-                            <h3 className="font-bold mb-2">Información complementaria</h3>
-                            {entrevista.interacciones_externas && <p><strong>Interacciones:</strong> {entrevista.interacciones_externas}</p>}
-                            {entrevista.sistemas_usados && <p><strong>Sistemas:</strong> {entrevista.sistemas_usados}</p>}
-                            {entrevista.entrevistados && <p><strong>Entrevistados:</strong> {entrevista.entrevistados}</p>}
-                            {entrevista.acuerdos && <p><strong>Acuerdos:</strong> {entrevista.acuerdos}</p>}
-                            {entrevista.observaciones_generales && <p><strong>Observaciones:</strong> {entrevista.observaciones_generales}</p>}
-                        </div>
-                    )}
-                    {procesos.length > 0 && (
-                        <div>
-                            <h3 className="font-bold text-lg mb-4">Procesos relevados</h3>
-                            {procesos.map(p => (
-                                <div key={p.id} className="mb-6 p-4 border rounded bg-white">
-                                    <h4 className="font-semibold text-lg">{p.nombre}</h4>
-                                    <div className="text-sm text-gray-600 mb-2">{p.area_inicio} → {p.area_cierre || '...'}</div>
-                                    <div className="space-y-3 mt-3">
-                                        {pasosPorProceso[p.id]?.map(paso => (
-                                            <div key={paso.id} className="p-3 bg-gray-50 rounded">
-                                                <div><span className="font-medium">Paso {paso.orden}:</span> {paso.descripcion}</div>
-                                                {paso.responsable_rol && <div>Responsable: {paso.responsable_rol}</div>}
-                                                {paso.area && <div>Área: {paso.area}</div>}
-                                                {paso.herramienta && <div>Herramienta: {paso.herramienta}</div>}
-                                                {paso.tiene_decision && (
-                                                    <div className="mt-2 p-2 bg-yellow-100 rounded">
-                                                        <div><strong>Decisión:</strong> {paso.condicion_decision}</div>
-                                                        {paso.destino_si_cumple && <div>Sí: {paso.destino_si_cumple}</div>}
-                                                        {paso.destino_si_no_cumple && <div>No: {paso.destino_si_no_cumple}</div>}
-                                                    </div>
-                                                )}
-                                                {paso.pasa_a_otra_area && (
-                                                    <div className="mt-2 p-2 bg-orange-100 rounded">
-                                                        <div>Pasa a: {paso.area_destino}</div>
-                                                        {paso.que_envia && <div>Envía: {paso.que_envia}</div>}
-                                                    </div>
-                                                )}
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    )}
-                </div>
-            );
+                setPasosPorProceso(pasosMap);
+            }
+            setLoading(false);
         }
+        cargar();
+    }, [entrevistaId]);
+
+    if (loading) return (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white p-6 rounded-lg border max-w-md">
+                <p>Cargando...</p>
+            </div>
+        </div>
+    );
+
+    if (!entrevista) return (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white p-6 rounded-lg border max-w-md">
+                <p className="text-red-600">Entrevista no encontrada</p>
+                <button onClick={onCerrar} className="mt-4 px-4 py-2 bg-gray-600 text-white rounded">Cerrar</button>
+            </div>
+        </div>
+    );
+
+    return (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white p-6 rounded-lg border max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+                <div className="flex justify-between mb-6">
+                    <h2 className="text-2xl font-bold">Entrevista: {entrevista.area}</h2>
+                    <button onClick={onCerrar} className="text-gray-600 hover:text-gray-900">
+                        ✕
+                    </button>
+                </div>
+
+                <div className="mb-6 p-4 bg-gray-50 rounded">
+                    <div className="grid grid-cols-2 gap-4">
+                        <div><strong>Fecha:</strong> {new Date(entrevista.fecha).toLocaleDateString('es-AR')}</div>
+                        <div><strong>Hora:</strong> {entrevista.hora ? entrevista.hora.slice(0,5) : '–'}</div>
+                        <div><strong>Entrevistador:</strong> {entrevista.entrevistador || '–'}</div>
+                        <div><strong>Responsable:</strong> {entrevista.responsable || '–'}</div>
+                        <div><strong>Estado:</strong> {entrevista.estado}</div>
+                    </div>
+                </div>
+
+                {(entrevista.interacciones_externas || entrevista.sistemas_usados || entrevista.entrevistados || entrevista.acuerdos || entrevista.observaciones_generales) && (
+                    <div className="mb-6 p-4 bg-blue-50 rounded">
+                        <h3 className="font-bold mb-2">Información complementaria</h3>
+                        {entrevista.interacciones_externas && <p><strong>Interacciones:</strong> {entrevista.interacciones_externas}</p>}
+                        {entrevista.sistemas_usados && <p><strong>Sistemas:</strong> {entrevista.sistemas_usados}</p>}
+                        {entrevista.entrevistados && <p><strong>Entrevistados:</strong> {entrevista.entrevistados}</p>}
+                        {entrevista.acuerdos && <p><strong>Acuerdos:</strong> {entrevista.acuerdos}</p>}
+                        {entrevista.observaciones_generales && <p><strong>Observaciones:</strong> {entrevista.observaciones_generales}</p>}
+                    </div>
+                )}
+
+                {procesos.length > 0 && (
+                    <div>
+                        <h3 className="font-bold text-lg mb-4">Procesos relevados</h3>
+                        {procesos.map(p => (
+                            <div key={p.id} className="mb-6 p-4 border rounded bg-white">
+                                <div className="flex justify-between">
+                                    <div>
+                                        <h4 className="font-semibold text-lg">{p.nombre}</h4>
+                                        <div className="text-sm text-gray-600 mb-2">{p.area_inicio} → {p.area_cierre || '...'}</div>
+                                    </div>
+                                    <button onClick={() => {
+                                        // Abrir DetalleProceso en una nueva pestaña/modal si lo deseas
+                                        // Por ahora, simulamos ir a detalle
+                                        window.open(`/detalle-proceso/${p.id}`, '_blank');
+                                        // O si tienes un estado global para abrir modales, cámbialo aquí
+                                        // Ej: setProcesoSeleccionado(p.id); setActiveTab('detalle-proceso');
+                                    }} className="bg-blue-600 text-white px-3 py-1 rounded text-sm flex items-center gap-1">
+                                        <Icons.Eye /> Ver Detalle
+                                    </button>
+                                </div>
+                                <div className="space-y-3 mt-3">
+                                    {pasosPorProceso[p.id]?.map(paso => (
+                                        <div key={paso.id} className="p-3 bg-gray-50 rounded">
+                                            <div><span className="font-medium">Paso {paso.orden}:</span> {paso.descripcion}</div>
+                                            {paso.responsable_rol && <div>Responsable: {paso.responsable_rol}</div>}
+                                            {paso.area && <div>Área: {paso.area}</div>}
+                                            {paso.herramienta && <div>Herramienta: {paso.herramienta}</div>}
+                                            {paso.tiene_decision && (
+                                                <div className="mt-2 p-2 bg-yellow-100 rounded">
+                                                    <div><strong>Decisión:</strong> {paso.condicion_decision}</div>
+                                                    {paso.destino_si_cumple && <div>✓ Sí: {paso.destino_si_cumple}</div>}
+                                                    {paso.destino_si_no_cumple && <div>✗ No: {paso.destino_si_no_cumple}</div>}
+                                                </div>
+                                            )}
+                                            {paso.pasa_a_otra_area && (
+                                                <div className="mt-2 p-2 bg-orange-100 rounded">
+                                                    <div>🔄 Pasa a: {paso.area_destino}</div>
+                                                    {paso.que_envia && <div>Envía: {paso.que_envia}</div>}
+                                                </div>
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
+
+                <div className="mt-6 flex justify-end">
+                    <button onClick={onCerrar} className="px-4 py-2 bg-gray-600 text-white rounded">
+                        Cerrar
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+}
         function ListaEntrevistas({ entrevistas, onVer, onEditarEstado }) {
             return (
                 <div className="space-y-3">
@@ -1018,6 +1061,7 @@
     const [procesoSeleccionado, setProcesoSeleccionado] = useState(null);
     const [entrevistaSeleccionada, setEntrevistaSeleccionada] = useState(null);
     const [procesoAEliminar, setProcesoAEliminar] = useState(null); // Estado para edición
+    const [entrevistaAVer, setEntrevistaAVer] = useState(null);
 
     useEffect(() => {
         loadData();
@@ -1051,9 +1095,9 @@
     }
 
     function verEntrevista(id) {
-        setEntrevistaSeleccionada(id);
-        setActiveTab('ver-entrevista');
-    }
+    setEntrevistaAVer(id);
+    setActiveTab('ver-entrevista-modal');
+}
 
     function verDetalleProceso(id) {
         setProcesoSeleccionado(id);
@@ -1113,12 +1157,15 @@
                             onVolver={() => setActiveTab('tracker')}
                         />
                     )}
-                    {activeTab === 'ver-entrevista' && (
-                        <VerEntrevista
-                            entrevistaId={entrevistaSeleccionada}
-                            onVolver={() => setActiveTab('entrevistas')}
-                        />
-                    )}
+                   {activeTab === 'ver-entrevista-modal' && (
+    <VerEntrevista
+        entrevistaId={entrevistaAVer}
+        onCerrar={() => {
+            setEntrevistaAVer(null);
+            setActiveTab('entrevistas');
+        }}
+    />
+)}
                     {activeTab === 'procesos' && (
                         <MatrizProcesos
                             procesos={procesos}

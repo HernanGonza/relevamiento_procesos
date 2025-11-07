@@ -9,8 +9,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.tailwindcss.com"></script>
-
-    <!-- Mermaid v11 -->
+    <!-- Mermaid v11 ESM (compatible con Babel) -->
     <script type="module">
         import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
         window.mermaid = mermaid;
@@ -24,7 +23,6 @@
         const SUPABASE_URL = 'https://ketmsuhhyymhprwvoxjx.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtldG1zdWhoeXltaHByd3ZveGp4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE3ODExODksImV4cCI6MjA3NzM1NzE4OX0.R6sOE9UofsP8NZnhc4uFJF3hTauEjvGJjnoSYtIifbQ';
         const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-
         const Icons = {
             Plus: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>,
             Trash: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>,
@@ -34,9 +32,7 @@
             Eye: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>,
             Edit: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>,
         };
-
         // ========== COMPONENTES ==========
-
         function FormularioEntrevista({ entrevistaId, onVolver }) {
             const [loading, setLoading] = useState(false);
             const [entrevista, setEntrevista] = useState(null);
@@ -60,7 +56,6 @@
                 acuerdos: '',
                 observaciones_generales: ''
             });
-
             useEffect(() => {
                 if (entrevistaId) {
                     supabase.from('entrevistas').select('*').eq('id', entrevistaId).single().then(({ data }) => {
@@ -73,7 +68,6 @@
                     });
                 }
             }, [entrevistaId]);
-
             const publicoOpciones = ['Ciudadanos', 'Empresas privadas', 'Municipios', 'ONGs', 'Otras áreas del Ministerio', 'Otros organismos provinciales', 'Organismos nacionales', 'Otros'];
             const togglePublico = (valor) => {
                 setComplemento(prev => {
@@ -85,7 +79,6 @@
                     }
                 });
             };
-
             const agregarProceso = () => {
                 setProcesos([...procesos, {
                     nombre: '', frecuencia: 'mensual', prioridad: 'media',
@@ -93,40 +86,34 @@
                     pasos: [{ descripcion: '', responsable_rol: '', area: '', herramienta: '', es_manual: true, datos_necesarios: '', documentos_generados: '', plazos: '', tiene_decision: false, condicion_decision: '', destino_si_cumple: '', destino_si_no_cumple: '', pasa_a_otra_area: false, area_destino: '', que_envia: '', espera_respuesta: false }]
                 }]);
             };
-
             const eliminarProceso = (index) => {
                 setProcesos(procesos.filter((_, i) => i !== index));
             };
-
             const actualizarProceso = (index, campo, valor) => {
                 const nuevos = [...procesos];
                 nuevos[index] = { ...nuevos[index], [campo]: valor };
                 setProcesos(nuevos);
             };
-
             const agregarPaso = (procIndex) => {
                 const nuevos = [...procesos];
                 nuevos[procIndex].pasos.push({ descripcion: '', responsable_rol: '', area: '', herramienta: '', es_manual: true, datos_necesarios: '', documentos_generados: '', plazos: '', tiene_decision: false, condicion_decision: '', destino_si_cumple: '', destino_si_no_cumple: '', pasa_a_otra_area: false, area_destino: '', que_envia: '', espera_respuesta: false });
                 setProcesos(nuevos);
             };
-
             const eliminarPaso = (procIndex, pasoIndex) => {
                 const nuevos = [...procesos];
                 nuevos[procIndex].pasos = nuevos[procIndex].pasos.filter((_, i) => i !== pasoIndex);
                 setProcesos(nuevos);
             };
-
             const actualizarPaso = (procIndex, pasoIndex, campo, valor) => {
                 const nuevos = [...procesos];
                 nuevos[procIndex].pasos[pasoIndex] = { ...nuevos[procIndex].pasos[pasoIndex], [campo]: valor };
                 setProcesos(nuevos);
             };
-
             async function guardarEntrevista() {
                 if (!entrevista) return;
                 setLoading(true);
                 try {
-                    await supabase.from('entrevistas').update({ 
+                    await supabase.from('entrevistas').update({
                         estado: 'realizada',
                         publico_usuarios: complemento.publico_usuarios.length ? complemento.publico_usuarios : null,
                         interacciones_externas: complemento.interacciones_externas || null,
@@ -137,7 +124,6 @@
                         acuerdos: complemento.acuerdos || null,
                         observaciones_generales: complemento.observaciones_generales || null
                     }).eq('id', entrevista.id);
-
                     for (const proc of procesos) {
                         if (!proc.nombre || !proc.area_inicio) continue;
                         const { data, error } = await supabase.from('procesos').insert([{
@@ -152,7 +138,6 @@
                         }]).select();
                         if (error) throw error;
                         const procesoId = data[0].id;
-
                         for (let i = 0; i < proc.pasos.length; i++) {
                             const paso = proc.pasos[i];
                             if (!paso.descripcion) continue;
@@ -176,7 +161,6 @@
                                 que_envia: paso.que_envia || null,
                                 espera_respuesta: paso.espera_respuesta
                             });
-
                             if (paso.pasa_a_otra_area && paso.area_destino && paso.area) {
                                 await supabase.from('handoffs').insert({
                                     proceso: proc.nombre,
@@ -190,7 +174,6 @@
                             }
                         }
                     }
-
                     alert('Entrevista guardada exitosamente');
                     if (onVolver) onVolver();
                 } catch (error) {
@@ -199,17 +182,13 @@
                     setLoading(false);
                 }
             }
-
             if (!entrevista) return <div className="p-6">Cargando...</div>;
-
             return (
                 <div className="bg-white p-6 rounded-lg border max-w-6xl mx-auto">
                     <div className="flex justify-between mb-6">
                         <h2 className="text-2xl font-bold">Formulario Completo de Entrevista</h2>
-                        <button onClick={onVolver} className="text-blue-600 hover:underline">← Volver</button>
+                        <button onClick={onVolver} className="text-blue-600 hover:underline">Volver</button>
                     </div>
-
-                    {/* Parte 1: Identificación */}
                     <div className="mb-8 p-4 border rounded bg-gray-50">
                         <h3 className="font-bold text-lg mb-3 text-blue-900">Parte 1: Identificación del Área</h3>
                         <div className="grid grid-cols-2 gap-4 mb-4">
@@ -231,8 +210,6 @@
                             </div>
                         </div>
                     </div>
-
-                    {/* Parte 2 y 3: Procesos */}
                     <div className="mb-8">
                         <div className="flex justify-between mb-4">
                             <h3 className="font-bold text-lg text-blue-900">Parte 2 y 3: Procesos y Pasos Detallados</h3>
@@ -267,8 +244,6 @@
                                     <input type="text" placeholder="Áreas intermedias (separadas por coma)" className="border p-2 rounded" value={proc.areas_intermedias} onChange={e => actualizarProceso(idx, 'areas_intermedias', e.target.value)} />
                                     <input type="text" placeholder="Área que cierra" className="border p-2 rounded" value={proc.area_cierre} onChange={e => actualizarProceso(idx, 'area_cierre', e.target.value)} />
                                 </div>
-
-                                {/* Pasos */}
                                 <div className="mt-4">
                                     <div className="flex justify-between mb-2">
                                         <span className="font-medium text-sm">Pasos del proceso:</span>
@@ -302,8 +277,6 @@
                                                 <input type="text" placeholder="Datos necesarios" className="border p-2 rounded w-full text-sm" value={paso.datos_necesarios} onChange={e => actualizarPaso(idx, pidx, 'datos_necesarios', e.target.value)} />
                                                 <input type="text" placeholder="Documentos generados" className="border p-2 rounded w-full text-sm" value={paso.documentos_generados} onChange={e => actualizarPaso(idx, pidx, 'documentos_generados', e.target.value)} />
                                                 <input type="text" placeholder="Plazos" className="border p-2 rounded w-full text-sm" value={paso.plazos} onChange={e => actualizarPaso(idx, pidx, 'plazos', e.target.value)} />
-
-                                                {/* Punto de decisión */}
                                                 <div className="border-t pt-2">
                                                     <label className="flex items-center gap-2 text-sm font-medium">
                                                         <input type="checkbox" checked={paso.tiene_decision} onChange={e => actualizarPaso(idx, pidx, 'tiene_decision', e.target.checked)} className="rounded" />
@@ -317,12 +290,10 @@
                                                         </div>
                                                     )}
                                                 </div>
-
-                                                {/* Handoff */}
                                                 <div className="border-t pt-2">
                                                     <label className="flex items-center gap-2 text-sm font-medium text-orange-700">
                                                         <input type="checkbox" checked={paso.pasa_a_otra_area} onChange={e => actualizarPaso(idx, pidx, 'pasa_a_otra_area', e.target.checked)} className="rounded" />
-                                                        🔄 Pasa a otra área (crea handoff automático)
+                                                        Pasa a otra área (crea handoff automático)
                                                     </label>
                                                     {paso.pasa_a_otra_area && (
                                                         <div className="ml-6 mt-2 space-y-2 bg-orange-50 p-2 rounded border border-orange-200">
@@ -342,8 +313,6 @@
                             </div>
                         ))}
                     </div>
-
-                    {/* Parte 4 y 5: Complementaria */}
                     <div className="mb-8 p-4 border rounded bg-gray-50">
                         <h3 className="font-bold text-lg mb-3 text-blue-900">Parte 4 y 5: Información Complementaria y Cierre</h3>
                         <div className="space-y-3">
@@ -359,32 +328,29 @@
                             <textarea placeholder="Observaciones generales" className="border p-2 rounded w-full" rows="2" value={complemento.observaciones_generales} onChange={e => setComplemento({...complemento, observaciones_generales: e.target.value})} />
                         </div>
                     </div>
-
                     <div className="text-center">
                         <button onClick={guardarEntrevista} disabled={loading} className={'px-6 py-3 rounded font-medium text-white ' + (loading ? 'bg-gray-400' : 'bg-green-600 hover:bg-green-700')}>
-                            {loading ? '⏳ Guardando...' : '💾 Guardar Entrevista Completa'}
+                            {loading ? 'Guardando...' : 'Guardar Entrevista Completa'}
                         </button>
                     </div>
                 </div>
             );
         }
-
         function VerEntrevista({ entrevistaId, onVolver }) {
             const [entrevista, setEntrevista] = useState(null);
             const [procesos, setProcesos] = useState([]);
             const [pasosPorProceso, setPasosPorProceso] = useState({});
             const [loading, setLoading] = useState(true);
-
             useEffect(() => {
                 async function cargar() {
-                    const {  entData } = await supabase.from('entrevistas').select('*').eq('id', entrevistaId).single();
-                    const {  procData } = await supabase.from('procesos').select('*').eq('entrevista_id', entrevistaId);
+                    const { data: entData } = await supabase.from('entrevistas').select('*').eq('id', entrevistaId).single();
+                    const { data: procData } = await supabase.from('procesos').select('*').eq('entrevista_id', entrevistaId);
                     if (entData) setEntrevista(entData);
                     if (procData) {
                         setProcesos(procData);
                         const pasosMap = {};
                         for (const p of procData) {
-                            const {  pasosData } = await supabase.from('pasos_proceso').select('*').eq('proceso_id', p.id).order('orden', { ascending: true });
+                            const { data: pasosData } = await supabase.from('pasos_proceso').select('*').eq('proceso_id', p.id).order('orden', { ascending: true });
                             pasosMap[p.id] = pasosData || [];
                         }
                         setPasosPorProceso(pasosMap);
@@ -393,15 +359,13 @@
                 }
                 cargar();
             }, [entrevistaId]);
-
             if (loading) return <div className="p-6">Cargando...</div>;
             if (!entrevista) return <div className="p-6">No encontrada</div>;
-
             return (
                 <div className="bg-white p-6 rounded-lg border max-w-6xl mx-auto">
                     <div className="flex justify-between mb-6">
                         <h2 className="text-2xl font-bold">Entrevista: {entrevista.area}</h2>
-                        <button onClick={onVolver} className="text-blue-600 hover:underline">← Volver</button>
+                        <button onClick={onVolver} className="text-blue-600 hover:underline">Volver</button>
                     </div>
                     <div className="mb-6 p-4 bg-gray-50 rounded">
                         <div className="grid grid-cols-2 gap-4">
@@ -439,13 +403,13 @@
                                                 {paso.tiene_decision && (
                                                     <div className="mt-2 p-2 bg-yellow-100 rounded">
                                                         <div><strong>Decisión:</strong> {paso.condicion_decision}</div>
-                                                        {paso.destino_si_cumple && <div>✓ Sí: {paso.destino_si_cumple}</div>}
-                                                        {paso.destino_si_no_cumple && <div>✗ No: {paso.destino_si_no_cumple}</div>}
+                                                        {paso.destino_si_cumple && <div>Sí: {paso.destino_si_cumple}</div>}
+                                                        {paso.destino_si_no_cumple && <div>No: {paso.destino_si_no_cumple}</div>}
                                                     </div>
                                                 )}
                                                 {paso.pasa_a_otra_area && (
                                                     <div className="mt-2 p-2 bg-orange-100 rounded">
-                                                        <div>🔄 Pasa a: {paso.area_destino}</div>
+                                                        <div>Pasa a: {paso.area_destino}</div>
                                                         {paso.que_envia && <div>Envía: {paso.que_envia}</div>}
                                                     </div>
                                                 )}
@@ -459,7 +423,6 @@
                 </div>
             );
         }
-
         function ListaEntrevistas({ entrevistas, onVer, onEditarEstado }) {
             return (
                 <div className="space-y-3">
@@ -486,8 +449,6 @@
                 </div>
             );
         }
-
-        // ====== DETALLE PROCESO (CORREGIDO CON MERMAID) ======
         function DetalleProceso({ procesoId, onVolver }) {
             const [proceso, setProceso] = useState(null);
             const [entrevista, setEntrevista] = useState(null);
@@ -516,107 +477,158 @@
                 return () => { cancelado = true; };
             }, [procesoId]);
 
-            // Mermaid render seguro
             useEffect(() => {
-                if (!pasos.length || !window.mermaid || !diagramRef.current) return;
+                if (loading || !pasos.length || !window.mermaid || !diagramRef.current) return;
 
-                const escape = (s) => (s || '').replace(/"/g, '\\"').replace(/\n/g, ' ');
-                let code = `graph TD\n  Inicio((Inicio)):::inicio\n  Fin((Fin)):::fin\n`;
-                let last = 'Inicio';
-                pasos.forEach((p, i) => {
-                    const id = `P${i+1}`;
-                    code += `  ${id}["${escape(p.descripcion)}"]:::paso\n  ${last} --> ${id}\n`;
-                    if (p.tiene_decision) {
-                        const c = `C${i+1}`;
-                        code += `  ${c}{${escape(p.condicion_decision)}}:::decision\n  ${id} --> ${c}\n`;
-                        if (p.destino_si_cumple) code += `  ${c} -->|Sí| SI${i+1}["${escape(p.destino_si_cumple)}"]:::destino\n`;
-                        if (p.destino_si_no_cumple) code += `  ${c} -->|No| NO${i+1}["${escape(p.destino_si_no_cumple)}"]:::destino\n`;
-                    } else if (p.pasa_a_otra_area && p.area_destino) {
-                        code += `  ${id} --> H${i+1}["→ ${escape(p.area_destino)}"]:::handoff\n`;
-                    } else if (i === pasos.length - 1) {
-                        code += `  ${id} --> Fin\n`;
-                    }
-                    last = id;
-                });
-                code += `\n  classDef inicio fill:#1e40af,color:white\n  classDef fin fill:#16a34a,color:white\n  classDef paso fill:#dbeafe,stroke:#3b82f6\n  classDef decision fill:#fef3c7,stroke:#f59e0b,stroke-dasharray:5,5\n  classDef destino fill:#fecaca,stroke:#ef4444\n  classDef handoff fill:#fff7ed,stroke:#ea580c\n`;
+                const renderDiagram = async () => {
+                    const escape = (s) => (s || '').replace(/"/g, '\\"').replace(/\n/g, ' ');
+                    let code = `graph TD\n  Inicio((Inicio)):::inicio\n  Fin((Fin)):::fin\n`;
+                    let last = 'Inicio';
 
-                const render = async () => {
+                    pasos.forEach((p, i) => {
+                        const id = `P${i+1}`;
+                        code += `  ${id}["${escape(p.descripcion)}"]:::paso\n  ${last} --> ${id}\n`;
+                        if (p.tiene_decision) {
+                            const c = `C${i+1}`;
+                            code += `  ${c}{${escape(p.condicion_decision)}}:::decision\n  ${id} --> ${c}\n`;
+                            if (p.destino_si_cumple) code += `  ${c} -->|Sí| SI${i+1}["${escape(p.destino_si_cumple)}"]:::destino\n`;
+                            if (p.destino_si_no_cumple) code += `  ${c} -->|No| NO${i+1}["${escape(p.destino_si_no_cumple)}"]:::destino\n`;
+                        } else if (p.pasa_a_otra_area && p.area_destino) {
+                            code += `  ${id} --> H${i+1}["→ ${escape(p.area_destino)}"]:::handoff\n`;
+                        } else if (i === pasos.length - 1) {
+                            code += `  ${id} --> Fin\n`;
+                        }
+                        last = id;
+                    });
+
+                    code += `\n  classDef inicio fill:#1e40af,color:white\n  classDef fin fill:#16a34a,color:white\n  classDef paso fill:#dbeafe,stroke:#3b82f6\n  classDef decision fill:#fef3c7,stroke:#f59e0b,stroke-dasharray:5,5\n  classDef destino fill:#fecaca,stroke:#ef4444\n  classDef handoff fill:#fff7ed,stroke:#ea580c\n`;
+
                     try {
-                        const { svg } = await window.mermaid.render(`mermaid-${procesoId}`, code);
+                        const { svg } = await window.mermaid.render(`diag-${procesoId}`, code);
                         setMermaidSvg(svg);
                     } catch (err) {
-                        setMermaidSvg(`<div class="text-red-600 p-4">Error al renderizar: ${err.message}</div>`);
+                        console.error('Mermaid error:', err);
+                        setMermaidSvg(`<div class="text-red-600 p-4">Error: ${err.message}</div>`);
                     }
                 };
-                if (document.readyState === 'complete') render();
-                else window.addEventListener('load', render);
-                return () => window.removeEventListener('load', render);
-            }, [pasos, procesoId]);
 
-            if (loading) return <div className="p-6 text-center">Cargando...</div>;
-            if (!proceso) return <div className="p-6 text-center text-red-600">Proceso no encontrado</div>;
+                const timer = setTimeout(renderDiagram, 100);
+                return () => clearTimeout(timer);
+            }, [loading, pasos, procesoId]);
+
+            if (loading) return <div className="p-6 text-center">Cargando detalles del proceso...</div>;
+            if (!proceso) return <div className="p-6 text-center">Proceso no encontrado</div>;
 
             return (
                 <div className="bg-white p-6 rounded border max-w-6xl mx-auto">
                     <div className="flex justify-between mb-6">
                         <div>
                             <h2 className="text-2xl font-bold">{proceso.nombre}</h2>
-                            <p className="text-sm text-gray-600">{proceso.area_inicio} → {proceso.area_cierre || '...'}</p>
+                            <p className="text-sm text-gray-600 mt-1">
+                                {proceso.area_inicio}
+                                {proceso.areas_intermedias && ` → ${proceso.areas_intermedias}`}
+                                {proceso.area_cierre && ` → ${proceso.area_cierre}`}
+                            </p>
                         </div>
                         <button onClick={onVolver} className="text-blue-600 hover:underline">Volver</button>
                     </div>
-
                     {entrevista && (
-                        <div className="mb-6 p-4 bg-blue-50 rounded">
-                            <h3 className="font-bold mb-2">Entrevista asociada</h3>
-                            <div className="grid grid-cols-2 gap-2 text-sm">
+                        <div className="mb-6 p-4 bg-blue-50 rounded border border-blue-200">
+                            <h3 className="font-bold text-lg mb-2">Entrevista asociada</h3>
+                            <div className="grid grid-cols-2 gap-3 text-sm">
                                 <div><strong>Área:</strong> {entrevista.area}</div>
                                 <div><strong>Fecha:</strong> {new Date(entrevista.fecha).toLocaleDateString('es-AR')}</div>
-                                <div><strong>Entrevistador:</strong> {entrevista.entrevistador}</div>
-                                <div><strong>Responsable:</strong> {entrevista.responsable}</div>
+                                {entrevista.hora && <div><strong>Hora:</strong> {entrevista.hora.slice(0, 5)}</div>}
+                                <div><strong>Entrevistador:</strong> {entrevista.entrevistador || '–'}</div>
+                                <div><strong>Responsable:</strong> {entrevista.responsable || '–'}</div>
                                 <div><strong>Estado:</strong> {entrevista.estado}</div>
-                                <div><strong>Frecuencia:</strong> {proceso.frecuencia}</div>
-                                <div><strong>Prioridad:</strong> {proceso.prioridad}</div>
-                                <div><strong>Estado relevamiento:</strong> {proceso.estado_relevamiento}</div>
                             </div>
                         </div>
                     )}
-
+                    <div className="grid grid-cols-3 gap-4 mb-6 p-4 bg-gray-50 rounded">
+                        <div><span className="text-sm text-gray-600">Frecuencia:</span> <p className="font-medium capitalize">{proceso.frecuencia}</p></div>
+                        <div><span className="text-sm text-gray-600">Prioridad:</span> <p className="font-medium capitalize">{proceso.prioridad}</p></div>
+                        <div><span className="text-sm text-gray-600">Estado:</span> <p className="font-medium capitalize">{proceso.estado_relevamiento?.replace('_', ' ')}</p></div>
+                    </div>
                     <div className="mb-6">
                         <h3 className="font-bold text-lg mb-4">Diagrama de Flujo (Visual)</h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                            {pasos.map((paso, i) => (
-                                <div key={i} className="p-3 bg-blue-50 border rounded">
-                                    <div className="font-semibold">{i + 1}. {paso.descripcion}</div>
-                                    <div className="text-sm mt-1">
-                                        <strong>Responsable:</strong> {paso.responsable_rol || 'tecnico'}<br/>
-                                        <strong>Área:</strong> {paso.area || 'el puma'}<br/>
-                                        <strong>Herramienta:</strong> {paso.herramienta || 'excel'}<br/>
-                                        <strong>Plazo:</strong> {paso.plazos || '1 semana'}<br/>
-                                        <strong>Datos necesarios:</strong> {paso.datos_necesarios || 'nombre, apellido, fecha, dni'}<br/>
-                                        <strong>Documentos:</strong> {paso.documentos_generados || 'expediente'}
+                        {pasos.length === 0 ? (
+                            <p className="text-gray-500 italic">Este proceso no tiene pasos definidos.</p>
+                        ) : (
+                            <div className="space-y-4">
+                                {pasos.map((paso, idx) => (
+                                    <div key={paso.id}>
+                                        <div className="flex items-start gap-4">
+                                            <div className="flex-shrink-0 w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center font-bold">
+                                                {paso.orden}
+                                            </div>
+                                            <div className="flex-1 border-2 border-blue-200 rounded-lg p-4 bg-blue-50">
+                                                <h4 className="font-semibold mb-2">{paso.descripcion}</h4>
+                                                <div className="grid grid-cols-2 gap-3 text-sm">
+                                                    {paso.responsable_rol && <div><span className="text-gray-600">Responsable:</span> {paso.responsable_rol}</div>}
+                                                    {paso.area && <div><span className="text-gray-600">Área:</span> <span className="font-medium">{paso.area}</span></div>}
+                                                    {paso.herramienta && <div><span className="text-gray-600">Herramienta:</span> {paso.herramienta}</div>}
+                                                    {paso.plazos && <div><span className="text-gray-600">Plazo:</span> {paso.plazos}</div>}
+                                                </div>
+                                                {paso.datos_necesarios && <div className="mt-2 text-sm"><span className="text-gray-600">Datos necesarios:</span> {paso.datos_necesarios}</div>}
+                                                {paso.documentos_generados && <div className="mt-1 text-sm"><span className="text-gray-600">Documentos:</span> {paso.documentos_generados}</div>}
+                                            </div>
+                                        </div>
+                                        {paso.tiene_decision && (
+                                            <div className="ml-12 mt-2 mb-2">
+                                                <div className="border-2 border-yellow-400 rounded-lg p-3 bg-yellow-50">
+                                                    <div className="font-semibold text-sm mb-2">Decisión: {paso.condicion_decision}</div>
+                                                    <div className="flex gap-4 text-sm">
+                                                        {paso.destino_si_cumple && <div className="flex-1"><span className="text-green-700">Sí cumple:</span> {paso.destino_si_cumple}</div>}
+                                                        {paso.destino_si_no_cumple && <div className="flex-1"><span className="text-red-700">Si no cumple:</span> {paso.destino_si_no_cumple}</div>}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
+                                        {paso.pasa_a_otra_area && paso.area_destino && (
+                                            <div className="ml-12 mt-2 mb-2">
+                                                <div className="border-2 border-orange-400 rounded-lg p-3 bg-orange-50">
+                                                    <div className="flex items-center gap-2 font-semibold text-sm mb-1">
+                                                        Pasa a: <span className="text-orange-700">{paso.area_destino}</span>
+                                                    </div>
+                                                    {paso.que_envia && <div className="text-sm">Envía: {paso.que_envia}</div>}
+                                                    {paso.espera_respuesta && <div className="text-sm text-orange-700 mt-1">Espera respuesta</div>}
+                                                </div>
+                                            </div>
+                                        )}
+                                        {idx < pasos.length - 1 && <div className="ml-4 h-6 w-0.5 bg-blue-300"></div>}
                                     </div>
-                                </div>
-                            ))}
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                    <div className="mb-6">
+                        <h3 className="font-bold text-lg mb-2">Diagrama UML (Mermaid)</h3>
+                        <div ref={diagramRef} className="p-4 bg-gray-50 rounded border min-h-64">
+                            {mermaidSvg ? (
+                                <div dangerouslySetInnerHTML={{ __html: mermaidSvg }} />
+                            ) : (
+                                <div className="text-gray-500">Generando diagrama...</div>
+                            )}
                         </div>
                     </div>
-
-                    <div ref={diagramRef} className="p-4 bg-gray-50 rounded border">
-                        <h3 className="font-bold text-lg mb-2">Diagrama UML (Mermaid)</h3>
-                        {mermaidSvg ? <div dangerouslySetInnerHTML={{ __html: mermaidSvg }} /> : <div className="text-gray-500">Generando diagrama...</div>}
-                    </div>
-
-                    <div className="mt-6 p-4 bg-yellow-50 rounded border">
-                        <h3 className="font-bold mb-2">Handoffs en este proceso:</h3>
-                        <p className="text-sm">No hay transiciones entre áreas en este proceso.</p>
+                    <div className="mt-6 p-4 bg-orange-50 rounded border border-orange-200">
+                        <h4 className="font-semibold mb-2">Handoffs en este proceso:</h4>
+                        {pasos.filter(p => p.pasa_a_otra_area).length > 0 ? (
+                            <ul className="text-sm space-y-1">
+                                {pasos.filter(p => p.pasa_a_otra_area).map(p => (
+                                    <li key={p.id}>• <strong>{p.area}</strong> → <strong>{p.area_destino}</strong> {p.que_envia && `(${p.que_envia})`}</li>
+                                ))}
+                            </ul>
+                        ) : (
+                            <p className="text-sm text-gray-600">No hay transiciones entre áreas en este proceso.</p>
+                        )}
                     </div>
                 </div>
             );
         }
-
         function TrackerEntrevistas({ entrevistas, setEntrevistas, onCompletar }) {
             const [form, setForm] = useState({ area: '', fecha: '', hora: '', responsable: '', entrevistador: '', estado: 'pendiente', notas: '' });
-
             async function agregar() {
                 if (!form.area || !form.fecha) return alert('Completa área y fecha');
                 const { data, error } = await supabase.from('entrevistas').insert([form]).select();
@@ -627,15 +639,12 @@
                     setForm({ area: '', fecha: '', hora: '', responsable: '', entrevistador: '', estado: 'pendiente', notas: '' });
                 }
             }
-
             async function eliminar(id) {
                 if (!confirm('Eliminar?')) return;
                 const { error } = await supabase.from('entrevistas').delete().eq('id', id);
                 if (!error) setEntrevistas(entrevistas.filter(e => e.id !== id));
             }
-
             const contarPorEstado = (estado) => entrevistas.filter(e => e.estado === estado).length;
-
             return (
                 <div className="space-y-6">
                     <div className="grid grid-cols-4 gap-4">
@@ -656,7 +665,6 @@
                             <div className="text-sm">Seguimiento</div>
                         </div>
                     </div>
-
                     <div className="bg-white p-4 rounded border">
                         <h3 className="font-semibold mb-3">Nueva Entrevista</h3>
                         <div className="grid grid-cols-2 gap-3">
@@ -670,7 +678,6 @@
                             <Icons.Plus /> Agregar
                         </button>
                     </div>
-
                     <div className="space-y-2">
                         {entrevistas.filter(e => e.estado === 'pendiente').map(e => (
                             <div key={e.id} className="bg-white p-4 rounded border">
@@ -694,7 +701,6 @@
                 </div>
             );
         }
-
         function MatrizProcesos({ procesos, onVerDetalle }) {
             return (
                 <div className="bg-white rounded border">
@@ -725,13 +731,11 @@
                 </div>
             );
         }
-
         function ValidacionHandoffs({ handoffs, onRecargar }) {
             async function toggleValidacion(id, campo, valorActual) {
                 await supabase.from('handoffs').update({ [campo]: !valorActual }).eq('id', id);
                 if (onRecargar) onRecargar();
             }
-
             return (
                 <div className="space-y-3">
                     {handoffs.map(h => (
@@ -763,7 +767,6 @@
                 </div>
             );
         }
-
         function App() {
             const [activeTab, setActiveTab] = useState('tracker');
             const [entrevistas, setEntrevistas] = useState([]);
@@ -773,11 +776,9 @@
             const [entrevistaEnProgreso, setEntrevistaEnProgreso] = useState(null);
             const [procesoSeleccionado, setProcesoSeleccionado] = useState(null);
             const [entrevistaSeleccionada, setEntrevistaSeleccionada] = useState(null);
-
             useEffect(() => {
                 loadData();
             }, []);
-
             async function loadData() {
                 try {
                     const [e, p, h] = await Promise.all([
@@ -794,29 +795,23 @@
                     setLoading(false);
                 }
             }
-
             async function editarEstadoEntrevista(id, nuevoEstado) {
                 await supabase.from('entrevistas').update({ estado: nuevoEstado }).eq('id', id);
                 loadData();
             }
-
             function iniciarCompletar(id) {
                 setEntrevistaEnProgreso(id);
                 setActiveTab('completar');
             }
-
             function verEntrevista(id) {
                 setEntrevistaSeleccionada(id);
                 setActiveTab('ver-entrevista');
             }
-
             function verDetalleProceso(id) {
                 setProcesoSeleccionado(id);
                 setActiveTab('detalle-proceso');
             }
-
             if (loading) return <div className="p-6 text-center">Cargando...</div>;
-
             return (
                 <div className="min-h-screen bg-gray-50 p-6">
                     <div className="max-w-7xl mx-auto">
@@ -824,7 +819,6 @@
                             <h1 className="text-3xl font-bold">Sistema de Relevamiento de Procesos</h1>
                             <p className="text-gray-600 mt-1">Ministerio de Ecología - Provincia de Misiones</p>
                         </div>
-
                         {activeTab !== 'completar' && activeTab !== 'detalle-proceso' && activeTab !== 'ver-entrevista' && (
                             <div className="flex gap-2 mb-6 border-b">
                                 <button onClick={() => setActiveTab('tracker')} className={'px-4 py-2 font-medium ' + (activeTab === 'tracker' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600')}>
@@ -841,7 +835,6 @@
                                 </button>
                             </div>
                         )}
-
                         <div>
                             {activeTab === 'tracker' && (
                                 <TrackerEntrevistas
@@ -892,7 +885,6 @@
                 </div>
             );
         }
-
         ReactDOM.render(<App />, document.getElementById('root'));
     </script>
 </body>

@@ -1112,22 +1112,30 @@
     );
 }
 
-        function DarkModeToggle() {
-        const [darkMode, setDarkMode] = useState(false);
-        
-        useEffect(() => {
-        if (darkMode) {
-        document.documentElement.classList.add('dark');
-           } else {
-           document.documentElement.classList.remove('dark');
-            }
-         }, [darkMode]);
+       function DarkModeToggle() {
+            const [darkMode, setDarkMode] = useState(() => {
+                const saved = localStorage.getItem('darkMode');
+                return saved ? JSON.parse(saved) : false;
+            });
+            
+            useEffect(() => {
+                if (darkMode) {
+                    document.documentElement.classList.add('dark');
+                } else {
+                    document.documentElement.classList.remove('dark');
+                }
+                localStorage.setItem('darkMode', JSON.stringify(darkMode));
+            }, [darkMode]);
 
-         return (
-            <button onClick={() => setDarkMode(!darkMode)} className="text-gray-600 dark:text-gray-300">
-              {darkMode ? '☀️' : '🌙'}
-         </button>
-    );
+            return (
+                <button 
+                    onClick={() => setDarkMode(!darkMode)} 
+                    className="p-2 rounded-lg bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+                    title={darkMode ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
+                >
+                    <span className="text-xl">{darkMode ? '☀️' : '🌙'}</span>
+                </button>
+            );
         }
       function App() {
     const [activeTab, setActiveTab] = useState('tracker');

@@ -701,36 +701,41 @@
                 </div>
             );
         }
-        function MatrizProcesos({ procesos, onVerDetalle }) {
-            return (
-                <div className="bg-white rounded border">
-                    <table className="w-full">
-                        <thead className="bg-gray-50">
-                            <tr>
-                                <th className="text-left p-3">Proceso</th>
-                                <th className="text-left p-3">Flujo</th>
-                                <th className="text-left p-3">Frecuencia</th>
-                                <th className="text-left p-3">Acciones</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {procesos.map(p => (
-                                <tr key={p.id} className="border-t">
-                                    <td className="p-3 font-medium">{p.nombre}</td>
-                                    <td className="p-3 text-sm">{p.area_inicio} → {p.area_cierre || '...'}</td>
-                                    <td className="p-3 text-sm">{p.frecuencia}</td>
-                                    <td className="p-3">
-                                        <button onClick={() => onVerDetalle(p.id)} className="bg-blue-600 text-white px-3 py-1 rounded text-sm flex items-center gap-1">
-                                            <Icons.Eye /> Ver
-                                        </button>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
-            );
-        }
+        function MatrizProcesos({ procesos, onVerDetalle, onEditar }) {
+    return (
+        <div className="bg-white rounded border">
+            <table className="w-full">
+                <thead className="bg-gray-50">
+                    <tr>
+                        <th className="text-left p-3">Proceso</th>
+                        <th className="text-left p-3">Flujo</th>
+                        <th className="text-left p-3">Frecuencia</th>
+                        <th className="text-left p-3">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {procesos.map(p => (
+                        <tr key={p.id} className="border-t">
+                            <td className="p-3 font-medium">{p.nombre}</td>
+                            <td className="p-3 text-sm">{p.area_inicio} → {p.area_cierre || '...'}</td>
+                            <td className="p-3 text-sm">{p.frecuencia}</td>
+                            <td className="p-3">
+                                <div className="flex gap-2">
+                                    <button onClick={() => onVerDetalle(p.id)} className="bg-blue-600 text-white px-3 py-1 rounded text-sm flex items-center gap-1">
+                                        <Icons.Eye /> Ver
+                                    </button>
+                                    <button onClick={() => onEditar(p.id)} className="bg-yellow-600 text-white px-3 py-1 rounded text-sm flex items-center gap-1">
+                                        <Icons.Edit /> Editar
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    ))}
+                </tbody>
+            </table>
+        </div>
+    );
+}
         function ValidacionHandoffs({ handoffs, onRecargar }) {
             async function toggleValidacion(id, campo, valorActual) {
                 await supabase.from('handoffs').update({ [campo]: !valorActual }).eq('id', id);
@@ -767,124 +772,387 @@
                 </div>
             );
         }
-        function App() {
-            const [activeTab, setActiveTab] = useState('tracker');
-            const [entrevistas, setEntrevistas] = useState([]);
-            const [procesos, setProcesos] = useState([]);
-            const [handoffs, setHandoffs] = useState([]);
-            const [loading, setLoading] = useState(true);
-            const [entrevistaEnProgreso, setEntrevistaEnProgreso] = useState(null);
-            const [procesoSeleccionado, setProcesoSeleccionado] = useState(null);
-            const [entrevistaSeleccionada, setEntrevistaSeleccionada] = useState(null);
-            useEffect(() => {
-                loadData();
-            }, []);
-            async function loadData() {
-                try {
-                    const [e, p, h] = await Promise.all([
-                        supabase.from('entrevistas').select('*').order('fecha', { ascending: false }),
-                        supabase.from('procesos').select('*').order('created_at', { ascending: false }),
-                        supabase.from('handoffs').select('*').order('created_at', { ascending: false })
-                    ]);
-                    if (e.data) setEntrevistas(e.data);
-                    if (p.data) setProcesos(p.data);
-                    if (h.data) setHandoffs(h.data);
-                } catch (error) {
-                    console.error('Error:', error);
-                } finally {
-                    setLoading(false);
+        function EditarProceso({ procesoId, onCerrar }) {
+    const [proceso, setProceso] = useState(null);
+    const [pasos, setPasos] = useState([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        async function cargar() {
+            try {
+                // Cargar proceso
+                const { data: procData } = await supabase.from('procesos').select('*').eq('id', procesoId).single();
+                if (!procData) return;
+                setProceso(procData);
+
+                // Cargar pasos
+                const { data: pasosData } = await supabase.from('pasos_proceso').select('*').eq('proceso_id', procesoId).order('orden', { ascending: true });
+                setPasos(pasosData || []);
+            } catch (err) {
+                console.error('Error al cargar proceso:', err);
+            } finally {
+                setLoading(false);
+            }
+        }
+        cargar();
+    }, [procesoId]);
+
+    const handleChangeProceso = (campo, valor) => {
+        setProceso(prev => ({ ...prev, [campo]: valor }));
+    };
+
+    const handleActualizarPaso = (index, campo, valor) => {
+        const nuevos = [...pasos];
+        nuevos[index] = { ...nuevos[index], [campo]: valor };
+        setPasos(nuevos);
+    };
+
+    const handleAgregarPaso = () => {
+        const nuevoPaso = {
+            descripcion: '',
+            responsable_rol: '',
+            area: '',
+            herramienta: '',
+            es_manual: true,
+            datos_necesarios: '',
+            documentos_generados: '',
+            plazos: '',
+            tiene_decision: false,
+            condicion_decision: '',
+            destino_si_cumple: '',
+            destino_si_no_cumple: '',
+            pasa_a_otra_area: false,
+            area_destino: '',
+            que_envia: '',
+            espera_respuesta: false
+        };
+        setPasos([...pasos, nuevoPaso]);
+    };
+
+    const handleEliminarPaso = (index) => {
+        setPasos(pasos.filter((_, i) => i !== index));
+    };
+
+    const handleGuardar = async () => {
+        if (!proceso) return;
+        try {
+            // Actualizar proceso
+            await supabase.from('procesos').update({
+                nombre: proceso.nombre,
+                frecuencia: proceso.frecuencia,
+                prioridad: proceso.prioridad,
+                area_inicio: proceso.area_inicio,
+                areas_intermedias: proceso.areas_intermedias,
+                area_cierre: proceso.area_cierre,
+                estado_relevamiento: proceso.estado_relevamiento
+            }).eq('id', proceso.id);
+
+            // Actualizar pasos
+            for (const paso of pasos) {
+                if (paso.id) {
+                    // Existe, actualizar
+                    await supabase.from('pasos_proceso').update({
+                        descripcion: paso.descripcion,
+                        responsable_rol: paso.responsable_rol,
+                        area: paso.area,
+                        herramienta: paso.herramienta,
+                        es_manual: paso.es_manual,
+                        datos_necesarios: paso.datos_necesarios,
+                        documentos_generados: paso.documentos_generados,
+                        plazos: paso.plazos,
+                        tiene_decision: paso.tiene_decision,
+                        condicion_decision: paso.condicion_decision,
+                        destino_si_cumple: paso.destino_si_cumple,
+                        destino_si_no_cumple: paso.destino_si_no_cumple,
+                        pasa_a_otra_area: paso.pasa_a_otra_area,
+                        area_destino: paso.area_destino,
+                        que_envia: paso.que_envia,
+                        espera_respuesta: paso.espera_respuesta
+                    }).eq('id', paso.id);
+                } else {
+                    // Nuevo, insertar
+                    await supabase.from('pasos_proceso').insert([{
+                        proceso_id: proceso.id,
+                        orden: paso.orden || pasos.indexOf(paso) + 1,
+                        descripcion: paso.descripcion,
+                        responsable_rol: paso.responsable_rol,
+                        area: paso.area,
+                        herramienta: paso.herramienta,
+                        es_manual: paso.es_manual,
+                        datos_necesarios: paso.datos_necesarios,
+                        documentos_generados: paso.documentos_generados,
+                        plazos: paso.plazos,
+                        tiene_decision: paso.tiene_decision,
+                        condicion_decision: paso.condicion_decision,
+                        destino_si_cumple: paso.destino_si_cumple,
+                        destino_si_no_cumple: paso.destino_si_no_cumple,
+                        pasa_a_otra_area: paso.pasa_a_otra_area,
+                        area_destino: paso.area_destino,
+                        que_envia: paso.que_envia,
+                        espera_respuesta: paso.espera_respuesta
+                    }]);
                 }
             }
-            async function editarEstadoEntrevista(id, nuevoEstado) {
-                await supabase.from('entrevistas').update({ estado: nuevoEstado }).eq('id', id);
-                loadData();
-            }
-            function iniciarCompletar(id) {
-                setEntrevistaEnProgreso(id);
-                setActiveTab('completar');
-            }
-            function verEntrevista(id) {
-                setEntrevistaSeleccionada(id);
-                setActiveTab('ver-entrevista');
-            }
-            function verDetalleProceso(id) {
-                setProcesoSeleccionado(id);
-                setActiveTab('detalle-proceso');
-            }
-            if (loading) return <div className="p-6 text-center">Cargando...</div>;
-            return (
-                <div className="min-h-screen bg-gray-50 p-6">
-                    <div className="max-w-7xl mx-auto">
-                        <div className="mb-6">
-                            <h1 className="text-3xl font-bold">Sistema de Relevamiento de Procesos</h1>
-                            <p className="text-gray-600 mt-1">Ministerio de Ecología - Provincia de Misiones</p>
-                        </div>
-                        {activeTab !== 'completar' && activeTab !== 'detalle-proceso' && activeTab !== 'ver-entrevista' && (
-                            <div className="flex gap-2 mb-6 border-b">
-                                <button onClick={() => setActiveTab('tracker')} className={'px-4 py-2 font-medium ' + (activeTab === 'tracker' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600')}>
-                                    Agendar Entrevistas
-                                </button>
-                                <button onClick={() => setActiveTab('entrevistas')} className={'px-4 py-2 font-medium ' + (activeTab === 'entrevistas' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600')}>
-                                    Entrevistas ({entrevistas.length})
-                                </button>
-                                <button onClick={() => setActiveTab('procesos')} className={'px-4 py-2 font-medium ' + (activeTab === 'procesos' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600')}>
-                                    Procesos ({procesos.length})
-                                </button>
-                                <button onClick={() => setActiveTab('handoffs')} className={'px-4 py-2 font-medium ' + (activeTab === 'handoffs' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600')}>
-                                    Handoffs ({handoffs.length})
-                                </button>
-                            </div>
-                        )}
-                        <div>
-                            {activeTab === 'tracker' && (
-                                <TrackerEntrevistas
-                                    entrevistas={entrevistas}
-                                    setEntrevistas={setEntrevistas}
-                                    onCompletar={iniciarCompletar}
-                                />
-                            )}
-                            {activeTab === 'entrevistas' && (
-                                <ListaEntrevistas
-                                    entrevistas={entrevistas}
-                                    onVer={verEntrevista}
-                                    onEditarEstado={editarEstadoEntrevista}
-                                />
-                            )}
-                            {activeTab === 'completar' && (
-                                <FormularioEntrevista
-                                    entrevistaId={entrevistaEnProgreso}
-                                    onVolver={() => setActiveTab('tracker')}
-                                />
-                            )}
-                            {activeTab === 'ver-entrevista' && (
-                                <VerEntrevista
-                                    entrevistaId={entrevistaSeleccionada}
-                                    onVolver={() => setActiveTab('entrevistas')}
-                                />
-                            )}
-                            {activeTab === 'procesos' && (
-                                <MatrizProcesos
-                                    procesos={procesos}
-                                    onVerDetalle={verDetalleProceso}
-                                />
-                            )}
-                            {activeTab === 'detalle-proceso' && (
-                                <DetalleProceso
-                                    procesoId={procesoSeleccionado}
-                                    onVolver={() => setActiveTab('procesos')}
-                                />
-                            )}
-                            {activeTab === 'handoffs' && (
-                                <ValidacionHandoffs
-                                    handoffs={handoffs}
-                                    onRecargar={loadData}
-                                />
-                            )}
-                        </div>
+
+            alert('Proceso actualizado exitosamente');
+            onCerrar();
+        } catch (err) {
+            alert('Error: ' + err.message);
+        }
+    };
+
+    if (loading) return <div className="p-6 text-center">Cargando...</div>;
+    if (!proceso) return <div className="p-6 text-center">Proceso no encontrado</div>;
+
+    return (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white p-6 rounded-lg border max-w-6xl w-full max-h-[90vh] overflow-y-auto">
+                <div className="flex justify-between mb-6">
+                    <h2 className="text-2xl font-bold">Editar Proceso</h2>
+                    <button onClick={onCerrar} className="text-gray-600 hover:text-gray-900">
+                        ✕
+                    </button>
+                </div>
+
+                {/* Datos del proceso */}
+                <div className="mb-6 p-4 bg-gray-50 rounded border">
+                    <h3 className="font-bold text-lg mb-3">Datos del Proceso</h3>
+                    <div className="grid grid-cols-3 gap-3">
+                        <input type="text" placeholder="Nombre" className="border p-2 rounded" value={proceso.nombre || ''} onChange={e => handleChangeProceso('nombre', e.target.value)} />
+                        <select className="border p-2 rounded" value={proceso.frecuencia || 'mensual'} onChange={e => handleChangeProceso('frecuencia', e.target.value)}>
+                            <option value="diaria">Diaria</option>
+                            <option value="semanal">Semanal</option>
+                            <option value="mensual">Mensual</option>
+                            <option value="eventual">Eventual</option>
+                        </select>
+                        <select className="border p-2 rounded" value={proceso.prioridad || 'media'} onChange={e => handleChangeProceso('prioridad', e.target.value)}>
+                            <option value="baja">Baja</option>
+                            <option value="media">Media</option>
+                            <option value="alta">Alta</option>
+                        </select>
+                        <input type="text" placeholder="Área inicio" className="border p-2 rounded" value={proceso.area_inicio || ''} onChange={e => handleChangeProceso('area_inicio', e.target.value)} />
+                        <input type="text" placeholder="Áreas intermedias" className="border p-2 rounded" value={proceso.areas_intermedias || ''} onChange={e => handleChangeProceso('areas_intermedias', e.target.value)} />
+                        <input type="text" placeholder="Área cierre" className="border p-2 rounded" value={proceso.area_cierre || ''} onChange={e => handleChangeProceso('area_cierre', e.target.value)} />
                     </div>
                 </div>
-            );
+
+                {/* Pasos */}
+                <div className="mb-6">
+                    <div className="flex justify-between mb-4">
+                        <h3 className="font-bold text-lg">Pasos del Proceso</h3>
+                        <button onClick={handleAgregarPaso} className="bg-blue-600 text-white px-3 py-1 rounded text-sm flex items-center gap-1">
+                            <Icons.Plus /> Agregar Paso
+                        </button>
+                    </div>
+                    {pasos.map((paso, idx) => (
+                        <div key={idx} className="mb-4 p-4 border rounded bg-white shadow-sm">
+                            <div className="flex justify-between mb-3">
+                                <h4 className="font-semibold">Paso {idx + 1}</h4>
+                                <button onClick={() => handleEliminarPaso(idx)} className="text-red-600">
+                                    <Icons.Trash />
+                                </button>
+                            </div>
+                            <div className="grid grid-cols-2 gap-3 text-sm">
+                                <input type="text" placeholder="Descripción" className="border p-2 rounded" value={paso.descripcion || ''} onChange={e => handleActualizarPaso(idx, 'descripcion', e.target.value)} />
+                                <input type="text" placeholder="Responsable (rol)" className="border p-2 rounded" value={paso.responsable_rol || ''} onChange={e => handleActualizarPaso(idx, 'responsable_rol', e.target.value)} />
+                                <input type="text" placeholder="Área" className="border p-2 rounded" value={paso.area || ''} onChange={e => handleActualizarPaso(idx, 'area', e.target.value)} />
+                                <input type="text" placeholder="Herramienta" className="border p-2 rounded" value={paso.herramienta || ''} onChange={e => handleActualizarPaso(idx, 'herramienta', e.target.value)} />
+                                <input type="text" placeholder="Datos necesarios" className="border p-2 rounded" value={paso.datos_necesarios || ''} onChange={e => handleActualizarPaso(idx, 'datos_necesarios', e.target.value)} />
+                                <input type="text" placeholder="Documentos generados" className="border p-2 rounded" value={paso.documentos_generados || ''} onChange={e => handleActualizarPaso(idx, 'documentos_generados', e.target.value)} />
+                                <input type="text" placeholder="Plazos" className="border p-2 rounded" value={paso.plazos || ''} onChange={e => handleActualizarPaso(idx, 'plazos', e.target.value)} />
+                            </div>
+                            <div className="mt-3">
+                                <label className="flex items-center gap-2 text-sm">
+                                    <input type="checkbox" checked={paso.tiene_decision} onChange={e => handleActualizarPaso(idx, 'tiene_decision', e.target.checked)} className="rounded" />
+                                    Tiene punto de decisión
+                                </label>
+                                {paso.tiene_decision && (
+                                    <div className="mt-2 p-2 bg-yellow-50 rounded">
+                                        <input type="text" placeholder="Condición a evaluar" className="border p-2 rounded w-full mb-1" value={paso.condicion_decision || ''} onChange={e => handleActualizarPaso(idx, 'condicion_decision', e.target.value)} />
+                                        <div className="grid grid-cols-2 gap-2">
+                                            <input type="text" placeholder="Destino si cumple" className="border p-2 rounded" value={paso.destino_si_cumple || ''} onChange={e => handleActualizarPaso(idx, 'destino_si_cumple', e.target.value)} />
+                                            <input type="text" placeholder="Destino si no cumple" className="border p-2 rounded" value={paso.destino_si_no_cumple || ''} onChange={e => handleActualizarPaso(idx, 'destino_si_no_cumple', e.target.value)} />
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                            <div className="mt-3">
+                                <label className="flex items-center gap-2 text-sm text-orange-700">
+                                    <input type="checkbox" checked={paso.pasa_a_otra_area} onChange={e => handleActualizarPaso(idx, 'pasa_a_otra_area', e.target.checked)} className="rounded" />
+                                    🔄 Pasa a otra área
+                                </label>
+                                {paso.pasa_a_otra_area && (
+                                    <div className="mt-2 p-2 bg-orange-50 rounded border border-orange-200">
+                                        <input type="text" placeholder="Área destino" className="border p-2 rounded w-full mb-1" value={paso.area_destino || ''} onChange={e => handleActualizarPaso(idx, 'area_destino', e.target.value)} />
+                                        <input type="text" placeholder="Qué envía" className="border p-2 rounded w-full mb-1" value={paso.que_envia || ''} onChange={e => handleActualizarPaso(idx, 'que_envia', e.target.value)} />
+                                        <label className="flex items-center gap-2 text-sm">
+                                            <input type="checkbox" checked={paso.espera_respuesta} onChange={e => handleActualizarPaso(idx, 'espera_respuesta', e.target.checked)} className="rounded" />
+                                            El proceso espera respuesta
+                                        </label>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    ))}
+                </div>
+
+                <div className="flex justify-end gap-3">
+                    <button onClick={onCerrar} className="px-4 py-2 rounded font-medium text-gray-600 border">
+                        Cancelar
+                    </button>
+                    <button onClick={handleGuardar} className="px-4 py-2 rounded font-medium text-white bg-green-600 hover:bg-green-700">
+                        Guardar Cambios
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+}
+       function App() {
+    const [activeTab, setActiveTab] = useState('tracker');
+    const [entrevistas, setEntrevistas] = useState([]);
+    const [procesos, setProcesos] = useState([]);
+    const [handoffs, setHandoffs] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [entrevistaEnProgreso, setEntrevistaEnProgreso] = useState(null);
+    const [procesoSeleccionado, setProcesoSeleccionado] = useState(null);
+    const [entrevistaSeleccionada, setEntrevistaSeleccionada] = useState(null);
+    const [procesoAEliminar, setProcesoAEliminar] = useState(null); // Estado para edición
+
+    useEffect(() => {
+        loadData();
+    }, []);
+
+    async function loadData() {
+        try {
+            const [e, p, h] = await Promise.all([
+                supabase.from('entrevistas').select('*').order('fecha', { ascending: false }),
+                supabase.from('procesos').select('*').order('created_at', { ascending: false }),
+                supabase.from('handoffs').select('*').order('created_at', { ascending: false })
+            ]);
+            if (e.data) setEntrevistas(e.data);
+            if (p.data) setProcesos(p.data);
+            if (h.data) setHandoffs(h.data);
+        } catch (error) {
+            console.error('Error:', error);
+        } finally {
+            setLoading(false);
         }
+    }
+
+    async function editarEstadoEntrevista(id, nuevoEstado) {
+        await supabase.from('entrevistas').update({ estado: nuevoEstado }).eq('id', id);
+        loadData();
+    }
+
+    function iniciarCompletar(id) {
+        setEntrevistaEnProgreso(id);
+        setActiveTab('completar');
+    }
+
+    function verEntrevista(id) {
+        setEntrevistaSeleccionada(id);
+        setActiveTab('ver-entrevista');
+    }
+
+    function verDetalleProceso(id) {
+        setProcesoSeleccionado(id);
+        setActiveTab('detalle-proceso');
+    }
+
+    function editarProceso(id) {
+        setProcesoAEliminar(id); // Reutilizamos estado temporal
+        setActiveTab('editar-proceso');
+    }
+
+    if (loading) return <div className="p-6 text-center">Cargando...</div>;
+
+    return (
+        <div className="min-h-screen bg-gray-50 p-6">
+            <div className="max-w-7xl mx-auto">
+                <div className="mb-6">
+                    <h1 className="text-3xl font-bold">Sistema de Relevamiento de Procesos</h1>
+                    <p className="text-gray-600 mt-1">Ministerio de Ecología - Provincia de Misiones</p>
+                </div>
+
+                {activeTab !== 'completar' && activeTab !== 'detalle-proceso' && activeTab !== 'ver-entrevista' && activeTab !== 'editar-proceso' && (
+                    <div className="flex gap-2 mb-6 border-b">
+                        <button onClick={() => setActiveTab('tracker')} className={'px-4 py-2 font-medium ' + (activeTab === 'tracker' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600')}>
+                            Agendar Entrevistas
+                        </button>
+                        <button onClick={() => setActiveTab('entrevistas')} className={'px-4 py-2 font-medium ' + (activeTab === 'entrevistas' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600')}>
+                            Entrevistas ({entrevistas.length})
+                        </button>
+                        <button onClick={() => setActiveTab('procesos')} className={'px-4 py-2 font-medium ' + (activeTab === 'procesos' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600')}>
+                            Procesos ({procesos.length})
+                        </button>
+                        <button onClick={() => setActiveTab('handoffs')} className={'px-4 py-2 font-medium ' + (activeTab === 'handoffs' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600')}>
+                            Handoffs ({handoffs.length})
+                        </button>
+                    </div>
+                )}
+
+                <div>
+                    {activeTab === 'tracker' && (
+                        <TrackerEntrevistas
+                            entrevistas={entrevistas}
+                            setEntrevistas={setEntrevistas}
+                            onCompletar={iniciarCompletar}
+                        />
+                    )}
+                    {activeTab === 'entrevistas' && (
+                        <ListaEntrevistas
+                            entrevistas={entrevistas}
+                            onVer={verEntrevista}
+                            onEditarEstado={editarEstadoEntrevista}
+                        />
+                    )}
+                    {activeTab === 'completar' && (
+                        <FormularioEntrevista
+                            entrevistaId={entrevistaEnProgreso}
+                            onVolver={() => setActiveTab('tracker')}
+                        />
+                    )}
+                    {activeTab === 'ver-entrevista' && (
+                        <VerEntrevista
+                            entrevistaId={entrevistaSeleccionada}
+                            onVolver={() => setActiveTab('entrevistas')}
+                        />
+                    )}
+                    {activeTab === 'procesos' && (
+                        <MatrizProcesos
+                            procesos={procesos}
+                            onVerDetalle={verDetalleProceso}
+                            onEditar={editarProceso}
+                        />
+                    )}
+                    {activeTab === 'detalle-proceso' && (
+                        <DetalleProceso
+                            procesoId={procesoSeleccionado}
+                            onVolver={() => setActiveTab('procesos')}
+                        />
+                    )}
+                    {activeTab === 'editar-proceso' && (
+                        <EditarProceso
+                            procesoId={procesoAEliminar}
+                            onCerrar={() => {
+                                setProcesoAEliminar(null);
+                                setActiveTab('procesos');
+                                loadData(); // Refrescar lista
+                            }}
+                        />
+                    )}
+                    {activeTab === 'handoffs' && (
+                        <ValidacionHandoffs
+                            handoffs={handoffs}
+                            onRecargar={loadData}
+                        />
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+}   
         ReactDOM.render(<App />, document.getElementById('root'));
     </script>
 </body>

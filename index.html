@@ -15,178 +15,167 @@
         window.mermaid = mermaid;
         mermaid.initialize({ startOnLoad: false });
     </script>
-    <style>
-    :root {
-        --color-bg: #f9fafb;
-        --color-surface: #ffffff;
-        --color-text: #111827;
-        --color-text-secondary: #6b7280;
-        --color-border: #e5e7eb;
-        --color-primary: #3b82f6;
-        --color-primary-dark: #2563eb;
-        --color-success: #10b981;
-        --color-warning: #f59e0b;
-        --color-danger: #ef4444;
-        --color-info: #0ea5e9;
-    }
+   <style>
+        /* ========== ESTILOS PERSONALIZADOS ========== */
 
-    .dark {
-        /* ✅ Fondos más suaves y oscuros */
-        --color-bg: #0f172a; /* Fondo principal: azul oscuro profundo */
-        --color-surface: #1e293b; /* Fondo de cards: slate-800 */
-        --color-surface-light: #334155; /* Fondo de secciones suaves: slate-700 */
+        /* Variables de color para claro y oscuro */
+        :root {
+            --bg-main: #f9fafb;
+            --surface: #ffffff;
+            --text: #111827;
+            --text-secondary: #6b7280;
+            --border: #e5e7eb;
+            --primary: #3b82f6;
+            --primary-hover: #2563eb;
+            --success: #22c55e;
+            --success-hover: #16a34a;
+            --warning: #f59e0b;
+            --warning-hover: #d97706;
+            --danger: #ef4444;
+            --danger-hover: #dc2626;
+            --counter-pending: #fbbf24; /* amber-400 */
+            --counter-completed: #60a5fa; /* blue-400 */
+            --counter-validated: #34d399; /* emerald-400 */
+            --counter-follow-up: #fb923c; /* orange-400 */
+        }
 
-        /* ✅ Textos con mejor contraste */
-        --color-text: #f8fafc; /* Texto principal: slate-50 */
-        --color-text-secondary: #cbd5e1; /* Texto secundario: slate-300 */
-        --color-text-muted: #94a3b8; /* Texto más bajo contraste: slate-400 */
+        .dark {
+            --bg-main: #0f172a; /* slate-900 */
+            --surface: #1e293b; /* slate-800 */
+            --text: #f8fafc; /* slate-50 */
+            --text-secondary: #cbd5e1; /* slate-300 */
+            --border: #334155; /* slate-700 */
+            --primary: #60a5fa; /* blue-400 */
+            --primary-hover: #3b82f6; /* blue-500 */
+            --success: #34d399; /* emerald-400 */
+            --success-hover: #10b45c; /* emerald-600 */
+            --warning: #fbbf24; /* amber-400 */
+            --warning-hover: #e0a014; /* amber-600 */
+            --danger: #f87171; /* red-300 */
+            --danger-hover: #ef4444; /* red-500 */
+            --counter-pending: #fde68a; /* amber-200 */
+            --counter-completed: #93c5fd; /* blue-300 */
+            --counter-validated: #86efac; /* green-300 */
+            --counter-follow-up: #fdba74; /* orange-200 */
+        }
 
-        /* ✅ Bordes suaves */
-        --color-border: #334155; /* slate-700 */
-        --color-border-light: #475569; /* slate-600 */
+        body {
+            background-color: var(--bg-main);
+            color: var(--text);
+        }
 
-        /* ✅ Colores primarios suaves */
-        --color-primary: #93c5fd; /* slate-300 */
-        --color-primary-dark: #60a5fa; /* slate-400 */
+        .bg-white {
+            background-color: var(--surface);
+        }
 
-        /* ✅ Estados con mejor visibilidad */
-        --color-success: #86efac; /* green-300 */
-        --color-warning: #fde68a; /* amber-200 */
-        --color-danger: #fca5a5; /* red-300 */
-        --color-info: #a5b4fc; /* indigo-300 */
-    }
+        .text-gray-600 {
+            color: var(--text-secondary);
+        }
 
-    body {
-        background-color: var(--color-bg);
-        color: var(--color-text);
-    }
+        .border {
+            border-color: var(--border);
+        }
 
-    /* ✅ Estilos para contadores en modo oscuro */
-    .counter-card {
-        background-color: var(--color-surface-light);
-        border: 1px solid var(--color-border-light);
-        color: var(--color-text);
-    }
+        /* Estilos para botones */
+        .btn-primary {
+            background-color: var(--primary);
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 0.375rem;
+            font-weight: 500;
+            transition: background-color 0.2s;
+        }
+        .btn-primary:hover {
+            background-color: var(--primary-hover);
+        }
 
-    .counter-number {
-        color: var(--color-primary);
-    }
+        .btn-success {
+            background-color: var(--success);
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 0.375rem;
+            font-weight: 500;
+            transition: background-color 0.2s;
+        }
+        .btn-success:hover {
+            background-color: var(--success-hover);
+        }
 
-    .counter-label {
-        color: var(--color-text-secondary);
-    }
+        .btn-danger {
+            background-color: var(--danger);
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 0.375rem;
+            font-weight: 500;
+            transition: background-color 0.2s;
+        }
+        .btn-danger:hover {
+            background-color: var(--danger-hover);
+        }
 
-    /* ✅ Estilos para inputs/selects en modo oscuro */
-    input, select, textarea {
-        background-color: var(--color-surface);
-        color: var(--color-text);
-        border: 1px solid var(--color-border);
-    }
+        .btn-warning {
+            background-color: var(--warning);
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 0.375rem;
+            font-weight: 500;
+            transition: background-color 0.2s;
+        }
+        .btn-warning:hover {
+            background-color: var(--warning-hover);
+        }
 
-    input:focus, select:focus, textarea:focus {
-        border-color: var(--color-primary);
-        outline: none;
-    }
+        .btn-link {
+            color: var(--primary);
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+        .btn-link:hover {
+            color: var(--primary-hover);
+            text-decoration: underline;
+        }
 
-    option {
-        background-color: var(--color-surface);
-        color: var(--color-text);
-    }
+        /* Estilos para contadores */
+        .counter-card {
+            background-color: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 0.5rem;
+            padding: 1rem;
+        }
+        .counter-number {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--text);
+        }
+        .counter-number.pending { color: var(--counter-pending); }
+        .counter-number.completed { color: var(--counter-completed); }
+        .counter-number.validated { color: var(--counter-validated); }
+        .counter-number.follow-up { color: var(--counter-follow-up); }
 
-    /* ✅ Estilos para botones en modo oscuro */
-    button {
-        color: var(--color-text);
-    }
+        /* Toggle de modo oscuro minimalista */
+        .dark-mode-toggle {
+            background: none;
+            border: none;
+            font-size: 1.25rem;
+            cursor: pointer;
+            color: var(--text-secondary);
+            transition: color 0.2s;
+        }
+        .dark-mode-toggle:hover {
+            color: var(--text);
+        }
 
-    /* ✅ Estilos para tablas */
-    table {
-        color: var(--color-text);
-    }
+        /* Cabecera de tabla en modo oscuro */
+        .table-header {
+            background-color: var(--surface);
+            color: var(--text);
+        }
 
-    th, td {
-        border-color: var(--color-border);
-    }
-
-    /* ✅ Estilos para el toggle de modo oscuro */
-    .toggle-switch {
-        position: relative;
-        display: inline-block;
-        width: 60px;
-        height: 30px;
-    }
-
-    .toggle-switch input {
-        opacity: 0;
-        width: 0;
-        height: 0;
-    }
-
-    .toggle-slider {
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background-color: var(--color-surface-light);
-        border: 1px solid var(--color-border);
-        transition: .4s;
-        border-radius: 30px;
-        cursor: pointer;
-    }
-
-    .toggle-slider:before {
-        position: absolute;
-        content: "";
-        height: 22px;
-        width: 22px;
-        left: 4px;
-        bottom: 4px;
-        background-color: var(--color-text);
-        transition: .4s;
-        border-radius: 50%;
-    }
-
-    input:checked + .toggle-slider {
-        background-color: var(--color-primary-dark);
-    }
-
-    input:checked + .toggle-slider:before {
-        transform: translateX(30px);
-    }
-
-    .toggle-icons {
-        position: absolute;
-        top: 50%;
-        transform: translateY(-50%);
-        width: 100%;
-        height: 100%;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        padding: 0 8px;
-        pointer-events: none;
-    }
-
-    .toggle-icons span {
-        font-size: 12px;
-    }
-
-    .toggle-icons .sun {
-        color: #fbbf24; /* amber-400 */
-    }
-
-    .toggle-icons .moon {
-        color: #93c5fd; /* blue-300 */
-    }
-
-    input:checked + .toggle-slider .sun {
-        color: #9ca3af; /* gray-400 */
-    }
-
-    input:checked + .toggle-slider .moon {
-        color: #fde047; /* yellow-300 */
-    }
-</style>
+        /* Modal overlay */
+        .modal-overlay {
+            background-color: rgba(0, 0, 0, 0.5);
+        }
+    </style>
 </head>
 <body class="dark">
     <div id="root"></div>
@@ -205,19 +194,32 @@
             Edit: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>,
         };
 
-        function DarkModeToggle({ darkMode, setDarkMode }) {
-            return (
-                <label className="toggle-switch">
-                    <input type="checkbox" checked={darkMode} onChange={() => setDarkMode(!darkMode)} />
-                    <span className="toggle-slider">
-                        <span className="toggle-icons">
-                            <span className="sun">☀</span>
-                            <span className="moon">🌙</span>
-                        </span>
-                    </span>
-                </label>
-            );
+        function DarkModeToggle() {
+    const [darkMode, setDarkMode] = useState(() => {
+        const saved = localStorage.getItem('darkMode');
+        if (saved !== null) {
+            return JSON.parse(saved);
         }
+        return window.matchMedia('(prefers-color-scheme: dark)').matches;
+    });
+
+    useEffect(() => {
+        if (darkMode) {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
+        localStorage.setItem('darkMode', JSON.stringify(darkMode));
+    }, [darkMode]);
+
+    const toggle = () => setDarkMode(!darkMode);
+
+    return (
+        <button onClick={toggle} className="dark-mode-toggle">
+            {darkMode ? '☀️' : '🌙'}
+        </button>
+    );
+}
 
         function FormularioEntrevista({ entrevistaId, onVolver }) {
             const [loading, setLoading] = useState(false);
@@ -684,12 +686,7 @@
                             </p>
                             <p className="text-sm mt-1">Estado: <span className="font-medium">{e.estado}</span></p>
                             <div className="mt-2 flex gap-2">
-                                <button
-                                    onClick={() => onVer(e.id)}
-                                    className="text-primary text-sm"
-                                >
-                                    Ver
-                                </button>
+                               <button onClick={() => onVer(e.id)} className="btn-link text-sm">Ver</button>
                                 <select
                                     value={e.estado}
                                     onChange={ev => onEditarEstado(e.id, ev.target.value)}
@@ -897,19 +894,19 @@
                 <div className="space-y-6">
                    <div className="grid grid-cols-4 gap-4">
     <div className="counter-card p-4 rounded border">
-        <div className="text-2xl font-bold counter-number">{contarPorEstado('pendiente')}</div>
+        <div className="text-2xl font-bold counter-number pending">{contarPorEstado('pendiente')}</div>
         <div className="text-sm counter-label">Pendientes</div>
     </div>
     <div className="counter-card p-4 rounded border">
-        <div className="text-2xl font-bold counter-number">{contarPorEstado('realizada')}</div>
+        <div className="text-2xl font-bold counter-number completed">{contarPorEstado('realizada')}</div>
         <div className="text-sm counter-label">Realizadas</div>
     </div>
     <div className="counter-card p-4 rounded border">
-        <div className="text-2xl font-bold counter-number">{contarPorEstado('validada')}</div>
+        <div className="text-2xl font-bold counter-number validated">{contarPorEstado('validada')}</div>
         <div className="text-sm counter-label">Validadas</div>
     </div>
     <div className="counter-card p-4 rounded border">
-        <div className="text-2xl font-bold counter-number">{contarPorEstado('requiere_seguimiento')}</div>
+        <div className="text-2xl font-bold counter-number follow-up">{contarPorEstado('requiere_seguimiento')}</div>
         <div className="text-sm counter-label">Seguimiento</div>
     </div>
 </div>
@@ -935,9 +932,9 @@
                                         <p className="text-sm text-text-secondary">{new Date(e.fecha).toLocaleDateString('es-AR')} {e.hora ? `a las ${e.hora.slice(0,5)}` : ''}</p>
                                     </div>
                                     <div className="flex gap-2">
-                                        <button onClick={() => onCompletar(e.id)} className="bg-success text-white px-3 py-1 rounded text-sm">
-                                            Completar
-                                        </button>
+                                        <button onClick={() => onCompletar(e.id)} className="btn-success text-sm">
+    Completar
+</button>
                                         <button onClick={() => eliminar(e.id)} className="text-danger p-2">
                                             <Icons.Trash />
                                         </button>
@@ -956,10 +953,10 @@
                     <table className="w-full">
                         <thead className="bg-gray-50 dark:bg-gray-800">
                             <tr>
-                                <th className="text-left p-3 text-text">Proceso</th>
-                                <th className="text-left p-3 text-text">Flujo</th>
-                                <th className="text-left p-3 text-text">Frecuencia</th>
-                                <th className="text-left p-3 text-text">Acciones</th>
+                                <th className="text-left p-3 table-header">Proceso</th>
+                                <th className="text-left p-3 table-heade">Flujo</th>
+                                <th className="text-left p-3 table-heade">Frecuencia</th>
+                                <th className="text-left p-3 table-heade">Acciones</th>
                             </tr>
                         </thead>
                         <tbody>

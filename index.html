@@ -9,11 +9,24 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script type="module">
-        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
-        window.mermaid = mermaid;
-        mermaid.initialize({ startOnLoad: false, theme: 'dark' });
-    </script>
+   <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    window.mermaid = mermaid;
+    mermaid.initialize({ 
+        startOnLoad: false, 
+        theme: 'base',
+        themeVariables: {
+            primaryColor: '#3b82f6',
+            primaryTextColor: '#1f2937',
+            primaryBorderColor: '#2563eb',
+            lineColor: '#6b7280',
+            secondaryColor: '#10b981',
+            tertiaryColor: '#f59e0b',
+            fontSize: '16px',
+            fontFamily: 'ui-sans-serif, system-ui, sans-serif'
+        }
+    });
+</script>
     <style>
         :root {
             --color-bg: #f8fafc;
@@ -238,10 +251,44 @@
             background-color: var(--color-primary-light);
             color: var(--color-primary);
         }
-        
         .dark .badge-primary {
             background-color: var(--color-primary-light);
             color: var(--color-primary);
+        }
+/* Estilos para diagramas Mermaid */
+        .mermaid-diagram svg {
+            max-width: 100%;
+            height: auto;
+        }
+        
+        .dark .mermaid-diagram svg text {
+            fill: #f1f5f9 !important;
+            font-weight: 500;
+        }
+        
+        .dark .mermaid-diagram svg .node rect,
+        .dark .mermaid-diagram svg .node circle,
+        .dark .mermaid-diagram svg .node polygon {
+            stroke: #60a5fa !important;
+            stroke-width: 2px;
+        }
+        
+        .dark .mermaid-diagram svg .edgePath .path {
+            stroke: #94a3b8 !important;
+            stroke-width: 2px;
+        }
+        
+        .dark .mermaid-diagram svg .edgeLabel {
+            background-color: #1e293b !important;
+        }
+        
+        .dark .mermaid-diagram svg .edgeLabel rect {
+            fill: #1e293b !important;
+        }
+        
+        .dark .mermaid-diagram svg .cluster rect {
+            fill: #0f172a !important;
+            stroke: #475569 !important;
         }
     </style>
 </head>
@@ -957,7 +1004,7 @@
                     
                     <div className="mb-6">
                         <h3 className="font-bold text-lg mb-2 text-text">Diagrama UML (Mermaid)</h3>
-                        <div ref={diagramRef} className="p-4 bg-surface rounded border border-border min-h-64">
+<div ref={diagramRef} className="p-4 bg-surface rounded border border-border min-h-64 mermaid-diagram">
                             {mermaidSvg ? (
                                 <div dangerouslySetInnerHTML={{ __html: mermaidSvg }} />
                             ) : (

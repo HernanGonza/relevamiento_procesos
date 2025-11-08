@@ -1818,7 +1818,7 @@
                                     Handoffs ({handoffs.length})
                                 </button>
                                  {/* ✅ Nueva pestaña */}
-        <button onClick={() => setActiveTab('generador')} className={'px-4 py-2 font-medium ' + (activeTab === 'generador' ? 'border-b-2 border-blue-600 text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-300')}>
+        <button onClick={() => setActiveTab('generador')} className={'px-4 py-2 font-medium ' + (activeTab === 'generador' ? 'border-b-2 text-primary' : 'text-text-secondary')} style={activeTab === 'generador' ? {borderColor: 'var(--color-primary)'} : {}}>
             Generador de Sistema
         </button>
                             </div>

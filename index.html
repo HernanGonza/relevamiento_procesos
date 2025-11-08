@@ -1416,171 +1416,180 @@
     const [procesoSeleccionado, setProcesoSeleccionado] = useState('');
     const [codigoGenerado, setCodigoGenerado] = useState(null);
     const [loading, setLoading] = useState(false);
+    const [cargandoProcesos, setCargandoProcesos] = useState(true);
 
     useEffect(() => {
-        async function cargar() {
+        async function cargarProcesos() {
             try {
-                const {  procData } = await supabase.from('procesos').select('id, nombre');
-                if (procData) setProcesos(procData);
+                setCargandoProcesos(true);
+                const { data, error } = await supabase
+                    .from('procesos')
+                    .select('id, nombre')
+                    .order('nombre', { ascending: true });
+
+                if (error) throw error;
+                setProcesos(data || []);
             } catch (err) {
-                console.error('Error en GeneradorSistema:', err);
+                alert('Error al cargar procesos: ' + err.message);
+            } finally {
+                setCargandoProcesos(false);
             }
         }
-        cargar();
+        cargarProcesos();
     }, []);
 
     const generarCodigo = async () => {
-        if (!procesoSeleccionado) return;
+        if (!procesoSeleccionado) {
+            alert('Selecciona un proceso');
+            return;
+        }
+
         setLoading(true);
         try {
-            const {  procData } = await supabase
+            const { data: procData, error } = await supabase
                 .from('procesos')
                 .select('*, pasos_proceso(*)')
                 .eq('id', procesoSeleccionado)
                 .single();
 
+            if (error) throw error;
             if (!procData) throw new Error('Proceso no encontrado');
 
-            const nombreTabla = procData.nombre.toLowerCase().replace(/ /g, '_');
+            const nombreTabla = procData.nombre
+                .toLowerCase()
+                .replace(/[^a-z0-9]+/g, '_')
+                .replace(/^_+|_+$/g, '');
+
             const pasos = procData.pasos_proceso || [];
 
-            // === Generar SQL ===
+            // === Extraer campos únicos de datos_necesarios ===
+            const camposUnicos = new Set();
+            pasos.forEach(paso => {
+                if (paso.datos_necesarios) {
+                    paso.datos_necesarios
+                        .split(',')
+                        .map(c => c.trim())
+                        .filter(Boolean)
+                        .forEach(campo => {
+                            const nombre = campo
+                                .toLowerCase()
+                                .replace(/[^a-z0-9]+/g, '_')
+                                .replace(/^_+|_+$/g, '');
+                            if (nombre) camposUnicos.add(nombre);
+                        });
+                }
+            });
+
+            // === SQL ===
             let sql = `-- Tabla principal para: ${procData.nombre}\n`;
             sql += `CREATE TABLE ${nombreTabla} (\n`;
             sql += `  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),\n`;
-            sql += `  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),\n`;
-            sql += `  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),\n`;
+            sql += `  created_at TIMESTAMPTZ DEFAULT NOW(),\n`;
+            sql += `  updated_at TIMESTAMPTZ DEFAULT NOW(),\n`;
             sql += `  estado VARCHAR(50) DEFAULT 'paso_1',\n`;
             sql += `  area_actual VARCHAR(100),\n`;
-            sql += `  usuario_asignado UUID REFERENCES auth.users(id),\n\n`;
-
-            // Campos de datos de los pasos
-            const camposUnicos = new Set();
-            pasos.forEach(p => {
-                if (p.datos_necesarios) {
-                    const campos = p.datos_necesarios.split(',').map(c => c.trim()).filter(Boolean);
-                    campos.forEach(c => {
-                        const nombre = c.toLowerCase().replace(/ /g, '_');
-                        camposUnicos.add(nombre);
-                    });
-                }
+            sql += `  usuario_asignado UUID REFERENCES auth.users(id),\n`;
+            if (camposUnicos.size > 0) sql += `\n  -- Campos de datos\n`;
+            camposUnicos.forEach(campo => {
+                sql += `  ${campo} TEXT,\n`;
             });
-            camposUnicos.forEach(nombre => {
-                sql += `  ${nombre} TEXT,\n`;
-            });
-
-            sql += `  -- Metadatos\n`;
             sql += `  responsable_actual VARCHAR(100),\n`;
-            sql += `  fecha_inicio TIMESTAMP,\n`;
-            sql += `  fecha_estimada_finalizacion TIMESTAMP,\n`;
+            sql += `  fecha_inicio TIMESTAMPTZ,\n`;
+            sql += `  fecha_estimada_finalizacion TIMESTAMPTZ,\n`;
             sql += `  notas TEXT\n`;
             sql += `);\n\n`;
 
-            // Historial
-            sql += `-- Tabla de historial de estados\n`;
+            sql += `-- Tabla de historial\n`;
             sql += `CREATE TABLE ${nombreTabla}_historial (\n`;
             sql += `  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),\n`;
-            sql += `  ${nombreTabla}_id UUID REFERENCES ${nombreTabla}(id),\n`;
+            sql += `  ${nombreTabla}_id UUID REFERENCES ${nombreTabla}(id) ON DELETE CASCADE,\n`;
             sql += `  paso_numero INTEGER,\n`;
             sql += `  paso_descripcion TEXT,\n`;
             sql += `  area VARCHAR(100),\n`;
             sql += `  usuario UUID REFERENCES auth.users(id),\n`;
             sql += `  accion VARCHAR(50),\n`;
-            sql += `  timestamp TIMESTAMP WITH TIME ZONE DEFAULT NOW(),\n`;
+            sql += `  timestamp TIMESTAMPTZ DEFAULT NOW(),\n`;
             sql += `  observaciones TEXT\n`;
             sql += `);\n\n`;
 
-            // Índices
             sql += `-- Índices\n`;
             sql += `CREATE INDEX idx_${nombreTabla}_estado ON ${nombreTabla}(estado);\n`;
             sql += `CREATE INDEX idx_${nombreTabla}_area ON ${nombreTabla}(area_actual);\n`;
 
-            // === Generar RLS ===
-            let rls = `-- RLS Policies para ${procData.nombre}\n`;
+            // === RLS ===
+            let rls = `-- RLS para tabla: ${nombreTabla}\n`;
             rls += `ALTER TABLE ${nombreTabla} ENABLE ROW LEVEL SECURITY;\n\n`;
-            rls += `-- Los usuarios solo ven registros de su área\n`;
-            rls += `CREATE POLICY "usuarios_ven_su_area" ON ${nombreTabla}\n`;
-            rls += `  FOR SELECT\n`;
-            rls += `  USING (\n`;
+            rls += `CREATE POLICY "ver_su_area" ON ${nombreTabla}\n`;
+            rls += `  FOR SELECT USING (\n`;
             rls += `    area_actual IN (\n`;
-            rls += `      SELECT area FROM usuarios_areas \n`;
-            rls += `      WHERE user_id = auth.uid()\n`;
+            rls += `      SELECT area FROM usuarios_areas WHERE user_id = auth.uid()\n`;
             rls += `    )\n`;
             rls += `  );\n\n`;
-            rls += `-- Los usuarios pueden actualizar registros asignados a ellos\n`;
-            rls += `CREATE POLICY "usuarios_actualizan_asignados" ON ${nombreTabla}\n`;
-            rls += `  FOR UPDATE\n`;
-            rls += `  USING (usuario_asignado = auth.uid());\n\n`;
-            rls += `-- Supervisores ven todo\n`;
-            rls += `CREATE POLICY "supervisores_ven_todo" ON ${nombreTabla}\n`;
-            rls += `  FOR ALL\n`;
-            rls += `  USING (\n`;
-            rls += `    EXISTS (\n`;
-            rls += `      SELECT 1 FROM user_roles \n`;
-            rls += `      WHERE user_id = auth.uid() \n`;
-            rls += `      AND role = 'supervisor'\n`;
-            rls += `    )\n`;
+            rls += `CREATE POLICY "actualizar_asignado" ON ${nombreTabla}\n`;
+            rls += `  FOR UPDATE USING (usuario_asignado = auth.uid());\n\n`;
+            rls += `CREATE POLICY "supervisores_todo" ON ${nombreTabla}\n`;
+            rls += `  FOR ALL USING (\n`;
+            rls += `    EXISTS (SELECT 1 FROM user_roles WHERE user_id = auth.uid() AND role = 'supervisor')\n`;
             rls += `  );\n`;
 
-            // === Generar componente React ===
-            let componente = `function Formulario${procData.nombre.replace(/ /g, '')}() {\n`;
+            // === React Component ===
+            let componente = `function Formulario${procData.nombre.replace(/[^a-zA-Z0-9]/g, '')}() {\n`;
             componente += `  const [form, setForm] = useState({\n`;
-            camposUnicos.forEach(nombre => {
-                componente += `    ${nombre}: '',\n`;
+            camposUnicos.forEach(campo => {
+                componente += `    ${campo}: '',\n`;
             });
             componente += `    estado: 'paso_1',\n`;
-            componente += `    area_actual: '${procData.area_inicio}'\n`;
+            componente += `    area_actual: '${procData.area_inicio || ''}'\n`;
             componente += `  });\n\n`;
             componente += `  const handleSubmit = async () => {\n`;
-            componente += `    const { data, error } = await supabase\n`;
+            componente += `    const { error } = await supabase\n`;
             componente += `      .from('${nombreTabla}')\n`;
-            componente += `      .insert([{\n`;
-            camposUnicos.forEach(nombre => {
-                componente += `        ${nombre}: form.${nombre},\n`;
-            });
-            componente += `        estado: form.estado,\n`;
-            componente += `        area_actual: form.area_actual\n`;
-            componente += `      }]);\n\n`;
-            componente += `    if (!error) {\n`;
-            componente += `      alert('Registro creado exitosamente');\n`;
-            componente += `    }\n`;
+            componente += `      .insert([{ ...form }]);\n\n`;
+            componente += `    if (!error) alert('Registro creado');\n`;
             componente += `  };\n\n`;
             componente += `  return (\n`;
-            componente += `    <form>\n`;
-            camposUnicos.forEach(nombre => {
+            componente += `    <div className="space-y-4">\n`;
+            camposUnicos.forEach(campo => {
+                const label = campo.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
                 componente += `      <input\n`;
                 componente += `        type="text"\n`;
-                componente += `        placeholder="${nombre}"\n`;
-                componente += `        value={form.${nombre}}\n`;
-                componente += `        onChange={e => setForm({...form, ${nombre}: e.target.value})}\n`;
+                componente += `        placeholder="${label}"\n`;
+                componente += `        value={form.${campo}}\n`;
+                componente += `        onChange={e => setForm({...form, ${campo}: e.target.value})}\n`;
+                componente += `        className="border p-2 rounded w-full"\n`;
                 componente += `      />\n`;
             });
-            componente += `      <button onClick={handleSubmit}>Enviar</button>\n`;
-            componente += `    </form>\n`;
+            componente += `      <button onClick={handleSubmit} className="btn-primary px-4 py-2">\n`;
+            componente += `        Enviar\n`;
+            componente += `      </button>\n`;
+            componente += `    </div>\n`;
             componente += `  );\n`;
-            componente += `}`;
+            componente += `}\n`;
 
-            // === Generar Edge Function ===
-            let workflow = `import { createClient } from '@supabase/supabase-js'\n\n`;
+            // === Edge Function ===
+            let workflow = `// Edge Function: workflow_${nombreTabla}.ts\n`;
             workflow += `Deno.serve(async (req) => {\n`;
-            workflow += `  const supabase = createClient(...)\n`;
-            workflow += `  const { registro_id, accion } = await req.json()\n\n`;
-            workflow += `  const {  registro } = await supabase\n`;
+            workflow += `  const supabase = createClient(Deno.env.get('SUPABASE_URL'), Deno.env.get('SUPABASE_ANON_KEY'));\n`;
+            workflow += `  const { registro_id, accion, datos } = await req.json();\n\n`;
+            workflow += `  const { data: reg, error } = await supabase\n`;
             workflow += `    .from('${nombreTabla}')\n`;
             workflow += `    .select('*')\n`;
             workflow += `    .eq('id', registro_id)\n`;
-            workflow += `    .single()\n\n`;
-            workflow += `  if (!registro) return new Response('Registro no encontrado', { status: 404 });\n\n`;
-            workflow += `  let nuevoEstado;\n`;
-            workflow += `  switch(registro.estado) {\n`;
+            workflow += `    .single();\n\n`;
+            workflow += `  if (error || !reg) return new Response(JSON.stringify({ error: 'No encontrado' }), { status: 404 });\n\n`;
+            workflow += `  let nuevoEstado = reg.estado;\n\n`;
+            workflow += `  switch (reg.estado) {\n`;
             pasos.forEach((paso, i) => {
                 workflow += `    case 'paso_${i + 1}':\n`;
-                if (paso.tiene_decision) {
-                    workflow += `      if (${paso.condicion_decision}) {\n`;
-                    workflow += `        nuevoEstado = '${paso.destino_si_cumple}';\n`;
-                    workflow += `      } else {\n`;
-                    workflow += `        nuevoEstado = '${paso.destino_si_no_cumple}';\n`;
-                    workflow += `      }\n`;
+                if (paso.tiene_decision && paso.condicion_decision) {
+                    const cond = paso.condicion_decision.toLowerCase().includes('datos.')
+                        ? paso.condicion_decision
+                        : `datos.${paso.condicion_decision}`;
+                    workflow += `      if (${cond}) {\n`;
+                    workflow += `        nuevoEstado = '${paso.destino_si_cumple || `paso_${i + 2}`}';`;
+                    workflow += `\n      } else {\n`;
+                    workflow += `        nuevoEstado = '${paso.destino_si_no_cumple || `paso_${i + 2}`}';`;
+                    workflow += `\n      }\n`;
                 } else {
                     workflow += `      nuevoEstado = 'paso_${i + 2}';\n`;
                 }
@@ -1589,20 +1598,17 @@
             workflow += `    default:\n`;
             workflow += `      nuevoEstado = 'finalizado';\n`;
             workflow += `  }\n\n`;
-            workflow += `  const { error } = await supabase\n`;
+            workflow += `  const { error: updError } = await supabase\n`;
             workflow += `    .from('${nombreTabla}')\n`;
             workflow += `    .update({ estado: nuevoEstado })\n`;
             workflow += `    .eq('id', registro_id);\n\n`;
-            workflow += `  if (error) return new Response('Error: ' + error.message, { status: 500 });\n\n`;
-            workflow += `  return new Response(JSON.stringify({ success: true, nuevo_estado: nuevoEstado }), { headers: { 'Content-Type': 'application/json' }});\n`;
-            workflow += `})`;
+            workflow += `  if (updError) return new Response(JSON.stringify({ error: updError.message }), { status: 500 });\n\n`;
+            workflow += `  return new Response(JSON.stringify({ success: true, nuevo_estado: nuevoEstado }), {\n`;
+            workflow += `    headers: { 'Content-Type': 'application/json' }\n`;
+            workflow += `  });\n`;
+            workflow += `});\n`;
 
-            setCodigoGenerado({
-                sql,
-                rls,
-                componente,
-                workflow
-            });
+            setCodigoGenerado({ sql, rls, componente, workflow });
         } catch (err) {
             alert('Error: ' + err.message);
         } finally {
@@ -1617,96 +1623,102 @@
     };
 
     return (
-        <div className="bg-white dark:bg-gray-800 dark:text-white p-6 rounded-lg border max-w-6xl mx-auto">
-            <div className="flex justify-between mb-6">
+        <div className="bg-surface p-6 rounded-lg border border-border max-w-6xl mx-auto">
+            <div className="flex justify-between items-center mb-6">
                 <div>
-                    <h2 className="text-2xl font-bold">Generador de Sistema</h2>
-                    <p className="text-gray-600 dark:text-gray-300 mt-1">Genera tablas, componentes y workflows automáticamente</p>
+                    <h2 className="text-2xl font-bold text-text">Generador de Sistema</h2>
+                    <p className="text-text-secondary mt-1">Crea tablas, RLS, formularios y workflows automáticamente</p>
                 </div>
-                <button onClick={onVolver} className="text-blue-600 hover:underline">← Volver</button>
+                <button onClick={onVolver} className="text-primary hover:underline flex items-center gap-1">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                    </svg>
+                    Volver
+                </button>
             </div>
 
-            <div className="mb-6">
-                <label className="block font-medium mb-2">Seleccionar Proceso:</label>
-                <select
-                    value={procesoSeleccionado}
-                    onChange={e => setProcesoSeleccionado(e.target.value)}
-                    className="border p-2 rounded w-full dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                >
-                    <option value="">Elegir un proceso...</option>
-                    {procesos.map(p => (
-                        <option key={p.id} value={p.id}>{p.nombre}</option>
-                    ))}
-                </select>
+            <div className="mb-6 p-4 bg-surface rounded border border-border">
+                <label className="block font-medium text-text mb-2">Seleccionar Proceso:</label>
+                {cargandoProcesos ? (
+                    <p className="text-text-secondary">Cargando procesos...</p>
+                ) : (
+                    <select
+                        value={procesoSeleccionado}
+                        onChange={e => setProcesoSeleccionado(e.target.value)}
+                        className="border border-border p-2 rounded w-full bg-surface text-text"
+                        disabled={procesos.length === 0}
+                    >
+                        <option value="">-- Elegir un proceso --</option>
+                        {procesos.map(p => (
+                            <option key={p.id} value={p.id}>{p.nombre}</option>
+                        ))}
+                    </select>
+                )}
                 <button
                     onClick={generarCodigo}
                     disabled={!procesoSeleccionado || loading}
-                    className="mt-3 bg-blue-600 text-white px-4 py-2 rounded"
+                    className={`mt-3 px-4 py-2 rounded font-medium flex items-center gap-2 ${loading ? 'bg-gray-400' : 'btn-primary'}`}
                 >
-                    {loading ? 'Generando...' : 'Generar Código'}
+                    {loading ? 'Generando...' : (
+                        <>
+                            <Icons.Plus /> Generar Código
+                        </>
+                    )}
                 </button>
             </div>
 
             {codigoGenerado && (
-                <div className="space-y-6">
+                <div className="space-y-8">
+                    {/* SQL */}
                     <div>
-                        <h3 className="font-bold text-lg mb-2">SQL Schema</h3>
-                        <div className="relative">
-                            <pre className="bg-gray-900 text-green-400 p-4 rounded border overflow-x-auto text-sm">
-                                {codigoGenerado.sql}
-                            </pre>
-                            <button
-                                onClick={() => copiarAlPortapapeles(codigoGenerado.sql)}
-                                className="absolute top-2 right-2 bg-blue-600 text-white px-2 py-1 rounded text-sm"
-                            >
+                        <h3 className="font-bold text-lg mb-2 text-text flex items-center justify-between">
+                            SQL Schema
+                            <button onClick={() => copiarAlPortapapeles(codigoGenerado.sql)} className="text-sm btn-primary px-3 py-1">
                                 Copiar
                             </button>
-                        </div>
+                        </h3>
+                        <pre className="bg-gray-900 text-green-400 p-4 rounded border border-border overflow-x-auto text-xs font-mono">
+                            {codigoGenerado.sql}
+                        </pre>
                     </div>
 
+                    {/* RLS */}
                     <div>
-                        <h3 className="font-bold text-lg mb-2">RLS Policies</h3>
-                        <div className="relative">
-                            <pre className="bg-gray-900 text-green-400 p-4 rounded border overflow-x-auto text-sm">
-                                {codigoGenerado.rls}
-                            </pre>
-                            <button
-                                onClick={() => copiarAlPortapapeles(codigoGenerado.rls)}
-                                className="absolute top-2 right-2 bg-blue-600 text-white px-2 py-1 rounded text-sm"
-                            >
+                        <h3 className="font-bold text-lg mb-2 text-text flex items-center justify-between">
+                            RLS Policies
+                            <button onClick={() => copiarAlPortapapeles(codigoGenerado.rls)} className="text-sm btn-primary px-3 py-1">
                                 Copiar
                             </button>
-                        </div>
+                        </h3>
+                        <pre className="bg-gray-900 text-green-400 p-4 rounded border border-border overflow-x-auto text-xs font-mono">
+                            {codigoGenerado.rls}
+                        </pre>
                     </div>
 
+                    {/* React */}
                     <div>
-                        <h3 className="font-bold text-lg mb-2">Componente React</h3>
-                        <div className="relative">
-                            <pre className="bg-gray-900 text-green-400 p-4 rounded border overflow-x-auto text-sm">
-                                {codigoGenerado.componente}
-                            </pre>
-                            <button
-                                onClick={() => copiarAlPortapapeles(codigoGenerado.componente)}
-                                className="absolute top-2 right-2 bg-blue-600 text-white px-2 py-1 rounded text-sm"
-                            >
+                        <h3 className="font-bold text-lg mb-2 text-text flex items-center justify-between">
+                            Componente React
+                            <button onClick={() => copiarAlPortapapeles(codigoGenerado.componente)} className="text-sm btn-primary px-3 py-1">
                                 Copiar
                             </button>
-                        </div>
+                        </h3>
+                        <pre className="bg-gray-900 text-green-400 p-4 rounded border border-border overflow-x-auto text-xs font-mono">
+                            {codigoGenerado.componente}
+                        </pre>
                     </div>
 
+                    {/* Edge Function */}
                     <div>
-                        <h3 className="font-bold text-lg mb-2">Edge Function (Workflow)</h3>
-                        <div className="relative">
-                            <pre className="bg-gray-900 text-green-400 p-4 rounded border overflow-x-auto text-sm">
-                                {codigoGenerado.workflow}
-                            </pre>
-                            <button
-                                onClick={() => copiarAlPortapapeles(codigoGenerado.workflow)}
-                                className="absolute top-2 right-2 bg-blue-600 text-white px-2 py-1 rounded text-sm"
-                            >
+                        <h3 className="font-bold text-lg mb-2 text-text flex items-center justify-between">
+                            Edge Function (Workflow)
+                            <button onClick={() => copiarAlPortapapeles(codigoGenerado.workflow)} className="text-sm btn-primary px-3 py-1">
                                 Copiar
                             </button>
-                        </div>
+                        </h3>
+                        <pre className="bg-gray-900 text-green-400 p-4 rounded border border-border overflow-x-auto text-xs font-mono">
+                            {codigoGenerado.workflow}
+                        </pre>
                     </div>
                 </div>
             )}

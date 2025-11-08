@@ -1418,24 +1418,32 @@
     const [loading, setLoading] = useState(false);
 
     useEffect(() => {
-        async function cargarProcesos() {
-            const {  procData } = await supabase.from('procesos').select('*');
-            if (procData) setProcesos(procData);
+        async function cargar() {
+            try {
+                const {  procData } = await supabase.from('procesos').select('id, nombre');
+                if (procData) setProcesos(procData);
+            } catch (err) {
+                console.error('Error al cargar procesos en GeneradorSistema:', err);
+            }
         }
-        cargarProcesos();
+        cargar();
     }, []);
 
     const generarCodigo = async () => {
         if (!procesoSeleccionado) return;
         setLoading(true);
         try {
-            const {  procData } = await supabase.from('procesos').select('*, pasos_proceso(*)').eq('id', procesoSeleccionado).single();
+            const {  procData } = await supabase
+                .from('procesos')
+                .select('*, pasos_proceso(*)')
+                .eq('id', procesoSeleccionado)
+                .single();
             if (!procData) throw new Error('Proceso no encontrado');
 
             const nombreTabla = procData.nombre.toLowerCase().replace(/ /g, '_');
             const pasos = procData.pasos_proceso || [];
 
-            // Generar SQL
+            // === Generar SQL ===
             let sql = `-- Tabla principal para: ${procData.nombre}\n`;
             sql += `CREATE TABLE ${nombreTabla} (\n`;
             sql += `  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),\n`;
@@ -1486,7 +1494,7 @@
             sql += `CREATE INDEX idx_${nombreTabla}_estado ON ${nombreTabla}(estado);\n`;
             sql += `CREATE INDEX idx_${nombreTabla}_area ON ${nombreTabla}(area_actual);\n`;
 
-            // RLS
+            // === Generar RLS ===
             let rls = `-- RLS Policies para ${procData.nombre}\n`;
             rls += `ALTER TABLE ${nombreTabla} ENABLE ROW LEVEL SECURITY;\n\n`;
             rls += `-- Los usuarios solo ven registros de su área\n`;
@@ -1513,7 +1521,7 @@
             rls += `    )\n`;
             rls += `  );\n`;
 
-            // Componente React
+            // === Generar componente React ===
             let componente = `function Formulario${procData.nombre.replace(/ /g, '')}() {\n`;
             componente += `  const [form, setForm] = useState({\n`;
             camposUnicos.forEach(nombre => {
@@ -1551,16 +1559,17 @@
             componente += `  );\n`;
             componente += `}`;
 
-            // Edge Function
+            // === Generar Edge Function ===
             let workflow = `import { createClient } from '@supabase/supabase-js'\n\n`;
             workflow += `Deno.serve(async (req) => {\n`;
             workflow += `  const supabase = createClient(...)\n`;
             workflow += `  const { registro_id, accion } = await req.json()\n\n`;
-            workflow += `  const { data: registro } = await supabase\n`;
+            workflow += `  const {  data: registro } = await supabase\n`;
             workflow += `    .from('${nombreTabla}')\n`;
             workflow += `    .select('*')\n`;
             workflow += `    .eq('id', registro_id)\n`;
             workflow += `    .single()\n\n`;
+            workflow += `  if (!registro) return new Response('Registro no encontrado', { status: 404 });\n\n`;
             workflow += `  let nuevoEstado;\n`;
             workflow += `  switch(registro.estado) {\n`;
             pasos.forEach((paso, i) => {
@@ -1576,12 +1585,15 @@
                 }
                 workflow += `      break;\n`;
             });
+            workflow += `    default:\n`;
+            workflow += `      nuevoEstado = 'finalizado';\n`;
             workflow += `  }\n\n`;
-            workflow += `  await supabase\n`;
+            workflow += `  const { error } = await supabase\n`;
             workflow += `    .from('${nombreTabla}')\n`;
             workflow += `    .update({ estado: nuevoEstado })\n`;
             workflow += `    .eq('id', registro_id);\n\n`;
-            workflow += `  return new Response(JSON.stringify({ success: true }))\n`;
+            workflow += `  if (error) return new Response('Error: ' + error.message, { status: 500 });\n\n`;
+            workflow += `  return new Response(JSON.stringify({ success: true, nuevo_estado: nuevoEstado }), { headers: { 'Content-Type': 'application/json' }});\n`;
             workflow += `})`;
 
             setCodigoGenerado({

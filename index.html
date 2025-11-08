@@ -1494,7 +1494,7 @@
             sql += `CREATE INDEX idx_${nombreTabla}_estado ON ${nombreTabla}(estado);\n`;
             sql += `CREATE INDEX idx_${nombreTabla}_area ON ${nombreTabla}(area_actual);\n`;
 
-            // === Generar RLS ===
+            // RLS
             let rls = `-- RLS Policies para ${procData.nombre}\n`;
             rls += `ALTER TABLE ${nombreTabla} ENABLE ROW LEVEL SECURITY;\n\n`;
             rls += `-- Los usuarios solo ven registros de su área\n`;
@@ -1521,7 +1521,7 @@
             rls += `    )\n`;
             rls += `  );\n`;
 
-            // === Generar componente React ===
+            // Componente React
             let componente = `function Formulario${procData.nombre.replace(/ /g, '')}() {\n`;
             componente += `  const [form, setForm] = useState({\n`;
             camposUnicos.forEach(nombre => {
@@ -1559,12 +1559,12 @@
             componente += `  );\n`;
             componente += `}`;
 
-            // === Generar Edge Function ===
+            // Edge Function
             let workflow = `import { createClient } from '@supabase/supabase-js'\n\n`;
             workflow += `Deno.serve(async (req) => {\n`;
             workflow += `  const supabase = createClient(...)\n`;
             workflow += `  const { registro_id, accion } = await req.json()\n\n`;
-            workflow += `  const {  data: registro } = await supabase\n`;
+            workflow += `  const {  registro } = await supabase\n`;
             workflow += `    .from('${nombreTabla}')\n`;
             workflow += `    .select('*')\n`;
             workflow += `    .eq('id', registro_id)\n`;
@@ -1618,7 +1618,10 @@
     return (
         <div className="bg-white dark:bg-gray-800 dark:text-white p-6 rounded-lg border max-w-6xl mx-auto">
             <div className="flex justify-between mb-6">
-                <h2 className="text-2xl font-bold">Generador de Sistema</h2>
+                <div>
+                    <h2 className="text-2xl font-bold">Generador de Sistema</h2>
+                    <p className="text-gray-600 dark:text-gray-300 mt-1">Genera esquemas SQL, RLS, componentes y workflows automáticamente</p>
+                </div>
                 <button onClick={onVolver} className="text-blue-600 hover:underline">← Volver</button>
             </div>
 

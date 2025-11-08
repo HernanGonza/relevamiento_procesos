@@ -1411,7 +1411,7 @@
                 </div>
             );
         }
-        function GeneradorSistema({ onVolver }) {
+       function GeneradorSistema({ onVolver }) {
     const [procesos, setProcesos] = useState([]);
     const [procesoSeleccionado, setProcesoSeleccionado] = useState('');
     const [codigoGenerado, setCodigoGenerado] = useState(null);
@@ -1423,7 +1423,7 @@
                 const {  procData } = await supabase.from('procesos').select('id, nombre');
                 if (procData) setProcesos(procData);
             } catch (err) {
-                console.error('Error al cargar procesos en GeneradorSistema:', err);
+                console.error('Error en GeneradorSistema:', err);
             }
         }
         cargar();
@@ -1438,6 +1438,7 @@
                 .select('*, pasos_proceso(*)')
                 .eq('id', procesoSeleccionado)
                 .single();
+
             if (!procData) throw new Error('Proceso no encontrado');
 
             const nombreTabla = procData.nombre.toLowerCase().replace(/ /g, '_');
@@ -1458,8 +1459,8 @@
             pasos.forEach(p => {
                 if (p.datos_necesarios) {
                     const campos = p.datos_necesarios.split(',').map(c => c.trim()).filter(Boolean);
-                    campos.forEach(cam => {
-                        const nombre = cam.toLowerCase().replace(/ /g, '_');
+                    campos.forEach(c => {
+                        const nombre = c.toLowerCase().replace(/ /g, '_');
                         camposUnicos.add(nombre);
                     });
                 }
@@ -1494,7 +1495,7 @@
             sql += `CREATE INDEX idx_${nombreTabla}_estado ON ${nombreTabla}(estado);\n`;
             sql += `CREATE INDEX idx_${nombreTabla}_area ON ${nombreTabla}(area_actual);\n`;
 
-            // RLS
+            // === Generar RLS ===
             let rls = `-- RLS Policies para ${procData.nombre}\n`;
             rls += `ALTER TABLE ${nombreTabla} ENABLE ROW LEVEL SECURITY;\n\n`;
             rls += `-- Los usuarios solo ven registros de su área\n`;
@@ -1521,7 +1522,7 @@
             rls += `    )\n`;
             rls += `  );\n`;
 
-            // Componente React
+            // === Generar componente React ===
             let componente = `function Formulario${procData.nombre.replace(/ /g, '')}() {\n`;
             componente += `  const [form, setForm] = useState({\n`;
             camposUnicos.forEach(nombre => {
@@ -1559,7 +1560,7 @@
             componente += `  );\n`;
             componente += `}`;
 
-            // Edge Function
+            // === Generar Edge Function ===
             let workflow = `import { createClient } from '@supabase/supabase-js'\n\n`;
             workflow += `Deno.serve(async (req) => {\n`;
             workflow += `  const supabase = createClient(...)\n`;
@@ -1620,7 +1621,7 @@
             <div className="flex justify-between mb-6">
                 <div>
                     <h2 className="text-2xl font-bold">Generador de Sistema</h2>
-                    <p className="text-gray-600 dark:text-gray-300 mt-1">Genera esquemas SQL, RLS, componentes y workflows automáticamente</p>
+                    <p className="text-gray-600 dark:text-gray-300 mt-1">Genera tablas, componentes y workflows automáticamente</p>
                 </div>
                 <button onClick={onVolver} className="text-blue-600 hover:underline">← Volver</button>
             </div>
@@ -1712,7 +1713,6 @@
         </div>
     );
 }
-
         function App() {
             const [activeTab, setActiveTab] = useState('tracker');
             const [entrevistas, setEntrevistas] = useState([]);

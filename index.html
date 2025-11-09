@@ -1520,7 +1520,6 @@
                     .from('procesos')
                     .select('id, nombre')
                     .order('nombre', { ascending: true });
-
                 if (error) throw error;
                 setProcesos(data || []);
             } catch (err) {
@@ -1537,15 +1536,17 @@
             alert('Selecciona un proceso');
             return;
         }
-
         setLoading(true);
         try {
+            // CARGAR PROCESO COMPLETO CON TODOS LOS CAMPOS NUEVOS
             const { data: procData, error } = await supabase
                 .from('procesos')
-                .select('*, pasos_proceso(*)')
+                .select(`
+                    *,
+                    pasos_proceso(*)
+                `)
                 .eq('id', procesoSeleccionado)
                 .single();
-
             if (error) throw error;
             if (!procData) throw new Error('Proceso no encontrado');
 
@@ -1556,7 +1557,7 @@
 
             const pasos = procData.pasos_proceso || [];
 
-            // === Extraer campos únicos de datos_necesarios ===
+            // === CAMPOS ÚNICOS DE DATOS NECESARIOS ===
             const camposUnicos = new Set();
             pasos.forEach(paso => {
                 if (paso.datos_necesarios) {
@@ -1574,8 +1575,34 @@
                 }
             });
 
+            // === METADATOS DEL PROCESO (para comentarios y lógica) ===
+            const {
+                volumen_mensual,
+                normativa,
+                reporte_obligatorio,
+                potencial_digital,
+                documento_final,
+                proceso_padre,
+                aprobador_final,
+                area_inicio,
+                area_cierre
+            } = procData;
+
             // === SQL ===
-            let sql = `-- Tabla principal para: ${procData.nombre}\n`;
+            let sql = `-- =======================================\n`;
+            sql += `-- TABLA GENERADA PARA: ${procData.nombre}\n`;
+            sql += `-- Área inicio: ${area_inicio || '—'}\n`;
+            if (area_cierre) sql += `-- Área cierre: ${area_cierre}\n`;
+            if (volumen_mensual) sql += `-- Volumen mensual: ~${volumen_mensual} trámites\n`;
+            if (normativa) sql += `-- Normativa: ${normativa}\n`;
+            if (reporte_obligatorio) sql += `-- REPORTE OBLIGATORIO: SÍ\n`;
+            if (potencial_digital === 'si') sql += `-- 100% DIGITALIZABLE\n`;
+            if (potencial_digital === 'parcial') sql += `-- DIGITALIZACIÓN PARCIAL\n`;
+            if (documento_final) sql += `-- Documento final: ${documento_final}\n`;
+            if (proceso_padre) sql += `-- Proceso padre: ${proceso_padre}\n`;
+            if (aprobador_final) sql += `-- Aprobador final: ${aprobador_final}\n`;
+            sql += `-- =======================================\n\n`;
+
             sql += `CREATE TABLE ${nombreTabla} (\n`;
             sql += `  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),\n`;
             sql += `  created_at TIMESTAMPTZ DEFAULT NOW(),\n`;
@@ -1583,17 +1610,30 @@
             sql += `  estado VARCHAR(50) DEFAULT 'paso_1',\n`;
             sql += `  area_actual VARCHAR(100),\n`;
             sql += `  usuario_asignado UUID REFERENCES auth.users(id),\n`;
-            if (camposUnicos.size > 0) sql += `\n  -- Campos de datos\n`;
-            camposUnicos.forEach(campo => {
-                sql += `  ${campo} TEXT,\n`;
-            });
             sql += `  responsable_actual VARCHAR(100),\n`;
             sql += `  fecha_inicio TIMESTAMPTZ,\n`;
             sql += `  fecha_estimada_finalizacion TIMESTAMPTZ,\n`;
-            sql += `  notas TEXT\n`;
+            sql += `  notas TEXT,\n`;
+
+            if (camposUnicos.size > 0) {
+                sql += `\n  -- Campos específicos del trámite\n`;
+                camposUnicos.forEach(campo => {
+                    sql += `  ${campo} TEXT,\n`;
+                });
+            }
+
+            if (reporte_obligatorio) {
+                sql += `  reporte_enviado BOOLEAN DEFAULT FALSE,\n`;
+            }
+            if (documento_final) {
+                sql += `  documento_final_generado VARCHAR(255),\n`;
+            }
+
+            sql = sql.replace(/,\n$/, '\n'); // Quitar última coma
             sql += `);\n\n`;
 
-            sql += `-- Tabla de historial\n`;
+            // Historial
+            sql += `-- Tabla de auditoría\n`;
             sql += `CREATE TABLE ${nombreTabla}_historial (\n`;
             sql += `  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),\n`;
             sql += `  ${nombreTabla}_id UUID REFERENCES ${nombreTabla}(id) ON DELETE CASCADE,\n`;
@@ -1606,97 +1646,148 @@
             sql += `  observaciones TEXT\n`;
             sql += `);\n\n`;
 
-            sql += `-- Índices\n`;
+            // Índices
             sql += `CREATE INDEX idx_${nombreTabla}_estado ON ${nombreTabla}(estado);\n`;
             sql += `CREATE INDEX idx_${nombreTabla}_area ON ${nombreTabla}(area_actual);\n`;
+            if (reporte_obligatorio) {
+                sql += `CREATE INDEX idx_${nombreTabla}_reporte ON ${nombreTabla}(reporte_enviado);\n`;
+            }
 
             // === RLS ===
-            let rls = `-- RLS para tabla: ${nombreTabla}\n`;
+            let rls = `-- RLS para: ${procData.nombre}\n`;
             rls += `ALTER TABLE ${nombreTabla} ENABLE ROW LEVEL SECURITY;\n\n`;
+
+            // Solo usuarios del área actual
             rls += `CREATE POLICY "ver_su_area" ON ${nombreTabla}\n`;
             rls += `  FOR SELECT USING (\n`;
             rls += `    area_actual IN (\n`;
             rls += `      SELECT area FROM usuarios_areas WHERE user_id = auth.uid()\n`;
             rls += `    )\n`;
             rls += `  );\n\n`;
+
+            // Solo el asignado puede actualizar
             rls += `CREATE POLICY "actualizar_asignado" ON ${nombreTabla}\n`;
             rls += `  FOR UPDATE USING (usuario_asignado = auth.uid());\n\n`;
-            rls += `CREATE POLICY "supervisores_todo" ON ${nombreTabla}\n`;
-            rls += `  FOR ALL USING (\n`;
-            rls += `    EXISTS (SELECT 1 FROM user_roles WHERE user_id = auth.uid() AND role = 'supervisor')\n`;
-            rls += `  );\n`;
 
-            // === React Component ===
+            // Supervisores y aprobador final
+            if (aprobador_final || proceso_padre) {
+                rls += `CREATE POLICY "supervisores_y_aprobador" ON ${nombreTabla}\n`;
+                rls += `  FOR ALL USING (\n`;
+                rls += `    EXISTS (SELECT 1 FROM user_roles WHERE user_id = auth.uid() AND role = 'supervisor')\n`;
+                if (aprobador_final) {
+                    rls += `    OR responsable_actual = '${aprobador_final}'\n`;
+                }
+                rls += `  );\n`;
+            } else {
+                rls += `CREATE POLICY "supervisores_todo" ON ${nombreTabla}\n`;
+                rls += `  FOR ALL USING (\n`;
+                rls += `    EXISTS (SELECT 1 FROM user_roles WHERE user_id = auth.uid() AND role = 'supervisor')\n`;
+                rls += `  );\n`;
+            }
+
+            // === REACT COMPONENT ===
             let componente = `function Formulario${procData.nombre.replace(/[^a-zA-Z0-9]/g, '')}() {\n`;
             componente += `  const [form, setForm] = useState({\n`;
             camposUnicos.forEach(campo => {
                 componente += `    ${campo}: '',\n`;
             });
             componente += `    estado: 'paso_1',\n`;
-            componente += `    area_actual: '${procData.area_inicio || ''}'\n`;
+            componente += `    area_actual: '${area_inicio || ''}'\n`;
             componente += `  });\n\n`;
+
             componente += `  const handleSubmit = async () => {\n`;
             componente += `    const { error } = await supabase\n`;
             componente += `      .from('${nombreTabla}')\n`;
             componente += `      .insert([{ ...form }]);\n\n`;
-            componente += `    if (!error) alert('Registro creado');\n`;
+            componente += `    if (!error) alert('Trámite iniciado correctamente');\n`;
             componente += `  };\n\n`;
+
             componente += `  return (\n`;
-            componente += `    <div className="space-y-4">\n`;
+            componente += `    <div className="max-w-2xl mx-auto p-6 bg-white rounded-lg shadow">\n`;
+            componente += `      <h2 className="text-2xl font-bold mb-6">{procData.nombre}</h2>\n`;
+
+            if (normativa) {
+                componente += `      <p className="text-sm text-gray-600 mb-4">Normativa: {${JSON.stringify(normativa)}}</p>\n`;
+            }
+
             camposUnicos.forEach(campo => {
                 const label = campo.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-                componente += `      <input\n`;
-                componente += `        type="text"\n`;
-                componente += `        placeholder="${label}"\n`;
-                componente += `        value={form.${campo}}\n`;
-                componente += `        onChange={e => setForm({...form, ${campo}: e.target.value})}\n`;
-                componente += `        className="border p-2 rounded w-full"\n`;
-                componente += `      />\n`;
+                componente += `      <div className="mb-4">\n`;
+                componente += `        <label className="block text-sm font-medium mb-1">${label}</label>\n`;
+                componente += `        <input\n`;
+                componente += `          type="text"\n`;
+                componente += `          value={form.${campo}}\n`;
+                componente += `          onChange={e => setForm({...form, ${campo}: e.target.value})}\n`;
+                componente += `          className="border border-gray-300 p-2 rounded w-full"\n`;
+                componente += `          required\n`;
+                componente += `        />\n`;
+                componente += `      </div>\n`;
             });
-            componente += `      <button onClick={handleSubmit} className="btn-primary px-4 py-2">\n`;
-            componente += `        Enviar\n`;
+
+            componente += `      <button onClick={handleSubmit} className="w-full bg-blue-600 text-white py-2 rounded font-medium hover:bg-blue-700">\n`;
+            componente += `        Iniciar Trámite\n`;
             componente += `      </button>\n`;
             componente += `    </div>\n`;
             componente += `  );\n`;
             componente += `}\n`;
 
-            // === Edge Function ===
+            // === EDGE FUNCTION (WORKFLOW) ===
             let workflow = `// Edge Function: workflow_${nombreTabla}.ts\n`;
             workflow += `Deno.serve(async (req) => {\n`;
             workflow += `  const supabase = createClient(Deno.env.get('SUPABASE_URL'), Deno.env.get('SUPABASE_ANON_KEY'));\n`;
             workflow += `  const { registro_id, accion, datos } = await req.json();\n\n`;
+
             workflow += `  const { data: reg, error } = await supabase\n`;
             workflow += `    .from('${nombreTabla}')\n`;
             workflow += `    .select('*')\n`;
             workflow += `    .eq('id', registro_id)\n`;
             workflow += `    .single();\n\n`;
+
             workflow += `  if (error || !reg) return new Response(JSON.stringify({ error: 'No encontrado' }), { status: 404 });\n\n`;
+
             workflow += `  let nuevoEstado = reg.estado;\n\n`;
             workflow += `  switch (reg.estado) {\n`;
+
             pasos.forEach((paso, i) => {
                 workflow += `    case 'paso_${i + 1}':\n`;
                 if (paso.tiene_decision && paso.condicion_decision) {
-                    const cond = paso.condicion_decision.toLowerCase().includes('datos.')
+                    const cond = paso.condicion_decision.includes('datos.')
                         ? paso.condicion_decision
-                        : `datos.${paso.condicion_decision}`;
+                        : `datos.${paso.condicion_decision.toLowerCase().replace(/[^a-z0-9_]/g, '_')}`;
                     workflow += `      if (${cond}) {\n`;
-                    workflow += `        nuevoEstado = '${paso.destino_si_cumple || `paso_${i + 2}`}';`;
-                    workflow += `\n      } else {\n`;
-                    workflow += `        nuevoEstado = '${paso.destino_si_no_cumple || `paso_${i + 2}`}';`;
-                    workflow += `\n      }\n`;
+                    workflow += `        nuevoEstado = '${paso.destino_si_cumple || `paso_${i + 2}`}'\n`;
+                    workflow += `      } else {\n`;
+                    workflow += `        nuevoEstado = '${paso.destino_si_no_cumple || `paso_${i + 2}`}'\n`;
+                    workflow += `      }\n`;
                 } else {
                     workflow += `      nuevoEstado = 'paso_${i + 2}';\n`;
                 }
                 workflow += `      break;\n`;
             });
+
             workflow += `    default:\n`;
             workflow += `      nuevoEstado = 'finalizado';\n`;
+            if (documento_final) {
+                workflow += `      // Generar documento final: ${documento_final}\n`;
+            }
+            if (reporte_obligatorio) {
+                workflow += `      // Enviar reporte obligatorio\n`;
+            }
             workflow += `  }\n\n`;
+
             workflow += `  const { error: updError } = await supabase\n`;
             workflow += `    .from('${nombreTabla}')\n`;
-            workflow += `    .update({ estado: nuevoEstado })\n`;
+            workflow += `    .update({ \n`;
+            workflow += `      estado: nuevoEstado,\n`;
+            if (reporte_obligatorio && pasos.length > 0) {
+                workflow += `      reporte_enviado: nuevoEstado === 'finalizado' ? true : reg.reporte_enviado,\n`;
+            }
+            workflow += `      updated_at: new Date().toISOString()\n`;
+            workflow += `    })\n`;
             workflow += `    .eq('id', registro_id);\n\n`;
+
             workflow += `  if (updError) return new Response(JSON.stringify({ error: updError.message }), { status: 500 });\n\n`;
+
             workflow += `  return new Response(JSON.stringify({ success: true, nuevo_estado: nuevoEstado }), {\n`;
             workflow += `    headers: { 'Content-Type': 'application/json' }\n`;
             workflow += `  });\n`;
@@ -1721,7 +1812,7 @@
             <div className="flex justify-between items-center mb-6">
                 <div>
                     <h2 className="text-2xl font-bold text-text">Generador de Sistema</h2>
-                    <p className="text-text-secondary mt-1">Crea tablas, RLS, formularios y workflows automáticamente</p>
+                    <p className="text-text-secondary mt-1">SQL, RLS, Formulario React y Workflow automático</p>
                 </div>
                 <button onClick={onVolver} className="text-primary hover:underline flex items-center gap-1">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1755,7 +1846,7 @@
                 >
                     {loading ? 'Generando...' : (
                         <>
-                            <Icons.Plus /> Generar Código
+                            Generar Código Completo
                         </>
                     )}
                 </button>

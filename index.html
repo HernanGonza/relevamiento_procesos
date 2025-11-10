@@ -388,13 +388,11 @@
     };
 
     const addPaso = (procIndex, parentId, branchType) => {
-        const nuevos = [...procesos];
-        const procPasos = nuevos[procIndex].pasos;
-        const siblings = procPasos.filter(p => p.parentId === parentId && p.branchType === branchType);
+    setProcesos(prev => prev.map((proc, i) => {
+        if (i !== procIndex) return proc;
+        const siblings = proc.pasos.filter(p => p.parentId === parentId && p.branchType === branchType);
         const newOrden = siblings.length + 1;
-
         const tempId = `temp_${tempIdCounter.current++}`;
-
         const newStep = {
             id: tempId,
             parentId,
@@ -406,9 +404,9 @@
             pasa_a_otra_area: false, area_destino: '', que_envia: '', espera_respuesta: false,
             es_paso_final: false
         };
-        procPasos.push(newStep);
-        setProcesos(nuevos);
-    };
+        return { ...proc, pasos: [...proc.pasos, newStep] };
+    }));
+};
 
     const eliminarPaso = (procIndex, stepId) => {
         const nuevos = [...procesos];
@@ -426,12 +424,16 @@
     };
 
     const actualizarPaso = (procIndex, stepId, campo, valor) => {
-        const nuevos = [...procesos];
-        const procPasos = nuevos[procIndex].pasos;
-        const updatedPasos = procPasos.map(s => s.id === stepId ? { ...s, [campo]: valor } : s);
-        nuevos[procIndex].pasos = updatedPasos;
-        setProcesos(nuevos);
-    };
+    setProcesos(prev => prev.map((proc, i) => {
+        if (i !== procIndex) return proc;
+        return {
+            ...proc,
+            pasos: proc.pasos.map(s =>
+                s.id === stepId ? { ...s, [campo]: valor } : s
+            )
+        };
+    }));
+};
 
     async function guardarEntrevista() {
         if (!entrevista) return;
@@ -1312,10 +1314,17 @@ const StepTreeView = ({ pasos, parentId, branchType, level = 0 }) => {
         setPasos(pasos.filter(s => !toRemove.includes(s.id)));
     };
 
-    const actualizarPaso = (stepId, campo, valor) => {
-        setPasos(pasos.map(s => s.id === stepId ? { ...s, [campo]:
-valor } : s));
-    };
+    const actualizarPaso = (procIndex, stepId, campo, valor) => {
+    setProcesos(prev => prev.map((proc, i) => {
+        if (i !== procIndex) return proc;
+        return {
+            ...proc,
+            pasos: proc.pasos.map(s =>
+                s.id === stepId ? { ...s, [campo]: valor } : s
+            )
+        };
+    }));
+};
 
     const handleGuardar = async () => {
         if (!proceso) return;

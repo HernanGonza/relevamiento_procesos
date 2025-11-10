@@ -690,6 +690,7 @@ const StepTree = React.memo(function StepTree({
   );
 }
 
+
        function VerEntrevista({ entrevistaId, onCerrar, onVerDetalle }) {
     const [entrevista, setEntrevista] = useState(null);
     const [procesos, setProcesos] = useState([]);
@@ -1191,7 +1192,7 @@ const StepTreeView = ({ pasos, parentId, branchType, level = 0 }) => {
             );
         }
 
- function EditarProceso({ procesoId, onCerrar }) {
+function EditarProceso({ procesoId, onCerrar }) {
   const { useState, useEffect, useRef, useCallback } = React;
   const [proceso, setProceso] = useState(null);
   const pasosRef = useRef([]); // mantener referencia estable
@@ -1402,6 +1403,7 @@ const StepTreeView = ({ pasos, parentId, branchType, level = 0 }) => {
     </div>
   );
 }
+
 
 
        function GeneradorSistema({ onVolver }) {

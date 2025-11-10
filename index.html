@@ -340,6 +340,9 @@
         acuerdos: '', observaciones_generales: ''
     });
 
+    // ID temporal estable
+    const tempIdCounter = useRef(0);
+
     useEffect(() => {
         if (entrevistaId) {
             supabase.from('entrevistas').select('*').eq('id', entrevistaId).single().then(({ data }) => {
@@ -354,7 +357,6 @@
     }, [entrevistaId]);
 
     const publicoOpciones = ['Ciudadanos', 'Empresas privadas', 'Municipios', 'ONGs', 'Otras áreas del Ministerio', 'Otros organismos provinciales', 'Organismos nacionales', 'Otros'];
-
     const togglePublico = (valor) => {
         setComplemento(prev => {
             const lista = [...prev.publico_usuarios];
@@ -391,8 +393,11 @@
         const procPasos = nuevos[procIndex].pasos;
         const siblings = procPasos.filter(p => p.parentId === parentId && p.branchType === branchType);
         const newOrden = siblings.length + 1;
+
+        const tempId = `temp_${tempIdCounter.current++}`;
+
         const newStep = {
-            id: Date.now(),
+            id: tempId,
             parentId,
             branchType,
             orden: newOrden,
@@ -456,10 +461,8 @@
                     proceso_padre: proc.proceso_padre || null, aprobador_final: proc.aprobador_final || null,
                     estado_relevamiento: 'en_proceso', entrevista_id: entrevista.id
                 }]).select();
-
                 if (error) throw error;
                 const procesoId = data[0].id;
-
                 const allSteps = proc.pasos;
                 const localToDb = {};
                 const insertData = allSteps.map(s => ({
@@ -475,16 +478,13 @@
                     es_paso_final: s.es_paso_final || false,
                     branch_type: s.branchType || null, parent_id: null
                 }));
-
                 const { data: insertedData } = await supabase.from('pasos_proceso').insert(insertData).select();
                 allSteps.forEach((s, i) => localToDb[s.id] = insertedData[i].id);
-
                 for (const s of allSteps) {
                     const dbId = localToDb[s.id];
                     const dbParent = s.parentId ? localToDb[s.parentId] : null;
                     await supabase.from('pasos_proceso').update({ parent_id: dbParent }).eq('id', dbId);
                 }
-
                 for (const step of allSteps) {
                     if (step.pasa_a_otra_area && step.area_destino && step.area) {
                         await supabase.from('handoffs').insert({
@@ -511,12 +511,13 @@
                 {childSteps.map((paso) => (
                     <div key={paso.id} className="mb-4 p-4 border border-border rounded bg-surface shadow-sm">
                         <div className="flex justify-between mb-2">
-                            <span className="text-sm font-semibold badge-primary px-2 py-1 rounded">Paso (ID: {paso.id})</span>
+                            <span className="text-sm font-semibold badge-primary px-2 py-1 rounded">
+                                Paso {typeof paso.id === 'number' ? `#${paso.id}` : '(nuevo)'}
+                            </span>
                             <button onClick={() => eliminarPaso(procIndex, paso.id)} className="btn-danger p-1 rounded">
                                 <Icons.Trash />
                             </button>
                         </div>
-
                         <div className="space-y-2">
                             <input type="text" placeholder="Descripción *" className="border border-border p-2 rounded w-full text-sm" value={paso.descripcion} onChange={e => actualizarPaso(procIndex, paso.id, 'descripcion', e.target.value)} />
                             <div className="grid grid-cols-2 gap-2">
@@ -535,7 +536,6 @@
                             <input type="text" placeholder="Plazos" className="border border-border p-2 rounded w-full text-sm" value={paso.plazos} onChange={e => actualizarPaso(procIndex, paso.id, 'plazos', e.target.value)} />
                             <input type="text" placeholder="Tiempo promedio" className="border border-border p-2 rounded w-full text-sm" value={paso.tiempo_promedio} onChange={e => actualizarPaso(procIndex, paso.id, 'tiempo_promedio', e.target.value)} />
                             <textarea placeholder="Riesgos" className="border border-border p-2 rounded w-full text-sm" rows="2" value={paso.riesgos} onChange={e => actualizarPaso(procIndex, paso.id, 'riesgos', e.target.value)} />
-
                             {/* Punto de decisión */}
                             <div className="border-t border-border pt-2">
                                 <label className="flex items-center gap-2 text-sm font-medium text-text">
@@ -560,7 +560,6 @@
                                     </div>
                                 )}
                             </div>
-
                             {/* Handoff */}
                             <div className="border-t border-border pt-2">
                                 <label className="flex items-center gap-2 text-sm font-medium" style={{color: 'var(--color-warning)'}}>
@@ -578,8 +577,7 @@
                                     </div>
                                 )}
                             </div>
-
-                            {/* PASO FINAL - SIEMPRE VISIBLE */}
+                            {/* PASO FINAL */}
                             <div className="border-t border-border pt-2 mt-2">
                                 <label className="flex items-center gap-2 text-sm font-medium text-success">
                                     <input type="checkbox" checked={paso.es_paso_final} onChange={e => actualizarPaso(procIndex, paso.id, 'es_paso_final', e.target.checked)} className="rounded" />
@@ -591,8 +589,7 @@
                                     </div>
                                 )}
                             </div>
-
-                            {/* Agregar siguiente solo si NO es final y NO tiene decisión */}
+                            {/* Siguiente paso */}
                             {!paso.es_paso_final && !paso.tiene_decision && (
                                 <div className="mt-2">
                                     <StepTree procIndex={procIndex} pasos={pasos} parentId={paso.id} branchType={null} level={level + 1} />
@@ -684,7 +681,6 @@
                             <input type="text" placeholder="Proceso padre" className="border border-border p-2 rounded" value={proc.proceso_padre} onChange={e => actualizarProceso(idx, 'proceso_padre', e.target.value)} />
                             <input type="text" placeholder="Aprobador final" className="border border-border p-2 rounded" value={proc.aprobador_final} onChange={e => actualizarProceso(idx, 'aprobador_final', e.target.value)} />
                         </div>
-
                         <div className="mt-4">
                             <div className="flex justify-between mb-2">
                                 <span className="font-medium text-sm text-text">Pasos:</span>
@@ -1210,18 +1206,20 @@ const StepTreeView = ({ pasos, parentId, branchType, level = 0 }) => {
             );
         }
 
-       function EditarProceso({ procesoId, onCerrar }) {
+     function EditarProceso({ procesoId, onCerrar }) {
     const [proceso, setProceso] = useState(null);
     const [pasos, setPasos] = useState([]);
     const originalPasos = useRef([]);
     const [loading, setLoading] = useState(true);
+
+    // ID temporal estable
+    const tempIdCounter = useRef(0);
 
     useEffect(() => {
         async function cargar() {
             try {
                 const { data: procData } = await supabase.from('procesos').select('*').eq('id', procesoId).single();
                 if (!procData) throw new Error('Proceso no encontrado');
-
                 const { data: pasosData } = await supabase.from('pasos_proceso').select('*').eq('proceso_id', procesoId);
                 setProceso(procData);
                 originalPasos.current = pasosData || [];
@@ -1247,8 +1245,10 @@ const StepTreeView = ({ pasos, parentId, branchType, level = 0 }) => {
     const addPaso = (parentId, branchType) => {
         const siblings = pasos.filter(p => p.parentId === parentId && p.branchType === branchType);
         const newOrden = siblings.length + 1;
+        const tempId = `temp_${tempIdCounter.current++}`;
+
         const newStep = {
-            id: `new_${Date.now()}`,
+            id: tempId,
             parentId,
             branchType,
             orden: newOrden,
@@ -1283,7 +1283,6 @@ const StepTreeView = ({ pasos, parentId, branchType, level = 0 }) => {
         if (!proceso) return;
         setLoading(true);
         try {
-            // 1. Actualizar proceso
             await supabase.from('procesos').update({
                 nombre: proceso.nombre,
                 frecuencia: proceso.frecuencia,
@@ -1301,18 +1300,15 @@ const StepTreeView = ({ pasos, parentId, branchType, level = 0 }) => {
                 estado_relevamiento: proceso.estado_relevamiento
             }).eq('id', proceso.id);
 
-            // 2. Detectar pasos eliminados
             const currentDbIds = pasos.filter(s => typeof s.id === 'number').map(s => s.id);
             const deletedIds = originalPasos.current.filter(o => !currentDbIds.includes(o.id)).map(o => o.id);
             if (deletedIds.length > 0) {
                 await supabase.from('pasos_proceso').delete().in('id', deletedIds);
             }
 
-            // 3. Insertar nuevos pasos
             const newSteps = pasos.filter(s => typeof s.id !== 'number');
             const localToDb = {};
             let insertedData = [];
-
             if (newSteps.length > 0) {
                 const insertData = newSteps.map(s => ({
                     proceso_id: proceso.id,
@@ -1337,7 +1333,6 @@ const StepTreeView = ({ pasos, parentId, branchType, level = 0 }) => {
                     branch_type: s.branchType || null,
                     parent_id: null
                 }));
-
                 const { data } = await supabase.from('pasos_proceso').insert(insertData).select();
                 insertedData = data;
                 newSteps.forEach((s, i) => {
@@ -1345,18 +1340,15 @@ const StepTreeView = ({ pasos, parentId, branchType, level = 0 }) => {
                 });
             }
 
-            // 4. Mapear todos los IDs (DB y nuevos)
             pasos.forEach(s => {
                 if (typeof s.id === 'number') {
                     localToDb[s.id] = s.id;
                 }
             });
 
-            // 5. Actualizar todos los pasos (nuevos y existentes)
             for (const s of pasos) {
                 const dbId = localToDb[s.id];
                 const dbParent = s.parentId ? localToDb[s.parentId] : null;
-
                 await supabase.from('pasos_proceso').update({
                     orden: s.orden,
                     descripcion: s.descripcion,
@@ -1381,7 +1373,6 @@ const StepTreeView = ({ pasos, parentId, branchType, level = 0 }) => {
                 }).eq('id', dbId);
             }
 
-            // 6. Recrear handoffs (opcional: borrar y volver a crear)
             await supabase.from('handoffs').delete().eq('proceso', proceso.nombre);
             for (const step of pasos) {
                 if (step.pasa_a_otra_area && step.area_destino && step.area) {
@@ -1396,7 +1387,6 @@ const StepTreeView = ({ pasos, parentId, branchType, level = 0 }) => {
                     });
                 }
             }
-
             alert('Proceso actualizado exitosamente');
             onCerrar();
         } catch (err) {
@@ -1406,7 +1396,6 @@ const StepTreeView = ({ pasos, parentId, branchType, level = 0 }) => {
         }
     };
 
-    // === StepTree (idéntico al de FormularioEntrevista) ===
     const StepTree = ({ pasos, parentId, branchType, level = 0 }) => {
         const childSteps = pasos.filter(p => p.parentId === parentId && p.branchType === branchType).sort((a, b) => a.orden - b.orden);
         return (
@@ -1415,13 +1404,12 @@ const StepTreeView = ({ pasos, parentId, branchType, level = 0 }) => {
                     <div key={paso.id} className="mb-4 p-4 border border-border rounded bg-surface shadow-sm">
                         <div className="flex justify-between mb-2">
                             <span className="text-sm font-semibold badge-primary px-2 py-1 rounded">
-                                Paso (ID: {typeof paso.id === 'number' ? paso.id : 'nuevo'})
+                                Paso {typeof paso.id === 'number' ? `#${paso.id}` : '(nuevo)'}
                             </span>
                             <button onClick={() => eliminarPaso(paso.id)} className="btn-danger p-1 rounded">
                                 <Icons.Trash />
                             </button>
                         </div>
-
                         <div className="space-y-2">
                             <input type="text" placeholder="Descripción *" className="border border-border p-2 rounded w-full text-sm" value={paso.descripcion} onChange={e => actualizarPaso(paso.id, 'descripcion', e.target.value)} />
                             <div className="grid grid-cols-2 gap-2">
@@ -1440,7 +1428,6 @@ const StepTreeView = ({ pasos, parentId, branchType, level = 0 }) => {
                             <input type="text" placeholder="Plazos" className="border border-border p-2 rounded w-full text-sm" value={paso.plazos} onChange={e => actualizarPaso(paso.id, 'plazos', e.target.value)} />
                             <input type="text" placeholder="Tiempo promedio" className="border border-border p-2 rounded w-full text-sm" value={paso.tiempo_promedio} onChange={e => actualizarPaso(paso.id, 'tiempo_promedio', e.target.value)} />
                             <textarea placeholder="Riesgos" className="border border-border p-2 rounded w-full text-sm" rows="2" value={paso.riesgos} onChange={e => actualizarPaso(paso.id, 'riesgos', e.target.value)} />
-
                             {/* Decisión */}
                             <div className="border-t border-border pt-2">
                                 <label className="flex items-center gap-2 text-sm font-medium text-text">
@@ -1465,7 +1452,6 @@ const StepTreeView = ({ pasos, parentId, branchType, level = 0 }) => {
                                     </div>
                                 )}
                             </div>
-
                             {/* Handoff */}
                             <div className="border-t border-border pt-2">
                                 <label className="flex items-center gap-2 text-sm font-medium" style={{color: 'var(--color-warning)'}}>
@@ -1483,8 +1469,7 @@ const StepTreeView = ({ pasos, parentId, branchType, level = 0 }) => {
                                     </div>
                                 )}
                             </div>
-
-                            {/* PASO FINAL - SIEMPRE VISIBLE */}
+                            {/* PASO FINAL */}
                             <div className="border-t border-border pt-2 mt-2">
                                 <label className="flex items-center gap-2 text-sm font-medium text-success">
                                     <input type="checkbox" checked={paso.es_paso_final} onChange={e => actualizarPaso(paso.id, 'es_paso_final', e.target.checked)} className="rounded" />
@@ -1496,8 +1481,7 @@ const StepTreeView = ({ pasos, parentId, branchType, level = 0 }) => {
                                     </div>
                                 )}
                             </div>
-
-                            {/* Siguiente paso solo si no es final y no tiene decisión */}
+                            {/* Siguiente paso */}
                             {!paso.es_paso_final && !paso.tiene_decision && (
                                 <div className="mt-2">
                                     <StepTree pasos={pasos} parentId={paso.id} branchType={null} level={level + 1} />
@@ -1523,8 +1507,6 @@ const StepTreeView = ({ pasos, parentId, branchType, level = 0 }) => {
                     <h2 className="text-2xl font-bold text-text">Editar Proceso: {proceso.nombre}</h2>
                     <button onClick={onCerrar} className="text-text-secondary hover:text-text">X</button>
                 </div>
-
-                {/* Campos del proceso */}
                 <div className="grid grid-cols-2 gap-3 mb-6">
                     <input type="text" placeholder="Nombre *" className="border border-border p-2 rounded" value={proceso.nombre} onChange={e => handleChangeProceso('nombre', e.target.value)} />
                     <select className="border border-border p-2 rounded" value={proceso.frecuencia} onChange={e => handleChangeProceso('frecuencia', e.target.value)}>
@@ -1556,8 +1538,6 @@ const StepTreeView = ({ pasos, parentId, branchType, level = 0 }) => {
                     <input type="text" placeholder="Proceso padre" className="border border-border p-2 rounded" value={proceso.proceso_padre} onChange={e => handleChangeProceso('proceso_padre', e.target.value)} />
                     <input type="text" placeholder="Aprobador final" className="border border-border p-2 rounded" value={proceso.aprobador_final} onChange={e => handleChangeProceso('aprobador_final', e.target.value)} />
                 </div>
-
-                {/* Pasos */}
                 <div className="mb-6">
                     <div className="flex justify-between mb-2">
                         <h3 className="font-bold text-lg text-text">Pasos del Proceso</h3>
@@ -1569,7 +1549,6 @@ const StepTreeView = ({ pasos, parentId, branchType, level = 0 }) => {
                     </div>
                     <StepTree pasos={pasos} parentId={null} branchType={null} />
                 </div>
-
                 <div className="flex justify-end gap-3">
                     <button onClick={onCerrar} className="px-4 py-2 border border-border rounded text-text-secondary">Cancelar</button>
                     <button onClick={handleGuardar} disabled={loading} className="btn-success px-6 py-2 rounded font-medium">

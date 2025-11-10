@@ -1087,8 +1087,12 @@
             <Icons.Check />
             <span className="font-semibold text-sm text-text">Paso final del proceso</span>
         </div>
-    </div>                   
-    {idx < pasos.length - 1 && <div className="ml-4 h-6 w-0.5 bg-border"></div>}
+    </div>
+)}
+{idx < pasos.length - 1 && (
+    <div className="ml-4 h-6 w-0.5 bg-border"></div>
+)}
+
                             </div>
                         ))}
                     </div>

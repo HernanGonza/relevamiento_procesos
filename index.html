@@ -436,16 +436,22 @@
     });
   }, []);
 
-  const actualizarPaso = useCallback((procIndex, stepId, campo, valor) => {
-    setProcesos(prev => {
-      const copia = prev.map((p, i) => i === procIndex ? { ...p } : p);
-      copia[procIndex] = {
-        ...copia[procIndex],
-        pasos: copia[procIndex].pasos.map(s => s.id === stepId ? { ...s, [campo]: valor } : s)
-      };
-      return copia;
-    });
-  }, []);
+ const actualizarPaso = useCallback((procIndex, stepId, campo, valor) => {
+  setProcesos(prev => {
+    const procesosActuales = [...prev];
+    const proc = procesosActuales[procIndex];
+    const paso = proc.pasos.find(s => s.id === stepId);
+    if (!paso) return prev;
+
+    // Mutación controlada: modificamos solo el campo afectado
+    paso[campo] = valor;
+
+    // Retornamos el mismo array y los mismos objetos
+    // para evitar recrear referencias
+    return procesosActuales;
+  });
+}, []);
+
 
   async function guardarEntrevista() {
     if (!entrevista) return;

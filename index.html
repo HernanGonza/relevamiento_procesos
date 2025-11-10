@@ -324,37 +324,20 @@
             );
         }
 
-       function FormularioEntrevista({ entrevistaId, onVolver }) {
+     function FormularioEntrevista({ entrevistaId, onVolver }) {
     const [loading, setLoading] = useState(false);
     const [entrevista, setEntrevista] = useState(null);
     const [procesos, setProcesos] = useState([{
         nombre: '', frecuencia: 'mensual', prioridad: 'media',
         area_inicio: '', areas_intermedias: '', area_cierre: '',
-        volumen_mensual: '',
-        normativa: '',
-        reporte_obligatorio: false,
-        potencial_digital: 'parcial',
-        documento_final: '',
-        proceso_padre: '',
-        aprobador_final: '',
-        pasos: [{
-            descripcion: '', responsable_rol: '', area: '', herramienta: '', es_manual: true,
-            datos_necesarios: '', documentos_generados: '', plazos: '',
-            tiempo_promedio: '',
-            riesgos: '',
-            tiene_decision: false, condicion_decision: '', destino_si_cumple: '', destino_si_no_cumple: '',
-            pasa_a_otra_area: false, area_destino: '', que_envia: '', espera_respuesta: false, es_paso_final: false
-        }]
+        volumen_mensual: '', normativa: '', reporte_obligatorio: false,
+        potencial_digital: 'parcial', documento_final: '', proceso_padre: '', aprobador_final: '',
+        pasos: []
     }]);
     const [complemento, setComplemento] = useState({
-        publico_usuarios: [],
-        interacciones_externas: '',
-        sistemas_usados: '',
-        tiene_manuales: false,
-        resolucion_formularios: '',
-        entrevistados: '',
-        acuerdos: '',
-        observaciones_generales: ''
+        publico_usuarios: [], interacciones_externas: '', sistemas_usados: '',
+        tiene_manuales: false, resolucion_formularios: '', entrevistados: '',
+        acuerdos: '', observaciones_generales: ''
     });
 
     useEffect(() => {
@@ -387,14 +370,9 @@
         setProcesos([...procesos, {
             nombre: '', frecuencia: 'mensual', prioridad: 'media',
             area_inicio: '', areas_intermedias: '', area_cierre: '',
-            volumen_mensual: '',
-            normativa: '',
-            reporte_obligatorio: false,
-            potencial_digital: 'parcial',
-            documento_final: '',
-            proceso_padre: '',
-            aprobador_final: '',
-            pasos: [{ descripcion: '', responsable_rol: '', area: '', herramienta: '', es_manual: true, datos_necesarios: '', documentos_generados: '', plazos: '', tiempo_promedio: '', riesgos: '', tiene_decision: false, condicion_decision: '', destino_si_cumple: '', destino_si_no_cumple: '', pasa_a_otra_area: false, area_destino: '', que_envia: '', espera_respuesta: false }]
+            volumen_mensual: '', normativa: '', reporte_obligatorio: false,
+            potencial_digital: 'parcial', documento_final: '', proceso_padre: '', aprobador_final: '',
+            pasos: []
         }]);
     };
 
@@ -408,21 +386,46 @@
         setProcesos(nuevos);
     };
 
-    const agregarPaso = (procIndex) => {
+    const addPaso = (procIndex, parentId, branchType) => {
         const nuevos = [...procesos];
-        nuevos[procIndex].pasos.push({ descripcion: '', responsable_rol: '', area: '', herramienta: '', es_manual: true, datos_necesarios: '', documentos_generados: '', plazos: '', tiempo_promedio: '', riesgos: '', tiene_decision: false, condicion_decision: '', destino_si_cumple: '', destino_si_no_cumple: '', pasa_a_otra_area: false, area_destino: '', que_envia: '', espera_respuesta: false, es_paso_final: false });
+        const procPasos = nuevos[procIndex].pasos;
+        const siblings = procPasos.filter(p => p.parentId === parentId && p.branchType === branchType);
+        const newOrden = siblings.length + 1;
+        const newStep = {
+            id: Date.now(),
+            parentId,
+            branchType,
+            orden: newOrden,
+            descripcion: '', responsable_rol: '', area: '', herramienta: '', es_manual: true,
+            datos_necesarios: '', documentos_generados: '', plazos: '', tiempo_promedio: '',
+            riesgos: '', tiene_decision: false, condicion_decision: '',
+            pasa_a_otra_area: false, area_destino: '', que_envia: '', espera_respuesta: false,
+            es_paso_final: false
+        };
+        procPasos.push(newStep);
         setProcesos(nuevos);
     };
 
-    const eliminarPaso = (procIndex, pasoIndex) => {
+    const eliminarPaso = (procIndex, stepId) => {
         const nuevos = [...procesos];
-        nuevos[procIndex].pasos = nuevos[procIndex].pasos.filter((_, i) => i !== pasoIndex);
+        const procPasos = nuevos[procIndex].pasos;
+        const toRemove = [];
+        const findDescendants = (id) => {
+            toRemove.push(id);
+            procPasos.forEach(s => {
+                if (s.parentId === id) findDescendants(s.id);
+            });
+        };
+        findDescendants(stepId);
+        nuevos[procIndex].pasos = procPasos.filter(s => !toRemove.includes(s.id));
         setProcesos(nuevos);
     };
 
-    const actualizarPaso = (procIndex, pasoIndex, campo, valor) => {
+    const actualizarPaso = (procIndex, stepId, campo, valor) => {
         const nuevos = [...procesos];
-        nuevos[procIndex].pasos[pasoIndex] = { ...nuevos[procIndex].pasos[pasoIndex], [campo]: valor };
+        const procPasos = nuevos[procIndex].pasos;
+        const updatedPasos = procPasos.map(s => s.id === stepId ? { ...s, [campo]: valor } : s);
+        nuevos[procIndex].pasos = updatedPasos;
         setProcesos(nuevos);
     };
 
@@ -445,62 +448,49 @@
             for (const proc of procesos) {
                 if (!proc.nombre || !proc.area_inicio) continue;
                 const { data, error } = await supabase.from('procesos').insert([{
-                    nombre: proc.nombre,
-                    frecuencia: proc.frecuencia,
-                    prioridad: proc.prioridad,
-                    area_inicio: proc.area_inicio,
-                    areas_intermedias: proc.areas_intermedias || null,
-                    area_cierre: proc.area_cierre || null,
-                    volumen_mensual: proc.volumen_mensual || null,
-                    normativa: proc.normativa || null,
-                    reporte_obligatorio: proc.reporte_obligatorio,
-                    potencial_digital: proc.potencial_digital,
-                    documento_final: proc.documento_final || null,
-                    proceso_padre: proc.proceso_padre || null,
-                    aprobador_final: proc.aprobador_final || null,
-                    estado_relevamiento: 'en_proceso',
-                    entrevista_id: entrevista.id
+                    nombre: proc.nombre, frecuencia: proc.frecuencia, prioridad: proc.prioridad,
+                    area_inicio: proc.area_inicio, areas_intermedias: proc.areas_intermedias || null,
+                    area_cierre: proc.area_cierre || null, volumen_mensual: proc.volumen_mensual || null,
+                    normativa: proc.normativa || null, reporte_obligatorio: proc.reporte_obligatorio,
+                    potencial_digital: proc.potencial_digital, documento_final: proc.documento_final || null,
+                    proceso_padre: proc.proceso_padre || null, aprobador_final: proc.aprobador_final || null,
+                    estado_relevamiento: 'en_proceso', entrevista_id: entrevista.id
                 }]).select();
 
                 if (error) throw error;
                 const procesoId = data[0].id;
 
-                for (let i = 0; i < proc.pasos.length; i++) {
-                    const paso = proc.pasos[i];
-                    if (!paso.descripcion) continue;
-                    await supabase.from('pasos_proceso').insert({
-                        proceso_id: procesoId,
-                        orden: i + 1,
-                        descripcion: paso.descripcion,
-                        responsable_rol: paso.responsable_rol || null,
-                        area: paso.area || null,
-                        herramienta: paso.herramienta || null,
-                        es_manual: paso.es_manual,
-                        datos_necesarios: paso.datos_necesarios || null,
-                        documentos_generados: paso.documentos_generados || null,
-                        plazos: paso.plazos || null,
-                        tiempo_promedio: paso.tiempo_promedio || null,
-                        riesgos: paso.riesgos || null,
-                        tiene_decision: paso.tiene_decision,
-                        condicion_decision: paso.condicion_decision || null,
-                        destino_si_cumple: paso.destino_si_cumple || null,
-                        destino_si_no_cumple: paso.destino_si_no_cumple || null,
-                        pasa_a_otra_area: paso.pasa_a_otra_area,
-                        area_destino: paso.area_destino || null,
-                        que_envia: paso.que_envia || null,
-                        espera_respuesta: paso.espera_respuesta,
-                        es_paso_final: paso.es_paso_final || false  // ✅ NUEVO
-                    });
+                const allSteps = proc.pasos;
+                const localToDb = {};
+                const insertData = allSteps.map(s => ({
+                    proceso_id: procesoId, orden: s.orden, descripcion: s.descripcion,
+                    responsable_rol: s.responsable_rol || null, area: s.area || null,
+                    herramienta: s.herramienta || null, es_manual: s.es_manual,
+                    datos_necesarios: s.datos_necesarios || null, documentos_generados: s.documentos_generados || null,
+                    plazos: s.plazos || null, tiempo_promedio: s.tiempo_promedio || null,
+                    riesgos: s.riesgos || null, tiene_decision: s.tiene_decision,
+                    condicion_decision: s.condicion_decision || null,
+                    pasa_a_otra_area: s.pasa_a_otra_area, area_destino: s.area_destino || null,
+                    que_envia: s.que_envia || null, espera_respuesta: s.espera_respuesta,
+                    es_paso_final: s.es_paso_final || false,
+                    branch_type: s.branchType || null, parent_id: null
+                }));
 
-                    if (paso.pasa_a_otra_area && paso.area_destino && paso.area) {
+                const { data: insertedData } = await supabase.from('pasos_proceso').insert(insertData).select();
+                allSteps.forEach((s, i) => localToDb[s.id] = insertedData[i].id);
+
+                for (const s of allSteps) {
+                    const dbId = localToDb[s.id];
+                    const dbParent = s.parentId ? localToDb[s.parentId] : null;
+                    await supabase.from('pasos_proceso').update({ parent_id: dbParent }).eq('id', dbId);
+                }
+
+                for (const step of allSteps) {
+                    if (step.pasa_a_otra_area && step.area_destino && step.area) {
                         await supabase.from('handoffs').insert({
-                            proceso: proc.nombre,
-                            area_origen: paso.area,
-                            area_destino: paso.area_destino,
-                            que_se_envia: paso.que_envia || null,
-                            validado_por_origen: false,
-                            validado_por_destino: false,
-                            entrevista_id: entrevista.id
+                            proceso: proc.nombre, area_origen: step.area, area_destino: step.area_destino,
+                            que_se_envia: step.que_envia || null, validado_por_origen: false,
+                            validado_por_destino: false, entrevista_id: entrevista.id
                         });
                     }
                 }
@@ -514,21 +504,121 @@
         }
     }
 
+    const StepTree = ({ procIndex, pasos, parentId, branchType, level = 0 }) => {
+        const childSteps = pasos.filter(p => p.parentId === parentId && p.branchType === branchType).sort((a, b) => a.orden - b.orden);
+        return (
+            <div style={{ marginLeft: `${level * 20}px` }}>
+                {childSteps.map((paso) => (
+                    <div key={paso.id} className="mb-4 p-4 border border-border rounded bg-surface shadow-sm">
+                        <div className="flex justify-between mb-2">
+                            <span className="text-sm font-semibold badge-primary px-2 py-1 rounded">Paso (ID: {paso.id})</span>
+                            <button onClick={() => eliminarPaso(procIndex, paso.id)} className="btn-danger p-1 rounded">
+                                <Icons.Trash />
+                            </button>
+                        </div>
+
+                        <div className="space-y-2">
+                            <input type="text" placeholder="Descripción *" className="border border-border p-2 rounded w-full text-sm" value={paso.descripcion} onChange={e => actualizarPaso(procIndex, paso.id, 'descripcion', e.target.value)} />
+                            <div className="grid grid-cols-2 gap-2">
+                                <input type="text" placeholder="Responsable (rol)" className="border border-border p-2 rounded text-sm" value={paso.responsable_rol} onChange={e => actualizarPaso(procIndex, paso.id, 'responsable_rol', e.target.value)} />
+                                <input type="text" placeholder="Área" className="border border-border p-2 rounded text-sm" value={paso.area} onChange={e => actualizarPaso(procIndex, paso.id, 'area', e.target.value)} />
+                            </div>
+                            <div className="grid grid-cols-2 gap-2">
+                                <input type="text" placeholder="Herramienta" className="border border-border p-2 rounded text-sm" value={paso.herramienta} onChange={e => actualizarPaso(procIndex, paso.id, 'herramienta', e.target.value)} />
+                                <label className="flex items-center gap-2 text-sm">
+                                    <input type="checkbox" checked={paso.es_manual} onChange={e => actualizarPaso(procIndex, paso.id, 'es_manual', e.target.checked)} className="rounded" />
+                                    Es manual
+                                </label>
+                            </div>
+                            <input type="text" placeholder="Datos necesarios" className="border border-border p-2 rounded w-full text-sm" value={paso.datos_necesarios} onChange={e => actualizarPaso(procIndex, paso.id, 'datos_necesarios', e.target.value)} />
+                            <input type="text" placeholder="Documentos generados" className="border border-border p-2 rounded w-full text-sm" value={paso.documentos_generados} onChange={e => actualizarPaso(procIndex, paso.id, 'documentos_generados', e.target.value)} />
+                            <input type="text" placeholder="Plazos" className="border border-border p-2 rounded w-full text-sm" value={paso.plazos} onChange={e => actualizarPaso(procIndex, paso.id, 'plazos', e.target.value)} />
+                            <input type="text" placeholder="Tiempo promedio" className="border border-border p-2 rounded w-full text-sm" value={paso.tiempo_promedio} onChange={e => actualizarPaso(procIndex, paso.id, 'tiempo_promedio', e.target.value)} />
+                            <textarea placeholder="Riesgos" className="border border-border p-2 rounded w-full text-sm" rows="2" value={paso.riesgos} onChange={e => actualizarPaso(procIndex, paso.id, 'riesgos', e.target.value)} />
+
+                            {/* Punto de decisión */}
+                            <div className="border-t border-border pt-2">
+                                <label className="flex items-center gap-2 text-sm font-medium text-text">
+                                    <input type="checkbox" checked={paso.tiene_decision} onChange={e => actualizarPaso(procIndex, paso.id, 'tiene_decision', e.target.checked)} className="rounded" />
+                                    Tiene decisión
+                                </label>
+                                {paso.tiene_decision && (
+                                    <div className="ml-6 mt-2 space-y-2 card-warning p-2 rounded border">
+                                        <input type="text" placeholder="Condición" className="border border-border p-2 rounded w-full text-sm" value={paso.condicion_decision} onChange={e => actualizarPaso(procIndex, paso.id, 'condicion_decision', e.target.value)} />
+                                        <div className="flex gap-4">
+                                            <div className="flex-1">
+                                                <h5 className="text-sm font-bold">Sí</h5>
+                                                <StepTree procIndex={procIndex} pasos={pasos} parentId={paso.id} branchType="si" level={level + 1} />
+                                                <button onClick={() => addPaso(procIndex, paso.id, 'si')} className="btn-success px-2 py-1 rounded text-xs mt-1">+ Sí</button>
+                                            </div>
+                                            <div className="flex-1">
+                                                <h5 className="text-sm font-bold">No</h5>
+                                                <StepTree procIndex={procIndex} pasos={pasos} parentId={paso.id} branchType="no" level={level + 1} />
+                                                <button onClick={() => addPaso(procIndex, paso.id, 'no')} className="btn-success px-2 py-1 rounded text-xs mt-1">+ No</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Handoff */}
+                            <div className="border-t border-border pt-2">
+                                <label className="flex items-center gap-2 text-sm font-medium" style={{color: 'var(--color-warning)'}}>
+                                    <input type="checkbox" checked={paso.pasa_a_otra_area} onChange={e => actualizarPaso(procIndex, paso.id, 'pasa_a_otra_area', e.target.checked)} className="rounded" />
+                                    Pasa a otra área
+                                </label>
+                                {paso.pasa_a_otra_area && (
+                                    <div className="ml-6 mt-2 space-y-2 p-2 rounded border" style={{backgroundColor: 'var(--color-warning-light)', borderColor: 'var(--color-warning)'}}>
+                                        <input type="text" placeholder="Área destino" className="border border-border p-2 rounded w-full text-sm" value={paso.area_destino} onChange={e => actualizarPaso(procIndex, paso.id, 'area_destino', e.target.value)} />
+                                        <input type="text" placeholder="¿Qué envía?" className="border border-border p-2 rounded w-full text-sm" value={paso.que_envia} onChange={e => actualizarPaso(procIndex, paso.id, 'que_envia', e.target.value)} />
+                                        <label className="flex items-center gap-2 text-sm">
+                                            <input type="checkbox" checked={paso.espera_respuesta} onChange={e => actualizarPaso(procIndex, paso.id, 'espera_respuesta', e.target.checked)} className="rounded" />
+                                            Espera respuesta
+                                        </label>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* PASO FINAL - SIEMPRE VISIBLE */}
+                            <div className="border-t border-border pt-2 mt-2">
+                                <label className="flex items-center gap-2 text-sm font-medium text-success">
+                                    <input type="checkbox" checked={paso.es_paso_final} onChange={e => actualizarPaso(procIndex, paso.id, 'es_paso_final', e.target.checked)} className="rounded" />
+                                    Este paso finaliza el proceso
+                                </label>
+                                {paso.es_paso_final && (
+                                    <div className="ml-6 mt-1 p-2 card-success rounded border text-sm">
+                                        Proceso termina aquí
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Agregar siguiente solo si NO es final y NO tiene decisión */}
+                            {!paso.es_paso_final && !paso.tiene_decision && (
+                                <div className="mt-2">
+                                    <StepTree procIndex={procIndex} pasos={pasos} parentId={paso.id} branchType={null} level={level + 1} />
+                                    <button onClick={() => addPaso(procIndex, paso.id, null)} className="btn-success px-2 py-1 rounded text-xs flex items-center gap-1 mt-1">
+                                        <Icons.Plus /> Siguiente Paso
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                ))}
+            </div>
+        );
+    };
+
     if (!entrevista) return <div className="p-6 text-text">Cargando...</div>;
 
     return (
         <div className="bg-surface p-6 rounded-lg border border-border max-w-6xl mx-auto">
-            <div className="flex justify-between mb-6">
-                <h2 className="text-2xl font-bold text-text">Formulario Completo de Entrevista</h2>
-                <button onClick={onVolver} className="text-primary hover:underline">Volver</button>
-            </div>
-
+            {/* Parte 1 */}
             <div className="mb-8 p-4 border border-border rounded bg-surface">
                 <h3 className="font-bold text-lg mb-3 text-primary">Parte 1: Identificación del Área</h3>
                 <div className="grid grid-cols-2 gap-4 mb-4 text-text">
                     <div><strong>Área:</strong> {entrevista.area}</div>
                     <div><strong>Fecha:</strong> {new Date(entrevista.fecha).toLocaleDateString('es-AR')}</div>
-                    <div><strong>Hora:</strong> {entrevista.hora ? entrevista.hora.slice(0, 5) : '—'}</div>
+                    <div><strong>Hora:</strong> {entrevista.hora?.slice(0, 5) || '—'}</div>
                     <div><strong>Responsable:</strong> {entrevista.responsable || '—'}</div>
                     <div><strong>Entrevistador:</strong> {entrevista.entrevistador || '—'}</div>
                 </div>
@@ -545,9 +635,10 @@
                 </div>
             </div>
 
+            {/* Procesos */}
             <div className="mb-8">
                 <div className="flex justify-between mb-4">
-                    <h3 className="font-bold text-lg text-primary">Parte 2 y 3: Procesos y Pasos Detallados</h3>
+                    <h3 className="font-bold text-lg text-primary">Parte 2 y 3: Procesos y Pasos</h3>
                     <button onClick={agregarProceso} className="btn-primary px-3 py-1 rounded text-sm flex items-center gap-1">
                         <Icons.Plus /> Agregar Proceso
                     </button>
@@ -571,16 +662,16 @@
                                 <option value="eventual">Eventual</option>
                             </select>
                             <select className="border border-border p-2 rounded" value={proc.prioridad} onChange={e => actualizarProceso(idx, 'prioridad', e.target.value)}>
-                                <option value="baja">Prioridad Baja</option>
-                                <option value="media">Prioridad Media</option>
-                                <option value="alta">Prioridad Alta</option>
+                                <option value="baja">Baja</option>
+                                <option value="media">Media</option>
+                                <option value="alta">Alta</option>
                             </select>
                             <input type="text" placeholder="Área que inicia *" className="border border-border p-2 rounded" value={proc.area_inicio} onChange={e => actualizarProceso(idx, 'area_inicio', e.target.value)} />
-                            <input type="text" placeholder="Áreas intermedias (separadas por coma)" className="border border-border p-2 rounded" value={proc.areas_intermedias} onChange={e => actualizarProceso(idx, 'areas_intermedias', e.target.value)} />
+                            <input type="text" placeholder="Áreas intermedias" className="border border-border p-2 rounded" value={proc.areas_intermedias} onChange={e => actualizarProceso(idx, 'areas_intermedias', e.target.value)} />
                             <input type="text" placeholder="Área que cierra" className="border border-border p-2 rounded" value={proc.area_cierre} onChange={e => actualizarProceso(idx, 'area_cierre', e.target.value)} />
-                            <input type="number" placeholder="Volumen mensual (trámites)" className="border border-border p-2 rounded" value={proc.volumen_mensual} onChange={e => actualizarProceso(idx, 'volumen_mensual', e.target.value)} />
-                            <input type="text" placeholder="Normativa (ley, decreto, etc.)" className="border border-border p-2 rounded" value={proc.normativa} onChange={e => actualizarProceso(idx, 'normativa', e.target.value)} />
-                            <label className="flex items-center gap-2 text-sm border border-border p-2 rounded bg-surface">
+                            <input type="number" placeholder="Volumen mensual" className="border border-border p-2 rounded" value={proc.volumen_mensual} onChange={e => actualizarProceso(idx, 'volumen_mensual', e.target.value)} />
+                            <input type="text" placeholder="Normativa" className="border border-border p-2 rounded" value={proc.normativa} onChange={e => actualizarProceso(idx, 'normativa', e.target.value)} />
+                            <label className="flex items-center gap-2 text-sm">
                                 <input type="checkbox" checked={proc.reporte_obligatorio} onChange={e => actualizarProceso(idx, 'reporte_obligatorio', e.target.checked)} className="rounded" />
                                 Reporte obligatorio
                             </label>
@@ -593,113 +684,26 @@
                             <input type="text" placeholder="Proceso padre" className="border border-border p-2 rounded" value={proc.proceso_padre} onChange={e => actualizarProceso(idx, 'proceso_padre', e.target.value)} />
                             <input type="text" placeholder="Aprobador final" className="border border-border p-2 rounded" value={proc.aprobador_final} onChange={e => actualizarProceso(idx, 'aprobador_final', e.target.value)} />
                         </div>
+
                         <div className="mt-4">
                             <div className="flex justify-between mb-2">
-                                <span className="font-medium text-sm text-text">Pasos del proceso:</span>
-                                <button onClick={() => agregarPaso(idx)} className="btn-success px-2 py-1 rounded text-xs flex items-center gap-1">
-                                    <Icons.Plus /> Agregar Paso
-                                </button>
+                                <span className="font-medium text-sm text-text">Pasos:</span>
+                                {proc.pasos.filter(p => p.parentId === null).length === 0 && (
+                                    <button onClick={() => addPaso(idx, null, null)} className="btn-success px-2 py-1 rounded text-xs flex items-center gap-1">
+                                        <Icons.Plus /> Paso Inicial
+                                    </button>
+                                )}
                             </div>
-                            {proc.pasos.map((paso, pidx) => (
-                                <div key={pidx} className="mb-3 p-3 border border-border rounded bg-surface shadow-sm">
-                                    <div className="flex justify-between mb-2">
-                                        <span className="text-sm font-semibold badge-primary px-2 py-1 rounded">Paso {pidx + 1}</span>
-                                        {proc.pasos.length > 1 && (
-                                            <button onClick={() => eliminarPaso(idx, pidx)} className="btn-danger p-1 rounded">
-                                                <Icons.Trash />
-                                            </button>
-                                        )}
-                                    </div>
-                                    <div className="space-y-2">
-                                        <input type="text" placeholder="¿Qué se hace?" className="border border-border p-2 rounded w-full text-sm" value={paso.descripcion} onChange={e => actualizarPaso(idx, pidx, 'descripcion', e.target.value)} />
-                                        <div className="grid grid-cols-2 gap-2">
-                                            <input type="text" placeholder="¿Quién lo hace? (rol)" className="border border-border p-2 rounded text-sm" value={paso.responsable_rol} onChange={e => actualizarPaso(idx, pidx, 'responsable_rol', e.target.value)} />
-                                            <input type="text" placeholder="Área donde se realiza" className="border border-border p-2 rounded text-sm" value={paso.area} onChange={e => actualizarPaso(idx, pidx, 'area', e.target.value)} />
-                                        </div>
-                                        <div className="grid grid-cols-2 gap-2">
-                                            <input type="text" placeholder="Herramienta/sistema" className="border border-border p-2 rounded text-sm" value={paso.herramienta} onChange={e => actualizarPaso(idx, pidx, 'herramienta', e.target.value)} />
-                                            <label className="flex items-center gap-2 text-sm border border-border p-2 rounded bg-surface text-text">
-                                                <input type="checkbox" checked={paso.es_manual} onChange={e => actualizarPaso(idx, pidx, 'es_manual', e.target.checked)} className="rounded" />
-                                                Es manual
-                                            </label>
-                                        </div>
-                                        <input type="text" placeholder="Datos necesarios" className="border border-border p-2 rounded w-full text-sm" value={paso.datos_necesarios} onChange={e => actualizarPaso(idx, pidx, 'datos_necesarios', e.target.value)} />
-                                        <input type="text" placeholder="Documentos generados" className="border border-border p-2 rounded w-full text-sm" value={paso.documentos_generados} onChange={e => actualizarPaso(idx, pidx, 'documentos_generados', e.target.value)} />
-                                        <input type="text" placeholder="Plazos" className="border border-border p-2 rounded w-full text-sm" value={paso.plazos} onChange={e => actualizarPaso(idx, pidx, 'plazos', e.target.value)} />
-                                        <input type="text" placeholder="Tiempo promedio (ej: 2 días)" className="border border-border p-2 rounded w-full text-sm" value={paso.tiempo_promedio} onChange={e => actualizarPaso(idx, pidx, 'tiempo_promedio', e.target.value)} />
-                                        <textarea placeholder="Riesgos / Problemas" className="border border-border p-2 rounded w-full text-sm" rows="2" value={paso.riesgos} onChange={e => actualizarPaso(idx, pidx, 'riesgos', e.target.value)} />
-                                        <div className="border-t border-border pt-2">
-                                            <label className="flex items-center gap-2 text-sm font-medium text-text">
-                                                <input type="checkbox" checked={paso.tiene_decision} onChange={e => actualizarPaso(idx, pidx, 'tiene_decision', e.target.checked)} className="rounded" />
-                                                Tiene punto de decisión
-                                            </label>
-                                            {paso.tiene_decision && (
-                                                <div className="ml-6 mt-2 space-y-2 card-warning p-2 rounded border">
-                                                    <input type="text" placeholder="Condición a evaluar" className="border border-border p-2 rounded w-full text-sm" value={paso.condicion_decision} onChange={e => actualizarPaso(idx, pidx, 'condicion_decision', e.target.value)} />
-                                                    <input type="text" placeholder="Si cumple → va a" className="border border-border p-2 rounded w-full text-sm" value={paso.destino_si_cumple} onChange={e => actualizarPaso(idx, pidx, 'destino_si_cumple', e.target.value)} />
-                                                    <input type="text" placeholder="Si NO cumple → va a" className="border border-border p-2 rounded w-full text-sm" value={paso.destino_si_no_cumple} onChange={e => actualizarPaso(idx, pidx, 'destino_si_no_cumple', e.target.value)} />
-                                                </div>
-                                            )}
-                                        </div>
-                                        <div className="border-t border-border pt-2">
-                                            <label className="flex items-center gap-2 text-sm font-medium" style={{color: 'var(--color-warning)'}}>
-                                                <input type="checkbox" checked={paso.pasa_a_otra_area} onChange={e => actualizarPaso(idx, pidx, 'pasa_a_otra_area', e.target.checked)} className="rounded" />
-                                                Pasa a otra área (crea handoff automático)
-                                            </label>
-                                            {paso.pasa_a_otra_area && (
-                                                <div className="ml-6 mt-2 space-y-2 p-2 rounded border" style={{backgroundColor: 'var(--color-warning-light)', borderColor: 'var(--color-warning)'}}>
-                                                    <input type="text" placeholder="Área destino" className="border border-border p-2 rounded w-full text-sm" value={paso.area_destino} onChange={e => actualizarPaso(idx, pidx, 'area_destino', e.target.value)} />
-                                                    <input type="text" placeholder="¿Qué le envían?" className="border border-border p-2 rounded w-full text-sm" value={paso.que_envia} onChange={e => actualizarPaso(idx, pidx, 'que_envia', e.target.value)} />
-                                                    <label className="flex items-center gap-2 text-sm text-text">
-                                                        <input type="checkbox" checked={paso.espera_respuesta} onChange={e => actualizarPaso(idx, pidx, 'espera_respuesta', e.target.checked)} className="rounded" />
-                                                        El proceso espera respuesta de esa área
-                                                    </label>
-                                                </div>
-                                            )}
-                                        </div>
-                                        <div className="border-t border-border pt-2 mt-2">
-    <label className="flex items-center gap-2 text-sm font-medium text-text">
-        <input 
-            type="checkbox" 
-            checked={paso.es_paso_final} 
-            onChange={e => actualizarPaso(idx, pidx, 'es_paso_final', e.target.checked)} 
-            className="rounded" 
-        />
-        Este paso finaliza el proceso de esta área
-    </label>
-    {paso.es_paso_final && (
-        <div className="ml-6 mt-2 p-2 card-success rounded border text-sm text-text">
-            ✓ Marcado como paso final - El proceso termina aquí
-        </div>
-    )}
-</div>
-                                    </div>
-                                </div>
-                            ))}
+                            <StepTree procIndex={idx} pasos={proc.pasos} parentId={null} branchType={null} />
                         </div>
                     </div>
                 ))}
             </div>
 
-            <div className="mb-8 p-4 border border-border rounded bg-surface">
-                <h3 className="font-bold text-lg mb-3 text-primary">Parte 4 y 5: Información Complementaria y Cierre</h3>
-                <div className="space-y-3">
-                    <textarea placeholder="Interacciones con otras áreas (qué envían/reciben)" className="border border-border p-2 rounded w-full" rows="3" value={complemento.interacciones_externas} onChange={e => setComplemento({...complemento, interacciones_externas: e.target.value})} />
-                    <textarea placeholder="Sistemas/herramientas que usan (Excel, Word, etc.)" className="border border-border p-2 rounded w-full" rows="2" value={complemento.sistemas_usados} onChange={e => setComplemento({...complemento, sistemas_usados: e.target.value})} />
-                    <label className="flex items-center gap-2 text-text">
-                        <input type="checkbox" checked={complemento.tiene_manuales} onChange={e => setComplemento({...complemento, tiene_manuales: e.target.checked})} className="rounded" />
-                        Tienen manuales de procedimientos escritos
-                    </label>
-                    <input type="text" placeholder="Resolución/Formularios oficiales (número)" className="border border-border p-2 rounded w-full" value={complemento.resolucion_formularios} onChange={e => setComplemento({...complemento, resolucion_formularios: e.target.value})} />
-                    <input type="text" placeholder="Entrevistado(s)" className="border border-border p-2 rounded w-full" value={complemento.entrevistados} onChange={e => setComplemento({...complemento, entrevistados: e.target.value})} />
-                    <textarea placeholder="Acuerdos (ej: enviar resumen en 3 días)" className="border border-border p-2 rounded w-full" rows="2" value={complemento.acuerdos} onChange={e => setComplemento({...complemento, acuerdos: e.target.value})} />
-                    <textarea placeholder="Observaciones generales" className="border border-border p-2 rounded w-full" rows="2" value={complemento.observaciones_generales} onChange={e => setComplemento({...complemento, observaciones_generales: e.target.value})} />
-                </div>
-            </div>
-
-            <div className="text-center">
-                <button onClick={guardarEntrevista} disabled={loading} className={'px-6 py-3 rounded font-medium text-white ' + (loading ? 'bg-gray-400' : 'btn-success')}>
-                    {loading ? 'Guardando...' : 'Guardar Entrevista Completa'}
+            <div className="flex justify-end gap-3">
+                <button onClick={onVolver} className="px-4 py-2 border border-border rounded text-text-secondary">Cancelar</button>
+                <button onClick={guardarEntrevista} disabled={loading} className="btn-success px-6 py-2 rounded font-medium">
+                    {loading ? 'Guardando...' : 'Guardar Entrevista'}
                 </button>
             </div>
         </div>
@@ -781,7 +785,49 @@
             </div>
         </div>
     );
+// Dentro de VerEntrevista
+const StepTreeView = ({ pasos, parentId, branchType, level = 0 }) => {
+    const children = pasos.filter(p => p.parent_id === parentId && p.branch_type === branchType).sort((a, b) => a.orden - b.orden);
+    return (
+        <div style={{ marginLeft: `${level * 16}px` }}>
+            {children.map(paso => (
+                <div key={paso.id} className="mb-3 p-3 border border-border rounded bg-surface">
+                    <div className="font-medium text-text">{paso.descripcion}</div>
+                    {paso.responsable_rol && <div className="text-sm text-text-secondary">Rol: {paso.responsable_rol}</div>}
+                    {paso.area && <div className="text-sm text-text-secondary">Área: {paso.area}</div>}
+                    {paso.tiempo_promedio && <div className="text-sm text-text-secondary">Tiempo: {paso.tiempo_promedio}</div>}
+                    {paso.es_paso_final && <div className="text-sm text-success font-medium">Paso Final</div>}
 
+                    {paso.tiene_decision && (
+                        <div className="mt-2 p-2 card-warning rounded">
+                            <div className="font-medium">Decisión: {paso.condicion_decision}</div>
+                            <div className="flex gap-4 mt-2">
+                                <div className="flex-1">
+                                    <strong>Sí:</strong>
+                                    <StepTreeView pasos={pasos} parentId={paso.id} branchType="si" level={level + 1} />
+                                </div>
+                                <div className="flex-1">
+                                    <strong>No:</strong>
+                                    <StepTreeView pasos={pasos} parentId={paso.id} branchType="no" level={level + 1} />
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {paso.pasa_a_otra_area && (
+                        <div className="mt-2 p-2 rounded border" style={{backgroundColor: 'var(--color-warning-light)'}}>
+                            <div className="text-sm">Pasa a: {paso.area_destino}</div>
+                        </div>
+                    )}
+
+                    {!paso.tiene_decision && (
+                        <StepTreeView pasos={pasos} parentId={paso.id} branchType={null} level={level + 1} />
+                    )}
+                </div>
+            ))}
+        </div>
+    );
+};
     return (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
             <div className="bg-surface p-6 rounded-lg border border-border max-w-4xl w-full max-h-[90vh] overflow-y-auto">
@@ -915,218 +961,95 @@
             );
         }
 
-     function DetalleProceso({ procesoId, onVolver }) {
+    function DetalleProceso({ procesoId, onVolver }) {
     const [proceso, setProceso] = useState(null);
-    const [entrevista, setEntrevista] = useState(null);
     const [pasos, setPasos] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [mermaidSvg, setMermaidSvg] = useState('');
     const diagramRef = useRef(null);
 
     useEffect(() => {
-        let cancelado = false;
         async function cargar() {
-            try {
-                const { data: proc } = await supabase.from('procesos').select('*').eq('id', procesoId).single();
-                if (!proc || cancelado) return;
-                setProceso(proc);
-
-                const { data: ent } = await supabase.from('entrevistas').select('*').eq('id', proc.entrevista_id).single();
-                if (!cancelado) setEntrevista(ent);
-
-                const { data: pasosData } = await supabase.from('pasos_proceso').select('*').eq('proceso_id', procesoId).order('orden');
-                if (!cancelado) setPasos(pasosData || []);
-            } catch (err) { console.error(err); }
-            finally { if (!cancelado) setLoading(false); }
+            const { data: proc } = await supabase.from('procesos').select('*').eq('id', procesoId).single();
+            const { data: pasosData } = await supabase.from('pasos_proceso').select('*').eq('proceso_id', procesoId);
+            setProceso(proc);
+            setPasos(pasosData || []);
+            setLoading(false);
         }
         cargar();
-        return () => { cancelado = true; };
     }, [procesoId]);
 
     useEffect(() => {
         if (loading || !pasos.length || !window.mermaid || !diagramRef.current) return;
 
-        const renderDiagram = async () => {
+        const renderMermaid = async () => {
+            let code = `graph TD\n  A[Inicio]:::inicio --> `;
             const escape = (s) => (s || '').replace(/"/g, '\\"').replace(/\n/g, ' ');
-            let code = `graph TD\n Inicio((Inicio)):::inicio\n Fin((Fin)):::fin\n`;
-            let last = 'Inicio';
 
-            pasos.forEach((p, i) => {
-                const id = `P${i+1}`;
-                code += ` ${id}["${escape(p.descripcion)}"]:::paso\n ${last} --> ${id}\n`;
+            const addStep = (step, fromId) => {
+                const id = `S${step.id}`;
+                code += `${fromId} --> ${id}["${escape(step.descripcion)}"]:::paso\n`;
 
-                if (p.tiene_decision) {
-                    const c = `C${i+1}`;
-                    code += ` ${c}{${escape(p.condicion_decision)}}:::decision\n ${id} --> ${c}\n`;
-                    if (p.destino_si_cumple) code += ` ${c} -->|Sí| SI${i+1}["${escape(p.destino_si_cumple)}"]:::destino\n`;
-                    if (p.destino_si_no_cumple) code += ` ${c} -->|No| NO${i+1}["${escape(p.destino_si_no_cumple)}"]:::destino\n`;
-                } else if (p.pasa_a_otra_area && p.area_destino) {
-                    code += ` ${id} --> H${i+1}["→ ${escape(p.area_destino)}"]:::handoff\n`;
-                    code += ` H${i+1} --> Fin\n`;
-                } else if (p.es_paso_final) {
-                    code += ` ${id} --> Fin\n`;
-                } else if (i === pasos.length - 1) {
-                    code += ` ${id} --> Fin\n`;
+                if (step.tiene_decision) {
+                    const decisionId = `D${step.id}`;
+                    code += `${id} --> ${decisionId}{${escape(step.condicion_decision)}}:::decision\n`;
+
+                    const siSteps = pasos.filter(s => s.parent_id === step.id && s.branch_type === 'si');
+                    const noSteps = pasos.filter(s => s.parent_id === step.id && s.branch_type === 'no');
+
+                    if (siSteps.length > 0) {
+                        siSteps.forEach(s => addStep(s, decisionId));
+                    } else {
+                        code += `${decisionId} -->|Sí| F[Fin]:::fin\n`;
+                    }
+
+                    if (noSteps.length > 0) {
+                        noSteps.forEach(s => addStep(s, decisionId));
+                    } else {
+                        code += `${decisionId} -->|No| F[Fin]:::fin\n`;
+                    }
+                } else if (step.es_paso_final) {
+                    code += `${id} --> F[Fin]:::fin\n`;
+                } else if (step.pasa_a_otra_area) {
+                    const handoffId = `H${step.id}`;
+                    code += `${id} --> ${handoffId}["→ ${escape(step.area_destino)}"]:::handoff\n`;
+                    code += `${handoffId} --> F[Fin]:::fin\n`;
+                } else {
+                    const next = pasos.find(s => s.parent_id === step.id && !s.branch_type);
+                    if (next) addStep(next, id);
                 }
-                last = id;
-            });
+            };
 
-            code += `\n classDef inicio fill:#1e40af,color:white\n classDef fin fill:#16a34a,color:white\n classDef paso fill:#dbeafe,stroke:#3b82f6\n classDef decision fill:#fef3c7,stroke:#f59e0b,stroke-dasharray:5,5\n classDef destino fill:#fecaca,stroke:#ef4444\n classDef handoff fill:#fff7ed,stroke:#ea580c\n`;
+            const root = pasos.find(s => !s.parent_id);
+            if (root) addStep(root, 'A');
+            else code += `A --> F[Fin]:::fin\n`;
 
-            try {
-                const { svg } = await window.mermaid.render(`diag-${procesoId}`, code);
-                setMermaidSvg(svg);
-            } catch (err) {
-                console.error('Mermaid error:', err);
-                setMermaidSvg(`<div class="text-danger p-4">Error: ${err.message}</div>`);
-            }
+            code += `classDef inicio fill:#10b981,stroke:#059669,color:white\n`;
+            code += `classDef fin fill:#ef4444,stroke:#dc2626,color:white\n`;
+            code += `classDef paso fill:#3b82f6,stroke:#2563eb,color:white\n`;
+            code += `classDef decision fill:#f59e0b,stroke:#d97706,color:white\n`;
+            code += `classDef handoff fill:#8b5cf6,stroke:#7c3aed,color:white\n`;
+
+            const { svg } = await window.mermaid.render('mermaid-diagram', code);
+            diagramRef.current.innerHTML = svg;
         };
 
-        const timer = setTimeout(renderDiagram, 100);
-        return () => clearTimeout(timer);
-    }, [loading, pasos, procesoId]);
+        renderMermaid();
+    }, [loading, pasos]);
 
-    if (loading) return <div className="p-6 text-center text-text">Cargando detalles del proceso...</div>;
-    if (!proceso) return <div className="p-6 text-center text-text">Proceso no encontrado</div>;
+    if (loading) return <div className="p-6 text-center">Cargando...</div>;
+    if (!proceso) return <div className="p-6 text-center">No encontrado</div>;
 
     return (
-        <div className="bg-surface p-6 rounded border border-border max-w-6xl mx-auto">
-            <div className="flex justify-between mb-6">
-                <div>
-                    <h2 className="text-2xl font-bold text-text">{proceso.nombre}</h2>
-                    <p className="text-sm text-text-secondary mt-1">
-                        {proceso.area_inicio}
-                        {proceso.areas_intermedias && ` → ${proceso.areas_intermedias}`}
-                        {proceso.area_cierre && ` → ${proceso.area_cierre}`}
-                    </p>
-                </div>
-                <button onClick={onVolver} className="text-primary hover:underline">Volver</button>
+        <div className="bg-surface p-6 rounded-lg border border-border max-w-6xl mx-auto">
+            <button onClick={onVolver} className="mb-4 text-primary hover:underline">← Volver</button>
+            <h2 className="text-2xl font-bold mb-4">{proceso.nombre}</h2>
+            <div className="mb-6 grid grid-cols-2 gap-4 text-sm">
+                <div><strong>Área inicio:</strong> {proceso.area_inicio}</div>
+                <div><strong>Frecuencia:</strong> {proceso.frecuencia}</div>
+                <div><strong>Prioridad:</strong> {proceso.prioridad}</div>
+                <div><strong>Potencial digital:</strong> {proceso.potencial_digital}</div>
             </div>
-
-            {entrevista && (
-                <div className="mb-6 p-4 card-info rounded border">
-                    <h3 className="font-bold text-lg mb-2 text-text">Entrevista asociada</h3>
-                    <div className="grid grid-cols-2 gap-3 text-sm text-text">
-                        <div><strong>Área:</strong> {entrevista.area}</div>
-                        <div><strong>Fecha:</strong> {new Date(entrevista.fecha).toLocaleDateString('es-AR')}</div>
-                        {entrevista.hora && <div><strong>Hora:</strong> {entrevista.hora.slice(0, 5)}</div>}
-                        <div><strong>Entrevistador:</strong> {entrevista.entrevistador || '—'}</div>
-                        <div><strong>Responsable:</strong> {entrevista.responsable || '—'}</div>
-                        <div><strong>Estado:</strong> {entrevista.estado}</div>
-                    </div>
-                </div>
-            )}
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8 p-4 bg-surface rounded border">
-                <div><strong>Frecuencia:</strong> <span className="capitalize">{proceso.frecuencia}</span></div>
-                <div><strong>Prioridad:</strong> <span className="capitalize">{proceso.prioridad}</span></div>
-                <div><strong>Volumen mensual:</strong> {proceso.volumen_mensual ? `${proceso.volumen_mensual} trámites` : '—'}</div>
-                <div><strong>Normativa:</strong> {proceso.normativa || '—'}</div>
-                <div><strong>Reporte obligatorio:</strong> <span className={proceso.reporte_obligatorio ? 'text-success' : 'text-text-secondary'}>{proceso.reporte_obligatorio ? 'Sí' : 'No'}</span></div>
-                <div><strong>Potencial digital:</strong>
-                    {proceso.potencial_digital === 'si' && <span className="text-success">100% digitalizable</span>}
-                    {proceso.potencial_digital === 'parcial' && <span className="text-warning">Parcial</span>}
-                    {proceso.potencial_digital === 'no' && <span className="text-danger">Requiere físico</span>}
-                </div>
-                <div><strong>Documento final:</strong> {proceso.documento_final || '—'}</div>
-                <div><strong>Proceso padre:</strong> {proceso.proceso_padre || '—'}</div>
-                <div><strong>Aprobador final:</strong> {proceso.aprobador_final || '—'}</div>
-            </div>
-
-            <div className="mb-6">
-                <h3 className="font-bold text-lg mb-4 text-text">Diagrama de Flujo (Visual)</h3>
-                {pasos.length === 0 ? (
-                    <p className="text-text-secondary italic">Este proceso no tiene pasos definidos.</p>
-                ) : (
-                    <div className="space-y-4">
-                        {pasos.map((paso, idx) => (
-                            <div key={paso.id}>
-                                <div className="flex items-start gap-4">
-                                    <div className="flex-shrink-0 w-8 h-8 btn-primary rounded-full flex items-center justify-center font-bold text-white">
-                                        {paso.orden}
-                                    </div>
-                                    <div className="flex-1 border-2 rounded-lg p-4 bg-surface border-border">
-                                        <h4 className="font-semibold mb-2 text-text">{paso.descripcion}</h4>
-                                        <div className="grid grid-cols-2 gap-3 text-sm">
-                                            {paso.responsable_rol && <div className="text-text"><span className="text-text-secondary">Responsable:</span> {paso.responsable_rol}</div>}
-                                            {paso.area && <div className="text-text"><span className="text-text-secondary">Área:</span> <span className="font-medium">{paso.area}</span></div>}
-                                            {paso.herramienta && <div className="text-text"><span className="text-text-secondary">Herramienta:</span> {paso.herramienta}</div>}
-                                            {paso.tiempo_promedio && <div className="text-text"><span className="text-text-secondary">Tiempo promedio:</span> {paso.tiempo_promedio}</div>}
-                                        </div>
-                                        {paso.datos_necesarios && <div className="mt-2 text-sm text-text"><span className="text-text-secondary">Datos necesarios:</span> {paso.datos_necesarios}</div>}
-                                        {paso.documentos_generados && <div className="mt-1 text-sm text-text"><span className="text-text-secondary">Documentos:</span> {paso.documentos_generados}</div>}
-                                        {paso.riesgos && <div className="mt-1 text-sm text-text"><span className="text-text-secondary">Riesgos:</span> {paso.riesgos}</div>}
-                                    </div>
-                                </div>
-
-                                {paso.tiene_decision && (
-                                    <div className="ml-12 mt-2 mb-2">
-                                        <div className="border-2 rounded-lg p-3 card-warning border" style={{borderColor: 'var(--color-warning)'}}>
-                                            <div className="font-semibold text-sm mb-2 text-text">Decisión: {paso.condicion_decision}</div>
-                                            <div className="flex gap-4 text-sm">
-                                                {paso.destino_si_cumple && <div className="flex-1 text-text"><span style={{color: 'var(--color-success)'}}>Sí cumple:</span> {paso.destino_si_cumple}</div>}
-                                                {paso.destino_si_no_cumple && <div className="flex-1 text-text"><span style={{color: 'var(--color-danger)'}}>Si no cumple:</span> {paso.destino_si_no_cumple}</div>}
-                                            </div>
-                                        </div>
-                                    </div>
-                                )}
-
-                                {paso.pasa_a_otra_area && paso.area_destino && (
-                                    <div className="ml-12 mt-2 mb-2">
-                                        <div className="border-2 rounded-lg p-3" style={{backgroundColor: 'var(--color-warning-light)', borderColor: 'var(--color-warning)'}}>
-                                            <div className="flex items-center gap-2 font-semibold text-sm mb-1 text-text">
-                                                Pasa a: <span style={{color: 'var(--color-warning)'}}>{paso.area_destino}</span>
-                                                <span className="ml-2 px-2 py-0.5 bg-red-100 text-red-700 rounded text-xs">FIN del proceso</span>
-                                            </div>
-                                            {paso.que_envia && <div className="text-sm text-text">Envía: {paso.que_envia}</div>}
-                                            {paso.espera_respuesta && <div className="text-sm mt-1" style={{color: 'var(--color-warning)'}}>Espera respuesta</div>}
-                                        </div>
-                                    </div>
-                                )}
-
-                                {paso.es_paso_final && !paso.pasa_a_otra_area && (
-                                    <div className="ml-12 mt-2 mb-2">
-                                        <div className="border-2 rounded-lg p-3 card-success border flex items-center gap-2">
-                                            <Icons.Check />
-                                            <span className="font-semibold text-sm text-text">
-                                                Paso final del proceso
-                                            </span>
-                                        </div>
-                                    </div>
-                                )}
-
-                                {idx < pasos.length - 1 && (
-                                    <div className="ml-4 h-6 w-0.5 bg-border"></div>
-                                )}
-                            </div>
-                        ))}
-                    </div>
-                )}
-            </div>
-
-            <div className="mb-6">
-                <h3 className="font-bold text-lg mb-2 text-text">Diagrama UML (Mermaid)</h3>
-                <div ref={diagramRef} className="p-4 bg-surface rounded border border-border min-h-64 mermaid-diagram">
-                    {mermaidSvg ? (
-                        <div dangerouslySetInnerHTML={{ __html: mermaidSvg }} />
-                    ) : (
-                        <div className="text-text-secondary">Generando diagrama...</div>
-                    )}
-                </div>
-            </div>
-
-            <div className="mt-6 p-4 rounded border" style={{backgroundColor: 'var(--color-warning-light)', borderColor: 'var(--color-warning)'}}>
-                <h4 className="font-semibold mb-2 text-text">Handoffs en este proceso:</h4>
-                {pasos.filter(p => p.pasa_a_otra_area).length > 0 ? (
-                    <ul className="text-sm space-y-1 text-text">
-                        {pasos.filter(p => p.pasa_a_otra_area).map(p => (
-                            <li key={p.id}>• <strong>{p.area}</strong> → <strong>{p.area_destino}</strong> {p.que_envia && `(${p.que_envia})`}</li>
-                        ))}
-                    </ul>
-                ) : (
-                    <p className="text-sm text-text-secondary">No hay transiciones entre áreas en este proceso.</p>
-                )}
-            </div>
+            <div ref={diagramRef} className="mermaid-diagram"></div>
         </div>
     );
 }
@@ -1287,22 +1210,29 @@
             );
         }
 
-        function EditarProceso({ procesoId, onCerrar }) {
+       function EditarProceso({ procesoId, onCerrar }) {
     const [proceso, setProceso] = useState(null);
     const [pasos, setPasos] = useState([]);
+    const originalPasos = useRef([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         async function cargar() {
             try {
                 const { data: procData } = await supabase.from('procesos').select('*').eq('id', procesoId).single();
-                if (!procData) return;
-                setProceso(procData);
+                if (!procData) throw new Error('Proceso no encontrado');
 
-                const { data: pasosData } = await supabase.from('pasos_proceso').select('*').eq('proceso_id', procesoId).order('orden', { ascending: true });
-                setPasos(pasosData || []);
+                const { data: pasosData } = await supabase.from('pasos_proceso').select('*').eq('proceso_id', procesoId);
+                setProceso(procData);
+                originalPasos.current = pasosData || [];
+                setPasos((pasosData || []).map(p => ({
+                    ...p,
+                    id: p.id,
+                    parentId: p.parent_id,
+                    branchType: p.branch_type
+                })));
             } catch (err) {
-                console.error('Error al cargar proceso:', err);
+                alert('Error al cargar: ' + err.message);
             } finally {
                 setLoading(false);
             }
@@ -1314,44 +1244,46 @@
         setProceso(prev => ({ ...prev, [campo]: valor }));
     };
 
-    const handleActualizarPaso = (index, campo, valor) => {
-        const nuevos = [...pasos];
-        nuevos[index] = { ...nuevos[index], [campo]: valor };
-        setPasos(nuevos);
-    };
-
-    const handleAgregarPaso = () => {
-        const nuevoPaso = {
-            descripcion: '',
-            responsable_rol: '',
-            area: '',
-            herramienta: '',
-            es_manual: true,
-            datos_necesarios: '',
-            documentos_generados: '',
-            plazos: '',
+    const addPaso = (parentId, branchType) => {
+        const siblings = pasos.filter(p => p.parentId === parentId && p.branchType === branchType);
+        const newOrden = siblings.length + 1;
+        const newStep = {
+            id: `new_${Date.now()}`,
+            parentId,
+            branchType,
+            orden: newOrden,
+            descripcion: '', responsable_rol: '', area: '', herramienta: '', es_manual: true,
+            datos_necesarios: '', documentos_generados: '', plazos: '',
             tiempo_promedio: '',
             riesgos: '',
-            tiene_decision: false,
-            condicion_decision: '',
-            destino_si_cumple: '',
-            destino_si_no_cumple: '',
-            pasa_a_otra_area: false,
-            area_destino: '',
-            que_envia: '',
-            espera_respuesta: false,
-            es_paso_final: false  // ✅ NUEVO
+            tiene_decision: false, condicion_decision: '',
+            pasa_a_otra_area: false, area_destino: '', que_envia: '', espera_respuesta: false,
+            es_paso_final: false
         };
-        setPasos([...pasos, nuevoPaso]);
+        setPasos([...pasos, newStep]);
     };
 
-    const handleEliminarPaso = (index) => {
-        setPasos(pasos.filter((_, i) => i !== index));
+    const eliminarPaso = (stepId) => {
+        const toRemove = [];
+        const findDescendants = (id) => {
+            toRemove.push(id);
+            pasos.forEach(s => {
+                if (s.parentId === id) findDescendants(s.id);
+            });
+        };
+        findDescendants(stepId);
+        setPasos(pasos.filter(s => !toRemove.includes(s.id)));
+    };
+
+    const actualizarPaso = (stepId, campo, valor) => {
+        setPasos(pasos.map(s => s.id === stepId ? { ...s, [campo]: valor } : s));
     };
 
     const handleGuardar = async () => {
         if (!proceso) return;
+        setLoading(true);
         try {
+            // 1. Actualizar proceso
             await supabase.from('procesos').update({
                 nombre: proceso.nombre,
                 frecuencia: proceso.frecuencia,
@@ -1369,193 +1301,279 @@
                 estado_relevamiento: proceso.estado_relevamiento
             }).eq('id', proceso.id);
 
-            for (const paso of pasos) {
-                if (paso.id) {
-                    await supabase.from('pasos_proceso').update({
-                        descripcion: paso.descripcion,
-                        responsable_rol: paso.responsable_rol,
-                        area: paso.area,
-                        herramienta: paso.herramienta,
-                        es_manual: paso.es_manual,
-                        datos_necesarios: paso.datos_necesarios,
-                        documentos_generados: paso.documentos_generados,
-                        plazos: paso.plazos,
-                        tiempo_promedio: paso.tiempo_promedio,
-                        riesgos: paso.riesgos,
-                        tiene_decision: paso.tiene_decision,
-                        condicion_decision: paso.condicion_decision,
-                        destino_si_cumple: paso.destino_si_cumple,
-                        destino_si_no_cumple: paso.destino_si_no_cumple,
-                        pasa_a_otra_area: paso.pasa_a_otra_area,
-                        area_destino: paso.area_destino,
-                        que_envia: paso.que_envia,
-                        espera_respuesta: paso.espera_respuesta,
-                        es_paso_final: paso.es_paso_final  // ✅ NUEVO
-                    }).eq('id', paso.id);
-                } else {
-                    await supabase.from('pasos_proceso').insert([{
-                        proceso_id: proceso.id,
-                        orden: paso.orden || pasos.indexOf(paso) + 1,
-                        descripcion: paso.descripcion,
-                        responsable_rol: paso.responsable_rol,
-                        area: paso.area,
-                        herramienta: paso.herramienta,
-                        es_manual: paso.es_manual,
-                        datos_necesarios: paso.datos_necesarios,
-                        documentos_generados: paso.documentos_generados,
-                        plazos: paso.plazos,
-                        tiempo_promedio: paso.tiempo_promedio,
-                        riesgos: paso.riesgos,
-                        tiene_decision: paso.tiene_decision,
-                        condicion_decision: paso.condicion_decision,
-                        destino_si_cumple: paso.destino_si_cumple,
-                        destino_si_no_cumple: paso.destino_si_no_cumple,
-                        pasa_a_otra_area: paso.pasa_a_otra_area,
-                        area_destino: paso.area_destino,
-                        que_envia: paso.que_envia,
-                        espera_respuesta: paso.espera_respuesta,
-                        es_paso_final: paso.es_paso_final  // ✅ NUEVO
-                    }]);
+            // 2. Detectar pasos eliminados
+            const currentDbIds = pasos.filter(s => typeof s.id === 'number').map(s => s.id);
+            const deletedIds = originalPasos.current.filter(o => !currentDbIds.includes(o.id)).map(o => o.id);
+            if (deletedIds.length > 0) {
+                await supabase.from('pasos_proceso').delete().in('id', deletedIds);
+            }
+
+            // 3. Insertar nuevos pasos
+            const newSteps = pasos.filter(s => typeof s.id !== 'number');
+            const localToDb = {};
+            let insertedData = [];
+
+            if (newSteps.length > 0) {
+                const insertData = newSteps.map(s => ({
+                    proceso_id: proceso.id,
+                    orden: s.orden,
+                    descripcion: s.descripcion,
+                    responsable_rol: s.responsable_rol || null,
+                    area: s.area || null,
+                    herramienta: s.herramienta || null,
+                    es_manual: s.es_manual,
+                    datos_necesarios: s.datos_necesarios || null,
+                    documentos_generados: s.documentos_generados || null,
+                    plazos: s.plazos || null,
+                    tiempo_promedio: s.tiempo_promedio || null,
+                    riesgos: s.riesgos || null,
+                    tiene_decision: s.tiene_decision,
+                    condicion_decision: s.condicion_decision || null,
+                    pasa_a_otra_area: s.pasa_a_otra_area,
+                    area_destino: s.area_destino || null,
+                    que_envia: s.que_envia || null,
+                    espera_respuesta: s.espera_respuesta,
+                    es_paso_final: s.es_paso_final || false,
+                    branch_type: s.branchType || null,
+                    parent_id: null
+                }));
+
+                const { data } = await supabase.from('pasos_proceso').insert(insertData).select();
+                insertedData = data;
+                newSteps.forEach((s, i) => {
+                    localToDb[s.id] = insertedData[i].id;
+                });
+            }
+
+            // 4. Mapear todos los IDs (DB y nuevos)
+            pasos.forEach(s => {
+                if (typeof s.id === 'number') {
+                    localToDb[s.id] = s.id;
+                }
+            });
+
+            // 5. Actualizar todos los pasos (nuevos y existentes)
+            for (const s of pasos) {
+                const dbId = localToDb[s.id];
+                const dbParent = s.parentId ? localToDb[s.parentId] : null;
+
+                await supabase.from('pasos_proceso').update({
+                    orden: s.orden,
+                    descripcion: s.descripcion,
+                    responsable_rol: s.responsable_rol || null,
+                    area: s.area || null,
+                    herramienta: s.herramienta || null,
+                    es_manual: s.es_manual,
+                    datos_necesarios: s.datos_necesarios || null,
+                    documentos_generados: s.documentos_generados || null,
+                    plazos: s.plazos || null,
+                    tiempo_promedio: s.tiempo_promedio || null,
+                    riesgos: s.riesgos || null,
+                    tiene_decision: s.tiene_decision,
+                    condicion_decision: s.condicion_decision || null,
+                    pasa_a_otra_area: s.pasa_a_otra_area,
+                    area_destino: s.area_destino || null,
+                    que_envia: s.que_envia || null,
+                    espera_respuesta: s.espera_respuesta,
+                    es_paso_final: s.es_paso_final || false,
+                    branch_type: s.branchType || null,
+                    parent_id: dbParent
+                }).eq('id', dbId);
+            }
+
+            // 6. Recrear handoffs (opcional: borrar y volver a crear)
+            await supabase.from('handoffs').delete().eq('proceso', proceso.nombre);
+            for (const step of pasos) {
+                if (step.pasa_a_otra_area && step.area_destino && step.area) {
+                    await supabase.from('handoffs').insert({
+                        proceso: proceso.nombre,
+                        area_origen: step.area,
+                        area_destino: step.area_destino,
+                        que_se_envia: step.que_envia || null,
+                        validado_por_origen: false,
+                        validado_por_destino: false,
+                        entrevista_id: proceso.entrevista_id
+                    });
                 }
             }
+
             alert('Proceso actualizado exitosamente');
             onCerrar();
         } catch (err) {
             alert('Error: ' + err.message);
+        } finally {
+            setLoading(false);
         }
+    };
+
+    // === StepTree (idéntico al de FormularioEntrevista) ===
+    const StepTree = ({ pasos, parentId, branchType, level = 0 }) => {
+        const childSteps = pasos.filter(p => p.parentId === parentId && p.branchType === branchType).sort((a, b) => a.orden - b.orden);
+        return (
+            <div style={{ marginLeft: `${level * 20}px` }}>
+                {childSteps.map((paso) => (
+                    <div key={paso.id} className="mb-4 p-4 border border-border rounded bg-surface shadow-sm">
+                        <div className="flex justify-between mb-2">
+                            <span className="text-sm font-semibold badge-primary px-2 py-1 rounded">
+                                Paso (ID: {typeof paso.id === 'number' ? paso.id : 'nuevo'})
+                            </span>
+                            <button onClick={() => eliminarPaso(paso.id)} className="btn-danger p-1 rounded">
+                                <Icons.Trash />
+                            </button>
+                        </div>
+
+                        <div className="space-y-2">
+                            <input type="text" placeholder="Descripción *" className="border border-border p-2 rounded w-full text-sm" value={paso.descripcion} onChange={e => actualizarPaso(paso.id, 'descripcion', e.target.value)} />
+                            <div className="grid grid-cols-2 gap-2">
+                                <input type="text" placeholder="Responsable (rol)" className="border border-border p-2 rounded text-sm" value={paso.responsable_rol} onChange={e => actualizarPaso(paso.id, 'responsable_rol', e.target.value)} />
+                                <input type="text" placeholder="Área" className="border border-border p-2 rounded text-sm" value={paso.area} onChange={e => actualizarPaso(paso.id, 'area', e.target.value)} />
+                            </div>
+                            <div className="grid grid-cols-2 gap-2">
+                                <input type="text" placeholder="Herramienta" className="border border-border p-2 rounded text-sm" value={paso.herramienta} onChange={e => actualizarPaso(paso.id, 'herramienta', e.target.value)} />
+                                <label className="flex items-center gap-2 text-sm">
+                                    <input type="checkbox" checked={paso.es_manual} onChange={e => actualizarPaso(paso.id, 'es_manual', e.target.checked)} className="rounded" />
+                                    Es manual
+                                </label>
+                            </div>
+                            <input type="text" placeholder="Datos necesarios" className="border border-border p-2 rounded w-full text-sm" value={paso.datos_necesarios} onChange={e => actualizarPaso(paso.id, 'datos_necesarios', e.target.value)} />
+                            <input type="text" placeholder="Documentos generados" className="border border-border p-2 rounded w-full text-sm" value={paso.documentos_generados} onChange={e => actualizarPaso(paso.id, 'documentos_generados', e.target.value)} />
+                            <input type="text" placeholder="Plazos" className="border border-border p-2 rounded w-full text-sm" value={paso.plazos} onChange={e => actualizarPaso(paso.id, 'plazos', e.target.value)} />
+                            <input type="text" placeholder="Tiempo promedio" className="border border-border p-2 rounded w-full text-sm" value={paso.tiempo_promedio} onChange={e => actualizarPaso(paso.id, 'tiempo_promedio', e.target.value)} />
+                            <textarea placeholder="Riesgos" className="border border-border p-2 rounded w-full text-sm" rows="2" value={paso.riesgos} onChange={e => actualizarPaso(paso.id, 'riesgos', e.target.value)} />
+
+                            {/* Decisión */}
+                            <div className="border-t border-border pt-2">
+                                <label className="flex items-center gap-2 text-sm font-medium text-text">
+                                    <input type="checkbox" checked={paso.tiene_decision} onChange={e => actualizarPaso(paso.id, 'tiene_decision', e.target.checked)} className="rounded" />
+                                    Tiene decisión
+                                </label>
+                                {paso.tiene_decision && (
+                                    <div className="ml-6 mt-2 space-y-2 card-warning p-2 rounded border">
+                                        <input type="text" placeholder="Condición" className="border border-border p-2 rounded w-full text-sm" value={paso.condicion_decision} onChange={e => actualizarPaso(paso.id, 'condicion_decision', e.target.value)} />
+                                        <div className="flex gap-4">
+                                            <div className="flex-1">
+                                                <h5 className="text-sm font-bold">Sí</h5>
+                                                <StepTree pasos={pasos} parentId={paso.id} branchType="si" level={level + 1} />
+                                                <button onClick={() => addPaso(paso.id, 'si')} className="btn-success px-2 py-1 rounded text-xs mt-1">+ Sí</button>
+                                            </div>
+                                            <div className="flex-1">
+                                                <h5 className="text-sm font-bold">No</h5>
+                                                <StepTree pasos={pasos} parentId={paso.id} branchType="no" level={level + 1} />
+                                                <button onClick={() => addPaso(paso.id, 'no')} className="btn-success px-2 py-1 rounded text-xs mt-1">+ No</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Handoff */}
+                            <div className="border-t border-border pt-2">
+                                <label className="flex items-center gap-2 text-sm font-medium" style={{color: 'var(--color-warning)'}}>
+                                    <input type="checkbox" checked={paso.pasa_a_otra_area} onChange={e => actualizarPaso(paso.id, 'pasa_a_otra_area', e.target.checked)} className="rounded" />
+                                    Pasa a otra área
+                                </label>
+                                {paso.pasa_a_otra_area && (
+                                    <div className="ml-6 mt-2 space-y-2 p-2 rounded border" style={{backgroundColor: 'var(--color-warning-light)', borderColor: 'var(--color-warning)'}}>
+                                        <input type="text" placeholder="Área destino" className="border border-border p-2 rounded w-full text-sm" value={paso.area_destino} onChange={e => actualizarPaso(paso.id, 'area_destino', e.target.value)} />
+                                        <input type="text" placeholder="¿Qué envía?" className="border border-border p-2 rounded w-full text-sm" value={paso.que_envia} onChange={e => actualizarPaso(paso.id, 'que_envia', e.target.value)} />
+                                        <label className="flex items-center gap-2 text-sm">
+                                            <input type="checkbox" checked={paso.espera_respuesta} onChange={e => actualizarPaso(paso.id, 'espera_respuesta', e.target.checked)} className="rounded" />
+                                            Espera respuesta
+                                        </label>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* PASO FINAL - SIEMPRE VISIBLE */}
+                            <div className="border-t border-border pt-2 mt-2">
+                                <label className="flex items-center gap-2 text-sm font-medium text-success">
+                                    <input type="checkbox" checked={paso.es_paso_final} onChange={e => actualizarPaso(paso.id, 'es_paso_final', e.target.checked)} className="rounded" />
+                                    Este paso finaliza el proceso
+                                </label>
+                                {paso.es_paso_final && (
+                                    <div className="ml-6 mt-1 p-2 card-success rounded border text-sm">
+                                        Proceso termina aquí
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Siguiente paso solo si no es final y no tiene decisión */}
+                            {!paso.es_paso_final && !paso.tiene_decision && (
+                                <div className="mt-2">
+                                    <StepTree pasos={pasos} parentId={paso.id} branchType={null} level={level + 1} />
+                                    <button onClick={() => addPaso(paso.id, null)} className="btn-success px-2 py-1 rounded text-xs flex items-center gap-1 mt-1">
+                                        <Icons.Plus /> Siguiente Paso
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                ))}
+            </div>
+        );
     };
 
     if (loading) return <div className="p-6 text-center text-text">Cargando...</div>;
     if (!proceso) return <div className="p-6 text-center text-text">Proceso no encontrado</div>;
 
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-auto">
             <div className="bg-surface p-6 rounded-lg border border-border max-w-6xl w-full max-h-[90vh] overflow-y-auto">
-                <div className="flex justify-between mb-6">
-                    <h2 className="text-2xl font-bold text-text">Editar Proceso</h2>
-                    <button onClick={onCerrar} className="text-text-secondary hover:text-text">
-                        X
-                    </button>
+                <div className="flex justify-between items-center mb-4">
+                    <h2 className="text-2xl font-bold text-text">Editar Proceso: {proceso.nombre}</h2>
+                    <button onClick={onCerrar} className="text-text-secondary hover:text-text">X</button>
                 </div>
 
-                <div className="mb-6 p-4 bg-surface rounded border border-border">
-                    <h3 className="font-bold text-lg mb-3 text-text">Datos del Proceso</h3>
-                    <div className="grid grid-cols-3 gap-3">
-                        <input type="text" placeholder="Nombre" className="border border-border p-2 rounded" value={proceso.nombre || ''} onChange={e => handleChangeProceso('nombre', e.target.value)} />
-                        <select className="border border-border p-2 rounded" value={proceso.frecuencia || 'mensual'} onChange={e => handleChangeProceso('frecuencia', e.target.value)}>
-                            <option value="diaria">Diaria</option>
-                            <option value="semanal">Semanal</option>
-                            <option value="mensual">Mensual</option>
-                            <option value="eventual">Eventual</option>
-                        </select>
-                        <select className="border border-border p-2 rounded" value={proceso.prioridad || 'media'} onChange={e => handleChangeProceso('prioridad', e.target.value)}>
-                            <option value="baja">Baja</option>
-                            <option value="media">Media</option>
-                            <option value="alta">Alta</option>
-                        </select>
-                        <input type="text" placeholder="Área inicio" className="border border-border p-2 rounded" value={proceso.area_inicio || ''} onChange={e => handleChangeProceso('area_inicio', e.target.value)} />
-                        <input type="text" placeholder="Áreas intermedias" className="border border-border p-2 rounded" value={proceso.areas_intermedias || ''} onChange={e => handleChangeProceso('areas_intermedias', e.target.value)} />
-                        <input type="text" placeholder="Área cierre" className="border border-border p-2 rounded" value={proceso.area_cierre || ''} onChange={e => handleChangeProceso('area_cierre', e.target.value)} />
-                        <input type="number" placeholder="Volumen mensual" className="border border-border p-2 rounded" value={proceso.volumen_mensual || ''} onChange={e => handleChangeProceso('volumen_mensual', e.target.value)} />
-                        <input type="text" placeholder="Normativa" className="border border-border p-2 rounded" value={proceso.normativa || ''} onChange={e => handleChangeProceso('normativa', e.target.value)} />
-                        <label className="flex items-center gap-2 text-sm border border-border p-2 rounded bg-surface">
-                            <input type="checkbox" checked={proceso.reporte_obligatorio} onChange={e => handleChangeProceso('reporte_obligatorio', e.target.checked)} />
-                            Reporte obligatorio
-                        </label>
-                        <select className="border border-border p-2 rounded" value={proceso.potencial_digital || 'parcial'} onChange={e => handleChangeProceso('potencial_digital', e.target.value)}>
-                            <option value="si">100% digital</option>
-                            <option value="parcial">Parcial</option>
-                            <option value="no">Requiere físico</option>
-                        </select>
-                        <input type="text" placeholder="Documento final" className="border border-border p-2 rounded" value={proceso.documento_final || ''} onChange={e => handleChangeProceso('documento_final', e.target.value)} />
-                        <input type="text" placeholder="Proceso padre" className="border border-border p-2 rounded" value={proceso.proceso_padre || ''} onChange={e => handleChangeProceso('proceso_padre', e.target.value)} />
-                        <input type="text" placeholder="Aprobador final" className="border border-border p-2 rounded" value={proceso.aprobador_final || ''} onChange={e => handleChangeProceso('aprobador_final', e.target.value)} />
-                    </div>
+                {/* Campos del proceso */}
+                <div className="grid grid-cols-2 gap-3 mb-6">
+                    <input type="text" placeholder="Nombre *" className="border border-border p-2 rounded" value={proceso.nombre} onChange={e => handleChangeProceso('nombre', e.target.value)} />
+                    <select className="border border-border p-2 rounded" value={proceso.frecuencia} onChange={e => handleChangeProceso('frecuencia', e.target.value)}>
+                        <option value="diaria">Diaria</option>
+                        <option value="semanal">Semanal</option>
+                        <option value="mensual">Mensual</option>
+                        <option value="eventual">Eventual</option>
+                    </select>
+                    <select className="border border-border p-2 rounded" value={proceso.prioridad} onChange={e => handleChangeProceso('prioridad', e.target.value)}>
+                        <option value="baja">Baja</option>
+                        <option value="media">Media</option>
+                        <option value="alta">Alta</option>
+                    </select>
+                    <input type="text" placeholder="Área inicio *" className="border border-border p-2 rounded" value={proceso.area_inicio} onChange={e => handleChangeProceso('area_inicio', e.target.value)} />
+                    <input type="text" placeholder="Áreas intermedias" className="border border-border p-2 rounded" value={proceso.areas_intermedias} onChange={e => handleChangeProceso('areas_intermedias', e.target.value)} />
+                    <input type="text" placeholder="Área cierre" className="border border-border p-2 rounded" value={proceso.area_cierre} onChange={e => handleChangeProceso('area_cierre', e.target.value)} />
+                    <input type="number" placeholder="Volumen mensual" className="border border-border p-2 rounded" value={proceso.volumen_mensual} onChange={e => handleChangeProceso('volumen_mensual', e.target.value)} />
+                    <input type="text" placeholder="Normativa" className="border border-border p-2 rounded" value={proceso.normativa} onChange={e => handleChangeProceso('normativa', e.target.value)} />
+                    <label className="flex items-center gap-2 text-sm">
+                        <input type="checkbox" checked={proceso.reporte_obligatorio} onChange={e => handleChangeProceso('reporte_obligatorio', e.target.checked)} className="rounded" />
+                        Reporte obligatorio
+                    </label>
+                    <select className="border border-border p-2 rounded" value={proceso.potencial_digital} onChange={e => handleChangeProceso('potencial_digital', e.target.value)}>
+                        <option value="si">100% digital</option>
+                        <option value="parcial">Parcial</option>
+                        <option value="no">Requiere físico</option>
+                    </select>
+                    <input type="text" placeholder="Documento final" className="border border-border p-2 rounded" value={proceso.documento_final} onChange={e => handleChangeProceso('documento_final', e.target.value)} />
+                    <input type="text" placeholder="Proceso padre" className="border border-border p-2 rounded" value={proceso.proceso_padre} onChange={e => handleChangeProceso('proceso_padre', e.target.value)} />
+                    <input type="text" placeholder="Aprobador final" className="border border-border p-2 rounded" value={proceso.aprobador_final} onChange={e => handleChangeProceso('aprobador_final', e.target.value)} />
                 </div>
 
+                {/* Pasos */}
                 <div className="mb-6">
-                    <div className="flex justify-between mb-4">
+                    <div className="flex justify-between mb-2">
                         <h3 className="font-bold text-lg text-text">Pasos del Proceso</h3>
-                        <button onClick={handleAgregarPaso} className="btn-primary px-3 py-1 rounded text-sm flex items-center gap-1">
-                            <Icons.Plus /> Agregar Paso
-                        </button>
+                        {pasos.filter(p => p.parentId === null).length === 0 && (
+                            <button onClick={() => addPaso(null, null)} className="btn-success px-2 py-1 rounded text-xs flex items-center gap-1">
+                                <Icons.Plus /> Paso Inicial
+                            </button>
+                        )}
                     </div>
-                    {pasos.map((paso, idx) => (
-                        <div key={idx} className="mb-4 p-4 border border-border rounded bg-surface shadow-sm">
-                            <div className="flex justify-between mb-3">
-                                <h4 className="font-semibold text-text">Paso {idx + 1}</h4>
-                                <button onClick={() => handleEliminarPaso(idx)} className="btn-danger">
-                                    <Icons.Trash />
-                                </button>
-                            </div>
-                            <div className="grid grid-cols-2 gap-3 text-sm">
-                                <input type="text" placeholder="Descripción" className="border border-border p-2 rounded" value={paso.descripcion || ''} onChange={e => handleActualizarPaso(idx, 'descripcion', e.target.value)} />
-                                <input type="text" placeholder="Responsable (rol)" className="border border-border p-2 rounded" value={paso.responsable_rol || ''} onChange={e => handleActualizarPaso(idx, 'responsable_rol', e.target.value)} />
-                                <input type="text" placeholder="Área" className="border border-border p-2 rounded" value={paso.area || ''} onChange={e => handleActualizarPaso(idx, 'area', e.target.value)} />
-                                <input type="text" placeholder="Herramienta" className="border border-border p-2 rounded" value={paso.herramienta || ''} onChange={e => handleActualizarPaso(idx, 'herramienta', e.target.value)} />
-                                <input type="text" placeholder="Datos necesarios" className="border border-border p-2 rounded" value={paso.datos_necesarios || ''} onChange={e => handleActualizarPaso(idx, 'datos_necesarios', e.target.value)} />
-                                <input type="text" placeholder="Documentos generados" className="border border-border p-2 rounded" value={paso.documentos_generados || ''} onChange={e => handleActualizarPaso(idx, 'documentos_generados', e.target.value)} />
-                                <input type="text" placeholder="Plazos" className="border border-border p-2 rounded" value={paso.plazos || ''} onChange={e => handleActualizarPaso(idx, 'plazos', e.target.value)} />
-                                <input type="text" placeholder="Tiempo promedio" className="border border-border p-2 rounded" value={paso.tiempo_promedio || ''} onChange={e => handleActualizarPaso(idx, 'tiempo_promedio', e.target.value)} />
-                                <textarea placeholder="Riesgos / Problemas" className="border border-border p-2 rounded col-span-2" rows="2" value={paso.riesgos || ''} onChange={e => handleActualizarPaso(idx, 'riesgos', e.target.value)} />
-                            </div>
-                            <div className="mt-3">
-                                <label className="flex items-center gap-2 text-sm text-text">
-                                    <input type="checkbox" checked={paso.tiene_decision} onChange={e => handleActualizarPaso(idx, 'tiene_decision', e.target.checked)} className="rounded" />
-                                    Tiene punto de decisión
-                                </label>
-                                {paso.tiene_decision && (
-                                    <div className="mt-2 p-2 card-warning rounded border">
-                                        <input type="text" placeholder="Condición a evaluar" className="border border-border p-2 rounded w-full mb-1" value={paso.condicion_decision || ''} onChange={e => handleActualizarPaso(idx, 'condicion_decision', e.target.value)} />
-                                        <div className="grid grid-cols-2 gap-2">
-                                            <input type="text" placeholder="Destino si cumple" className="border border-border p-2 rounded" value={paso.destino_si_cumple || ''} onChange={e => handleActualizarPaso(idx, 'destino_si_cumple', e.target.value)} />
-                                            <input type="text" placeholder="Destino si no cumple" className="border border-border p-2 rounded" value={paso.destino_si_no_cumple || ''} onChange={e => handleActualizarPaso(idx, 'destino_si_no_cumple', e.target.value)} />
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-                            <div className="mt-3">
-                                <label className="flex items-center gap-2 text-sm text-text">
-                                    <input type="checkbox" checked={paso.pasa_a_otra_area} onChange={e => handleActualizarPaso(idx, 'pasa_a_otra_area', e.target.checked)} className="rounded" />
-                                    Pasa a otra área
-                                </label>
-                                {paso.pasa_a_otra_area && (
-                                    <div className="mt-2 p-2 rounded border" style={{backgroundColor: 'var(--color-warning-light)', borderColor: 'var(--color-warning)'}}>
-                                        <input type="text" placeholder="Área destino" className="border border-border p-2 rounded w-full mb-1" value={paso.area_destino || ''} onChange={e => handleActualizarPaso(idx, 'area_destino', e.target.value)} />
-                                        <input type="text" placeholder="Qué envía" className="border border-border p-2 rounded w-full mb-1" value={paso.que_envia || ''} onChange={e => handleActualizarPaso(idx, 'que_envia', e.target.value)} />
-                                        <label className="flex items-center gap-2 text-sm text-text">
-                                            <input type="checkbox" checked={paso.espera_respuesta} onChange={e => handleActualizarPaso(idx, 'espera_respuesta', e.target.checked)} className="rounded" />
-                                            El proceso espera respuesta
-                                        </label>
-                                    </div>
-                                )}
-                            </div>
-                            <div className="mt-3">
-    <label className="flex items-center gap-2 text-sm text-text">
-        <input 
-            type="checkbox" 
-            checked={paso.es_paso_final} 
-            onChange={e => handleActualizarPaso(idx, 'es_paso_final', e.target.checked)} 
-            className="rounded" 
-        />
-        Este paso finaliza el proceso (sin handoff)
-    </label>
-    {paso.es_paso_final && (
-        <div className="mt-2 p-2 card-success rounded text-sm text-text">
-            ✓ Marcado como paso final del proceso
-        </div>
-    )}
-</div>
-                        </div>
-                    ))}
+                    <StepTree pasos={pasos} parentId={null} branchType={null} />
                 </div>
 
                 <div className="flex justify-end gap-3">
-                    <button onClick={onCerrar} className="px-4 py-2 rounded font-medium text-text-secondary border border-border bg-surface">
-                        Cancelar
-                    </button>
-                    <button onClick={handleGuardar} className="px-4 py-2 rounded font-medium text-white btn-success">
-                        Guardar Cambios
+                    <button onClick={onCerrar} className="px-4 py-2 border border-border rounded text-text-secondary">Cancelar</button>
+                    <button onClick={handleGuardar} disabled={loading} className="btn-success px-6 py-2 rounded font-medium">
+                        {loading ? 'Guardando...' : 'Guardar Cambios'}
                     </button>
                 </div>
             </div>

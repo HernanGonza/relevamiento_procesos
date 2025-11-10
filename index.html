@@ -915,7 +915,7 @@
             );
         }
 
-       function DetalleProceso({ procesoId, onVolver }) {
+     function DetalleProceso({ procesoId, onVolver }) {
     const [proceso, setProceso] = useState(null);
     const [entrevista, setEntrevista] = useState(null);
     const [pasos, setPasos] = useState([]);
@@ -962,8 +962,8 @@
                     if (p.destino_si_no_cumple) code += ` ${c} -->|No| NO${i+1}["${escape(p.destino_si_no_cumple)}"]:::destino\n`;
                 } else if (p.pasa_a_otra_area && p.area_destino) {
                     code += ` ${id} --> H${i+1}["→ ${escape(p.area_destino)}"]:::handoff\n`;
-                    code += ` H${i+1} --> Fin\n`;  // ✅ NUEVO: Handoff conecta a Fin
-                } else if (p.es_paso_final) {  // ✅ NUEVO
+                    code += ` H${i+1} --> Fin\n`;
+                } else if (p.es_paso_final) {
                     code += ` ${id} --> Fin\n`;
                 } else if (i === pasos.length - 1) {
                     code += ` ${id} --> Fin\n`;
@@ -1130,6 +1130,7 @@
         </div>
     );
 }
+
 
         function TrackerEntrevistas({ entrevistas, setEntrevistas, onCompletar }) {
             const [form, setForm] = useState({ area: '', fecha: '', hora: '', responsable: '', entrevistador: '', estado: 'pendiente', notas: '' });

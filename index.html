@@ -952,24 +952,24 @@
             let last = 'Inicio';
 
             pasos.forEach((p, i) => {
-    const id = `P${i+1}`;
-    code += ` ${id}["${escape(p.descripcion)}"]:::paso\n ${last} --> ${id}\n`;
+                const id = `P${i+1}`;
+                code += ` ${id}["${escape(p.descripcion)}"]:::paso\n ${last} --> ${id}\n`;
 
-    if (p.tiene_decision) {
-        const c = `C${i+1}`;
-        code += ` ${c}{${escape(p.condicion_decision)}}:::decision\n ${id} --> ${c}\n`;
-        if (p.destino_si_cumple) code += ` ${c} -->|Sí| SI${i+1}["${escape(p.destino_si_cumple)}"]:::destino\n`;
-        if (p.destino_si_no_cumple) code += ` ${c} -->|No| NO${i+1}["${escape(p.destino_si_no_cumple)}"]:::destino\n`;
-    } else if (p.pasa_a_otra_area && p.area_destino) {
-        code += ` ${id} --> H${i+1}["→ ${escape(p.area_destino)}"]:::handoff\n`;
-        code += ` H${i+1} --> Fin\n`;  // ✅ NUEVO: Handoff conecta a Fin
-    } else if (p.es_paso_final) {  // ✅ NUEVO
-        code += ` ${id} --> Fin\n`;
-    } else if (i === pasos.length - 1) {
-        code += ` ${id} --> Fin\n`;
-    }
-    last = id;
-});
+                if (p.tiene_decision) {
+                    const c = `C${i+1}`;
+                    code += ` ${c}{${escape(p.condicion_decision)}}:::decision\n ${id} --> ${c}\n`;
+                    if (p.destino_si_cumple) code += ` ${c} -->|Sí| SI${i+1}["${escape(p.destino_si_cumple)}"]:::destino\n`;
+                    if (p.destino_si_no_cumple) code += ` ${c} -->|No| NO${i+1}["${escape(p.destino_si_no_cumple)}"]:::destino\n`;
+                } else if (p.pasa_a_otra_area && p.area_destino) {
+                    code += ` ${id} --> H${i+1}["→ ${escape(p.area_destino)}"]:::handoff\n`;
+                    code += ` H${i+1} --> Fin\n`;  // ✅ NUEVO: Handoff conecta a Fin
+                } else if (p.es_paso_final) {  // ✅ NUEVO
+                    code += ` ${id} --> Fin\n`;
+                } else if (i === pasos.length - 1) {
+                    code += ` ${id} --> Fin\n`;
+                }
+                last = id;
+            });
 
             code += `\n classDef inicio fill:#1e40af,color:white\n classDef fin fill:#16a34a,color:white\n classDef paso fill:#dbeafe,stroke:#3b82f6\n classDef decision fill:#fef3c7,stroke:#f59e0b,stroke-dasharray:5,5\n classDef destino fill:#fecaca,stroke:#ef4444\n classDef handoff fill:#fff7ed,stroke:#ea580c\n`;
 
@@ -1023,7 +1023,7 @@
                 <div><strong>Volumen mensual:</strong> {proceso.volumen_mensual ? `${proceso.volumen_mensual} trámites` : '—'}</div>
                 <div><strong>Normativa:</strong> {proceso.normativa || '—'}</div>
                 <div><strong>Reporte obligatorio:</strong> <span className={proceso.reporte_obligatorio ? 'text-success' : 'text-text-secondary'}>{proceso.reporte_obligatorio ? 'Sí' : 'No'}</span></div>
-                <div><strong>Potencial digital:</strong> 
+                <div><strong>Potencial digital:</strong>
                     {proceso.potencial_digital === 'si' && <span className="text-success">100% digitalizable</span>}
                     {proceso.potencial_digital === 'parcial' && <span className="text-warning">Parcial</span>}
                     {proceso.potencial_digital === 'no' && <span className="text-danger">Requiere físico</span>}
@@ -1058,6 +1058,7 @@
                                         {paso.riesgos && <div className="mt-1 text-sm text-text"><span className="text-text-secondary">Riesgos:</span> {paso.riesgos}</div>}
                                     </div>
                                 </div>
+
                                 {paso.tiene_decision && (
                                     <div className="ml-12 mt-2 mb-2">
                                         <div className="border-2 rounded-lg p-3 card-warning border" style={{borderColor: 'var(--color-warning)'}}>
@@ -1069,36 +1070,40 @@
                                         </div>
                                     </div>
                                 )}
-                               {paso.pasa_a_otra_area && paso.area_destino && (
-    <div className="ml-12 mt-2 mb-2">
-        <div className="border-2 rounded-lg p-3" style={{backgroundColor: 'var(--color-warning-light)', borderColor: 'var(--color-warning)'}}>
-            <div className="flex items-center gap-2 font-semibold text-sm mb-1 text-text">
-                Pasa a: <span style={{color: 'var(--color-warning)'}}>{paso.area_destino}</span>
-                <span className="ml-2 px-2 py-0.5 bg-red-100 text-red-700 rounded text-xs">FIN del proceso</span>
-            </div>
-            {paso.que_envia && <div className="text-sm text-text">Envía: {paso.que_envia}</div>}
-            {paso.espera_respuesta && <div className="text-sm mt-1" style={{color: 'var(--color-warning)'}}>Espera respuesta</div>}
-        </div>
-    </div>
-)}
-{paso.es_paso_final && !paso.pasa_a_otra_area && (
-    <div className="ml-12 mt-2 mb-2">
-        <div className="border-2 rounded-lg p-3 card-success border flex items-center gap-2">
-            <Icons.Check />
-            <span className="font-semibold text-sm text-text">
-                Paso final del proceso
-            </span>
-        </div>
-    </div>
-)}
 
-{idx < pasos.length - 1 && (
-    <div className="ml-4 h-6 w-0.5 bg-border"></div>
-))}
-))}
-</div>
-)}
-</div>
+                                {paso.pasa_a_otra_area && paso.area_destino && (
+                                    <div className="ml-12 mt-2 mb-2">
+                                        <div className="border-2 rounded-lg p-3" style={{backgroundColor: 'var(--color-warning-light)', borderColor: 'var(--color-warning)'}}>
+                                            <div className="flex items-center gap-2 font-semibold text-sm mb-1 text-text">
+                                                Pasa a: <span style={{color: 'var(--color-warning)'}}>{paso.area_destino}</span>
+                                                <span className="ml-2 px-2 py-0.5 bg-red-100 text-red-700 rounded text-xs">FIN del proceso</span>
+                                            </div>
+                                            {paso.que_envia && <div className="text-sm text-text">Envía: {paso.que_envia}</div>}
+                                            {paso.espera_respuesta && <div className="text-sm mt-1" style={{color: 'var(--color-warning)'}}>Espera respuesta</div>}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {paso.es_paso_final && !paso.pasa_a_otra_area && (
+                                    <div className="ml-12 mt-2 mb-2">
+                                        <div className="border-2 rounded-lg p-3 card-success border flex items-center gap-2">
+                                            <Icons.Check />
+                                            <span className="font-semibold text-sm text-text">
+                                                Paso final del proceso
+                                            </span>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {idx < pasos.length - 1 && (
+                                    <div className="ml-4 h-6 w-0.5 bg-border"></div>
+                                )}
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </div>
+
             <div className="mb-6">
                 <h3 className="font-bold text-lg mb-2 text-text">Diagrama UML (Mermaid)</h3>
                 <div ref={diagramRef} className="p-4 bg-surface rounded border border-border min-h-64 mermaid-diagram">

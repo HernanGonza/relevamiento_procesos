@@ -1085,20 +1085,20 @@
     <div className="ml-12 mt-2 mb-2">
         <div className="border-2 rounded-lg p-3 card-success border flex items-center gap-2">
             <Icons.Check />
-            <span className="font-semibold text-sm text-text">Paso final del proceso</span>
+            <span className="font-semibold text-sm text-text">
+                Paso final del proceso
+            </span>
         </div>
     </div>
 )}
+
 {idx < pasos.length - 1 && (
     <div className="ml-4 h-6 w-0.5 bg-border"></div>
+))}
+))}
+</div>
 )}
-
-                            </div>
-                        ))}
-                    </div>
-                )}
-            </div>
-
+</div>
             <div className="mb-6">
                 <h3 className="font-bold text-lg mb-2 text-text">Diagrama UML (Mermaid)</h3>
                 <div ref={diagramRef} className="p-4 bg-surface rounded border border-border min-h-64 mermaid-diagram">

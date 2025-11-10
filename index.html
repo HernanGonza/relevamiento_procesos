@@ -324,7 +324,7 @@
             );
         }
 
-     function FormularioEntrevista({ entrevistaId, onVolver }) {
+    function FormularioEntrevista({ entrevistaId, onVolver }) {
     const [loading, setLoading] = useState(false);
     const [entrevista, setEntrevista] = useState(null);
     const [procesos, setProcesos] = useState([{
@@ -340,7 +340,6 @@
         acuerdos: '', observaciones_generales: ''
     });
 
-    // ID temporal estable
     const tempIdCounter = useRef(0);
 
     useEffect(() => {
@@ -399,7 +398,7 @@
         const newStep = {
             id: tempId,
             parentId,
-            branchType,
+            branchType: branchType || 'linear',
             orden: newOrden,
             descripcion: '', responsable_rol: '', area: '', herramienta: '', es_manual: true,
             datos_necesarios: '', documentos_generados: '', plazos: '', tiempo_promedio: '',
@@ -453,44 +452,75 @@
             for (const proc of procesos) {
                 if (!proc.nombre || !proc.area_inicio) continue;
                 const { data, error } = await supabase.from('procesos').insert([{
-                    nombre: proc.nombre, frecuencia: proc.frecuencia, prioridad: proc.prioridad,
-                    area_inicio: proc.area_inicio, areas_intermedias: proc.areas_intermedias || null,
-                    area_cierre: proc.area_cierre || null, volumen_mensual: proc.volumen_mensual || null,
-                    normativa: proc.normativa || null, reporte_obligatorio: proc.reporte_obligatorio,
-                    potencial_digital: proc.potencial_digital, documento_final: proc.documento_final || null,
-                    proceso_padre: proc.proceso_padre || null, aprobador_final: proc.aprobador_final || null,
-                    estado_relevamiento: 'en_proceso', entrevista_id: entrevista.id
+                    nombre: proc.nombre,
+                    frecuencia: proc.frecuencia,
+                    prioridad: proc.prioridad,
+                    area_inicio: proc.area_inicio,
+                    areas_intermedias: proc.areas_intermedias || null,
+                    area_cierre: proc.area_cierre || null,
+                    volumen_mensual: proc.volumen_mensual || null,
+                    normativa: proc.normativa || null,
+                    reporte_obligatorio: proc.reporte_obligatorio,
+                    potencial_digital: proc.potencial_digital,
+                    documento_final: proc.documento_final || null,
+                    proceso_padre: proc.proceso_padre || null,
+                    aprobador_final: proc.aprobador_final || null,
+                    estado_relevamiento: 'en_proceso',
+                    entrevista_id: entrevista.id
                 }]).select();
+
                 if (error) throw error;
                 const procesoId = data[0].id;
+
                 const allSteps = proc.pasos;
                 const localToDb = {};
                 const insertData = allSteps.map(s => ({
-                    proceso_id: procesoId, orden: s.orden, descripcion: s.descripcion,
-                    responsable_rol: s.responsable_rol || null, area: s.area || null,
-                    herramienta: s.herramienta || null, es_manual: s.es_manual,
-                    datos_necesarios: s.datos_necesarios || null, documentos_generados: s.documentos_generados || null,
-                    plazos: s.plazos || null, tiempo_promedio: s.tiempo_promedio || null,
-                    riesgos: s.riesgos || null, tiene_decision: s.tiene_decision,
+                    proceso_id: procesoId,
+                    orden: s.orden,
+                    descripcion: s.descripcion,
+                    responsable_rol: s.responsable_rol || null,
+                    area: s.area || null,
+                    herramienta: s.herramienta || null,
+                    es_manual: s.es_manual,
+                    datos_necesarios: s.datos_necesarios || null,
+                    documentos_generados: s.documentos_generados || null,
+                    plazos: s.plazos || null,
+                    tiempo_promedio: s.tiempo_promedio || null,
+                    riesgos: s.riesgos || null,
+                    tiene_decision: s.tiene_decision,
                     condicion_decision: s.condicion_decision || null,
-                    pasa_a_otra_area: s.pasa_a_otra_area, area_destino: s.area_destino || null,
-                    que_envia: s.que_envia || null, espera_respuesta: s.espera_respuesta,
+                    pasa_a_otra_area: s.pasa_a_otra_area,
+                    area_destino: s.area_destino || null,
+                    que_envia: s.que_envia || null,
+                    espera_respuesta: s.espera_respuesta,
                     es_paso_final: s.es_paso_final || false,
-                    branch_type: s.branchType || null, parent_id: null
+                    branch_type: s.branchType || null,
+                    parent_id: null
                 }));
+
                 const { data: insertedData } = await supabase.from('pasos_proceso').insert(insertData).select();
-                allSteps.forEach((s, i) => localToDb[s.id] = insertedData[i].id);
+                allSteps.forEach((s, i) => {
+                    localToDb[s.id] = insertedData[i].id;
+                });
+
                 for (const s of allSteps) {
                     const dbId = localToDb[s.id];
                     const dbParent = s.parentId ? localToDb[s.parentId] : null;
-                    await supabase.from('pasos_proceso').update({ parent_id: dbParent }).eq('id', dbId);
+                    await supabase.from('pasos_proceso').update({
+                        parent_id: dbParent
+                    }).eq('id', dbId);
                 }
+
                 for (const step of allSteps) {
                     if (step.pasa_a_otra_area && step.area_destino && step.area) {
                         await supabase.from('handoffs').insert({
-                            proceso: proc.nombre, area_origen: step.area, area_destino: step.area_destino,
-                            que_se_envia: step.que_envia || null, validado_por_origen: false,
-                            validado_por_destino: false, entrevista_id: entrevista.id
+                            proceso: proc.nombre,
+                            area_origen: step.area,
+                            area_destino: step.area_destino,
+                            que_se_envia: step.que_envia || null,
+                            validado_por_origen: false,
+                            validado_por_destino: false,
+                            entrevista_id: entrevista.id
                         });
                     }
                 }
@@ -504,12 +534,17 @@
         }
     }
 
-    const StepTree = ({ procIndex, pasos, parentId, branchType, level = 0 }) => {
-        const childSteps = pasos.filter(p => p.parentId === parentId && p.branchType === branchType).sort((a, b) => a.orden - b.orden);
+    const StepTree = React.memo(({ procIndex, pasos, parentId, branchType, level = 0 }) => {
+        const currentBranchType = branchType || 'linear';
+        const childSteps = useMemo(() => 
+            pasos.filter(p => p.parentId === parentId && p.branchType === currentBranchType).sort((a, b) => a.orden - b.orden),
+            [pasos, parentId, currentBranchType]
+        );
+
         return (
             <div style={{ marginLeft: `${level * 20}px` }}>
                 {childSteps.map((paso) => (
-                    <div key={paso.id} className="mb-4 p-4 border border-border rounded bg-surface shadow-sm">
+                    <div key={`${paso.id}-${level}`} className="mb-4 p-4 border border-border rounded bg-surface shadow-sm">
                         <div className="flex justify-between mb-2">
                             <span className="text-sm font-semibold badge-primary px-2 py-1 rounded">
                                 Paso {typeof paso.id === 'number' ? `#${paso.id}` : '(nuevo)'}
@@ -592,8 +627,8 @@
                             {/* Siguiente paso */}
                             {!paso.es_paso_final && !paso.tiene_decision && (
                                 <div className="mt-2">
-                                    <StepTree procIndex={procIndex} pasos={pasos} parentId={paso.id} branchType={null} level={level + 1} />
-                                    <button onClick={() => addPaso(procIndex, paso.id, null)} className="btn-success px-2 py-1 rounded text-xs flex items-center gap-1 mt-1">
+                                    <StepTree procIndex={procIndex} pasos={pasos} parentId={paso.id} branchType="linear" level={level + 1} />
+                                    <button onClick={() => addPaso(procIndex, paso.id, 'linear')} className="btn-success px-2 py-1 rounded text-xs flex items-center gap-1 mt-1">
                                         <Icons.Plus /> Siguiente Paso
                                     </button>
                                 </div>
@@ -609,13 +644,17 @@
 
     return (
         <div className="bg-surface p-6 rounded-lg border border-border max-w-6xl mx-auto">
-            {/* Parte 1 */}
+            <div className="flex justify-between mb-6">
+                <h2 className="text-2xl font-bold text-text">Formulario Completo de Entrevista</h2>
+                <button onClick={onVolver} className="text-primary hover:underline">Volver</button>
+            </div>
+
             <div className="mb-8 p-4 border border-border rounded bg-surface">
                 <h3 className="font-bold text-lg mb-3 text-primary">Parte 1: Identificación del Área</h3>
                 <div className="grid grid-cols-2 gap-4 mb-4 text-text">
                     <div><strong>Área:</strong> {entrevista.area}</div>
                     <div><strong>Fecha:</strong> {new Date(entrevista.fecha).toLocaleDateString('es-AR')}</div>
-                    <div><strong>Hora:</strong> {entrevista.hora?.slice(0, 5) || '—'}</div>
+                    <div><strong>Hora:</strong> {entrevista.hora ? entrevista.hora.slice(0, 5) : '—'}</div>
                     <div><strong>Responsable:</strong> {entrevista.responsable || '—'}</div>
                     <div><strong>Entrevistador:</strong> {entrevista.entrevistador || '—'}</div>
                 </div>
@@ -632,10 +671,9 @@
                 </div>
             </div>
 
-            {/* Procesos */}
             <div className="mb-8">
                 <div className="flex justify-between mb-4">
-                    <h3 className="font-bold text-lg text-primary">Parte 2 y 3: Procesos y Pasos</h3>
+                    <h3 className="font-bold text-lg text-primary">Parte 2 y 3: Procesos y Pasos Detallados</h3>
                     <button onClick={agregarProceso} className="btn-primary px-3 py-1 rounded text-sm flex items-center gap-1">
                         <Icons.Plus /> Agregar Proceso
                     </button>
@@ -685,12 +723,12 @@
                             <div className="flex justify-between mb-2">
                                 <span className="font-medium text-sm text-text">Pasos:</span>
                                 {proc.pasos.filter(p => p.parentId === null).length === 0 && (
-                                    <button onClick={() => addPaso(idx, null, null)} className="btn-success px-2 py-1 rounded text-xs flex items-center gap-1">
+                                    <button onClick={() => addPaso(idx, null, 'linear')} className="btn-success px-2 py-1 rounded text-xs flex items-center gap-1">
                                         <Icons.Plus /> Paso Inicial
                                     </button>
                                 )}
                             </div>
-                            <StepTree procIndex={idx} pasos={proc.pasos} parentId={null} branchType={null} />
+                            <StepTree procIndex={idx} pasos={proc.pasos} parentId={null} branchType="linear" />
                         </div>
                     </div>
                 ))}
@@ -1206,7 +1244,7 @@ const StepTreeView = ({ pasos, parentId, branchType, level = 0 }) => {
             );
         }
 
-     function EditarProceso({ procesoId, onCerrar }) {
+   function EditarProceso({ procesoId, onCerrar }) {
     const [proceso, setProceso] = useState(null);
     const [pasos, setPasos] = useState([]);
     const originalPasos = useRef([]);
@@ -1227,7 +1265,7 @@ const StepTreeView = ({ pasos, parentId, branchType, level = 0 }) => {
                     ...p,
                     id: p.id,
                     parentId: p.parent_id,
-                    branchType: p.branch_type
+                    branchType: p.branch_type || 'linear'
                 })));
             } catch (err) {
                 alert('Error al cargar: ' + err.message);
@@ -1250,7 +1288,7 @@ const StepTreeView = ({ pasos, parentId, branchType, level = 0 }) => {
         const newStep = {
             id: tempId,
             parentId,
-            branchType,
+            branchType: branchType || 'linear',
             orden: newOrden,
             descripcion: '', responsable_rol: '', area: '', herramienta: '', es_manual: true,
             datos_necesarios: '', documentos_generados: '', plazos: '',
@@ -1387,6 +1425,7 @@ const StepTreeView = ({ pasos, parentId, branchType, level = 0 }) => {
                     });
                 }
             }
+
             alert('Proceso actualizado exitosamente');
             onCerrar();
         } catch (err) {
@@ -1396,12 +1435,17 @@ const StepTreeView = ({ pasos, parentId, branchType, level = 0 }) => {
         }
     };
 
-    const StepTree = ({ pasos, parentId, branchType, level = 0 }) => {
-        const childSteps = pasos.filter(p => p.parentId === parentId && p.branchType === branchType).sort((a, b) => a.orden - b.orden);
+    const StepTree = React.memo(({ pasos, parentId, branchType, level = 0 }) => {
+        const currentBranchType = branchType || 'linear';
+        const childSteps = useMemo(() => 
+            pasos.filter(p => p.parentId === parentId && p.branchType === currentBranchType).sort((a, b) => a.orden - b.orden),
+            [pasos, parentId, currentBranchType]
+        );
+
         return (
             <div style={{ marginLeft: `${level * 20}px` }}>
                 {childSteps.map((paso) => (
-                    <div key={paso.id} className="mb-4 p-4 border border-border rounded bg-surface shadow-sm">
+                    <div key={`${paso.id}-${level}`} className="mb-4 p-4 border border-border rounded bg-surface shadow-sm">
                         <div className="flex justify-between mb-2">
                             <span className="text-sm font-semibold badge-primary px-2 py-1 rounded">
                                 Paso {typeof paso.id === 'number' ? `#${paso.id}` : '(nuevo)'}
@@ -1484,8 +1528,8 @@ const StepTreeView = ({ pasos, parentId, branchType, level = 0 }) => {
                             {/* Siguiente paso */}
                             {!paso.es_paso_final && !paso.tiene_decision && (
                                 <div className="mt-2">
-                                    <StepTree pasos={pasos} parentId={paso.id} branchType={null} level={level + 1} />
-                                    <button onClick={() => addPaso(paso.id, null)} className="btn-success px-2 py-1 rounded text-xs flex items-center gap-1 mt-1">
+                                    <StepTree pasos={pasos} parentId={paso.id} branchType="linear" level={level + 1} />
+                                    <button onClick={() => addPaso(paso.id, 'linear')} className="btn-success px-2 py-1 rounded text-xs flex items-center gap-1 mt-1">
                                         <Icons.Plus /> Siguiente Paso
                                     </button>
                                 </div>
@@ -1542,12 +1586,12 @@ const StepTreeView = ({ pasos, parentId, branchType, level = 0 }) => {
                     <div className="flex justify-between mb-2">
                         <h3 className="font-bold text-lg text-text">Pasos del Proceso</h3>
                         {pasos.filter(p => p.parentId === null).length === 0 && (
-                            <button onClick={() => addPaso(null, null)} className="btn-success px-2 py-1 rounded text-xs flex items-center gap-1">
+                            <button onClick={() => addPaso(null, 'linear')} className="btn-success px-2 py-1 rounded text-xs flex items-center gap-1">
                                 <Icons.Plus /> Paso Inicial
                             </button>
                         )}
                     </div>
-                    <StepTree pasos={pasos} parentId={null} branchType={null} />
+                    <StepTree pasos={pasos} parentId={null} branchType="linear" />
                 </div>
                 <div className="flex justify-end gap-3">
                     <button onClick={onCerrar} className="px-4 py-2 border border-border rounded text-text-secondary">Cancelar</button>

@@ -323,12 +323,95 @@
                 </label>
             );
         }
+const StepTree = React.memo(function StepTree({
+  procIndex,
+  pasos,
+  parentId = null,
+  branchType = "linear",
+  level = 0,
+  actualizarPaso,
+  addPaso,
+  eliminarPaso
+}) {
+  const { useMemo } = React;
 
-   function FormularioEntrevista({ entrevistaId, onVolver }) {
-  const { useState, useEffect, useRef, useMemo, useCallback } = React;
-  const [loading, setLoading] = useState(false);
+  const childSteps = useMemo(() => {
+    return pasos
+      .filter((p) => p.parentId === parentId && p.branchType === branchType)
+      .sort((a, b) => a.orden - b.orden);
+  }, [pasos, parentId, branchType]);
+
+  return (
+    <div style={{ marginLeft: `${level * 20}px` }}>
+      {childSteps.map((paso) => (
+        <div
+          key={paso.id}
+          className="mb-4 p-4 border border-border rounded bg-surface shadow-sm"
+        >
+          <div className="flex justify-between mb-2">
+            <span className="text-sm font-semibold badge-primary px-2 py-1 rounded">
+              Paso {typeof paso.id === "number" ? `#${paso.id}` : "(nuevo)"}
+            </span>
+            <button
+              onClick={() => eliminarPaso(procIndex, paso.id)}
+              className="btn-danger p-1 rounded"
+            >
+              <Icons.Trash />
+            </button>
+          </div>
+
+          <input
+            type="text"
+            placeholder="Descripción *"
+            className="border border-border p-2 rounded w-full text-sm"
+            value={paso.descripcion || ""}
+            onChange={(e) =>
+              actualizarPaso(procIndex, paso.id, "descripcion", e.target.value)
+            }
+          />
+
+          <input
+            type="text"
+            placeholder="Área"
+            className="border border-border p-2 rounded w-full text-sm mt-2"
+            value={paso.area || ""}
+            onChange={(e) =>
+              actualizarPaso(procIndex, paso.id, "area", e.target.value)
+            }
+          />
+
+          {!paso.es_paso_final && (
+            <div className="mt-2">
+              <StepTree
+                procIndex={procIndex}
+                pasos={pasos}
+                parentId={paso.id}
+                branchType="linear"
+                level={level + 1}
+                actualizarPaso={actualizarPaso}
+                addPaso={addPaso}
+                eliminarPaso={eliminarPaso}
+              />
+              <button
+                onClick={() => addPaso(procIndex, paso.id, "linear")}
+                className="btn-success px-2 py-1 rounded text-xs mt-1"
+              >
+                + Siguiente Paso
+              </button>
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+});
+
+  function FormularioEntrevista({ entrevistaId, onVolver }) {
+  const { useState, useEffect, useRef, useCallback } = React;
+
   const [entrevista, setEntrevista] = useState(null);
-  const [procesos, setProcesos] = useState([
+  // Usamos ref para mantener la misma referencia del array de procesos/pasos
+  const procesosRef = useRef([
     {
       nombre: '',
       frecuencia: 'mensual',
@@ -346,12 +429,9 @@
       pasos: []
     }
   ]);
-  const [complemento, setComplemento] = useState({
-    publico_usuarios: [], interacciones_externas: '', sistemas_usados: '',
-    tiene_manuales: false, resolucion_formularios: '', entrevistados: '',
-    acuerdos: '', observaciones_generales: ''
-  });
-
+  // tick forza render sin cambiar referencias internas
+  const [tick, setTick] = useState(0);
+  const [loading, setLoading] = useState(false);
   const tempIdCounter = useRef(0);
 
   useEffect(() => {
@@ -359,117 +439,110 @@
     supabase.from('entrevistas').select('*').eq('id', entrevistaId).single()
       .then(({ data, error }) => {
         if (error) return console.error(error);
-        if (data) {
-          setEntrevista(data);
-          if (data.publico_usuarios) setComplemento(prev => ({ ...prev, publico_usuarios: data.publico_usuarios }));
-        }
+        if (data) setEntrevista(data);
       });
   }, [entrevistaId]);
 
-  const publicoOpciones = ['Ciudadanos', 'Empresas privadas', 'Municipios', 'ONGs', 'Otras áreas del Ministerio', 'Otros organismos provinciales', 'Organismos nacionales', 'Otros'];
+  // Helpers para forzar render
+  const touch = useCallback(() => setTick(t => t + 1), []);
 
-  const togglePublico = useCallback((valor) => {
-    setComplemento(prev => {
-      const lista = [...prev.publico_usuarios];
-      if (lista.includes(valor)) return { ...prev, publico_usuarios: lista.filter(x => x !== valor) };
-      return { ...prev, publico_usuarios: [...lista, valor] };
-    });
-  }, []);
-
+  // Acciones: mutan procesosRef.current, luego touch()
   const agregarProceso = useCallback(() => {
-    setProcesos(prev => [...prev, {
-      nombre: '', frecuencia: 'mensual', prioridad: 'media',
-      area_inicio: '', areas_intermedias: '', area_cierre: '',
-      volumen_mensual: '', normativa: '', reporte_obligatorio: false,
-      potencial_digital: 'parcial', documento_final: '', proceso_padre: '', aprobador_final: '',
+    procesosRef.current.push({
+      nombre: '',
+      frecuencia: 'mensual',
+      prioridad: 'media',
+      area_inicio: '',
+      areas_intermedias: '',
+      area_cierre: '',
+      volumen_mensual: '',
+      normativa: '',
+      reporte_obligatorio: false,
+      potencial_digital: 'parcial',
+      documento_final: '',
+      proceso_padre: '',
+      aprobador_final: '',
       pasos: []
-    }]);
-  }, []);
+    });
+    touch();
+  }, [touch]);
 
   const eliminarProceso = useCallback((index) => {
-    setProcesos(prev => prev.filter((_, i) => i !== index));
-  }, []);
+    procesosRef.current.splice(index, 1);
+    touch();
+  }, [touch]);
 
-  const actualizarProceso = useCallback((index, campo, valor) => {
-    setProcesos(prev => {
-      const copia = [...prev];
-      copia[index] = { ...copia[index], [campo]: valor };
-      return copia;
-    });
-  }, []);
+  const actualizarProcesoCampo = useCallback((index, campo, valor) => {
+    const proc = procesosRef.current[index];
+    if (!proc) return;
+    proc[campo] = valor;
+    touch();
+  }, [touch]);
 
   const addPaso = useCallback((procIndex, parentId = null, branchType = 'linear') => {
-    setProcesos(prev => {
-      const copia = prev.map((p, i) => i === procIndex ? { ...p } : p);
-      const proc = copia[procIndex];
-      const siblings = proc.pasos.filter(x => x.parentId === parentId && x.branchType === branchType);
-      const orden = siblings.length + 1;
-      const tempId = `temp_${tempIdCounter.current++}`;
-      const newStep = {
-        id: tempId,
-        parentId,
-        branchType: branchType || 'linear',
-        orden,
-        descripcion: '', responsable_rol: '', area: '', herramienta: '', es_manual: true,
-        datos_necesarios: '', documentos_generados: '', plazos: '', tiempo_promedio: '',
-        riesgos: '', tiene_decision: false, condicion_decision: '',
-        pasa_a_otra_area: false, area_destino: '', que_envia: '', espera_respuesta: false,
-        es_paso_final: false
-      };
-      proc.pasos = [...proc.pasos, newStep];
-      return copia;
-    });
-  }, []);
+    const proc = procesosRef.current[procIndex];
+    if (!proc) return;
+    const siblings = proc.pasos.filter(p => p.parentId === parentId && p.branchType === branchType);
+    const orden = siblings.length + 1;
+    const newStep = {
+      id: `temp_${tempIdCounter.current++}`,
+      parentId,
+      branchType,
+      orden,
+      descripcion: '',
+      responsable_rol: '',
+      area: '',
+      herramienta: '',
+      es_manual: true,
+      datos_necesarios: '',
+      documentos_generados: '',
+      plazos: '',
+      tiempo_promedio: '',
+      riesgos: '',
+      tiene_decision: false,
+      condicion_decision: '',
+      pasa_a_otra_area: false,
+      area_destino: '',
+      que_envia: '',
+      espera_respuesta: false,
+      es_paso_final: false
+    };
+    proc.pasos.push(newStep);
+    touch();
+  }, [touch]);
 
   const eliminarPaso = useCallback((procIndex, stepId) => {
-    setProcesos(prev => {
-      const copia = prev.map((p, i) => i === procIndex ? { ...p } : p);
-      const proc = copia[procIndex];
-      const toRemove = new Set();
-      const findDesc = (id) => {
-        toRemove.add(id);
-        proc.pasos.forEach(s => { if (s.parentId === id) findDesc(s.id); });
-      };
-      findDesc(stepId);
-      proc.pasos = proc.pasos.filter(s => !toRemove.has(s.id));
-      return copia;
-    });
-  }, []);
+    const proc = procesosRef.current[procIndex];
+    if (!proc) return;
+    // eliminar nodo y descendientes
+    const toRemove = new Set();
+    const find = (id) => {
+      toRemove.add(id);
+      proc.pasos.forEach(s => { if (s.parentId === id) find(s.id); });
+    };
+    find(stepId);
+    proc.pasos = proc.pasos.filter(s => !toRemove.has(s.id));
+    touch();
+  }, [touch]);
 
- const actualizarPaso = useCallback((procIndex, stepId, campo, valor) => {
-  setProcesos(prev => {
-    const procesosActuales = [...prev];
-    const proc = procesosActuales[procIndex];
-    const paso = proc.pasos.find(s => s.id === stepId);
-    if (!paso) return prev;
-
-    // Mutación controlada: modificamos solo el campo afectado
+  const actualizarPaso = useCallback((procIndex, stepId, campo, valor) => {
+    const proc = procesosRef.current[procIndex];
+    if (!proc) return;
+    const paso = proc.pasos.find(p => p.id === stepId);
+    if (!paso) return;
     paso[campo] = valor;
+    touch();
+  }, [touch]);
 
-    // Retornamos el mismo array y los mismos objetos
-    // para evitar recrear referencias
-    return procesosActuales;
-  });
-}, []);
-
-
+  // Guardar — usa los datos mutados en procesosRef.current
   async function guardarEntrevista() {
     if (!entrevista) return;
     setLoading(true);
     try {
-      await supabase.from('entrevistas').update({
-        estado: 'realizada',
-        publico_usuarios: complemento.publico_usuarios.length ? complemento.publico_usuarios : null,
-        interacciones_externas: complemento.interacciones_externas || null,
-        sistemas_usados: complemento.sistemas_usados || null,
-        tiene_manuales: complemento.tiene_manuales,
-        resolucion_formularios: complemento.resolucion_formularios || null,
-        entrevistados: complemento.entrevistados || null,
-        acuerdos: complemento.acuerdos || null,
-        observaciones_generales: complemento.observaciones_generales || null
-      }).eq('id', entrevista.id);
+      // actualiza entrevista
+      await supabase.from('entrevistas').update({ estado: 'realizada' }).eq('id', entrevista.id);
 
-      for (const proc of procesos) {
+      for (const proc of procesosRef.current) {
         if (!proc.nombre || !proc.area_inicio) continue;
         const { data, error } = await supabase.from('procesos').insert([{
           nombre: proc.nombre,
@@ -492,7 +565,7 @@
         if (error) throw error;
         const procesoId = data[0].id;
 
-        // guardado de pasos: insert y actualización de parent_id
+        // Insertar pasos y luego actualizar parent_id
         const allSteps = proc.pasos;
         const insertData = allSteps.map(s => ({
           proceso_id: procesoId,
@@ -519,11 +592,10 @@
         }));
 
         const { data: inserted } = await supabase.from('pasos_proceso').insert(insertData).select();
-        // map temporal ids to db ids by index (as in tu lógica original)
         const tempToDb = {};
         allSteps.forEach((s, i) => tempToDb[s.id] = inserted[i].id);
 
-        // update parent_id
+        // actualizar parent_id
         for (const s of allSteps) {
           const dbId = tempToDb[s.id];
           const dbParent = s.parentId ? tempToDb[s.parentId] : null;
@@ -555,99 +627,8 @@
     }
   }
 
-  // StepTree memoizado — evita rerenders que rompen el foco
-  const StepTree = React.memo(function StepTree({ procIndex, pasos, parentId = null, branchType = 'linear', level = 0 }) {
-    const children = useMemo(() => pasos.filter(p => p.parentId === parentId && p.branchType === branchType).sort((a, b) => a.orden - b.orden), [pasos, parentId, branchType]);
-
-    return (
-      <div style={{ marginLeft: `${level * 20}px` }}>
-        {children.map(paso => (
-          <div key={paso.id} className="mb-4 p-4 border border-border rounded bg-surface shadow-sm">
-            <div className="flex justify-between mb-2">
-              <span className="text-sm font-semibold badge-primary px-2 py-1 rounded">Paso {typeof paso.id === 'number' ? `#${paso.id}` : '(nuevo)'}</span>
-              <button onClick={() => eliminarPaso(procIndex, paso.id)} className="btn-danger p-1 rounded"><Icons.Trash /></button>
-            </div>
-
-            <div className="space-y-2">
-              <input type="text" placeholder="Descripción *" className="border border-border p-2 rounded w-full text-sm" value={paso.descripcion} onChange={e => actualizarPaso(procIndex, paso.id, 'descripcion', e.target.value)} />
-
-              <div className="grid grid-cols-2 gap-2">
-                <input type="text" placeholder="Responsable (rol)" className="border border-border p-2 rounded text-sm" value={paso.responsable_rol} onChange={e => actualizarPaso(procIndex, paso.id, 'responsable_rol', e.target.value)} />
-                <input type="text" placeholder="Área" className="border border-border p-2 rounded text-sm" value={paso.area} onChange={e => actualizarPaso(procIndex, paso.id, 'area', e.target.value)} />
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                <input type="text" placeholder="Herramienta" className="border border-border p-2 rounded text-sm" value={paso.herramienta} onChange={e => actualizarPaso(procIndex, paso.id, 'herramienta', e.target.value)} />
-                <label className="flex items-center gap-2 text-sm">
-                  <input type="checkbox" checked={paso.es_manual} onChange={e => actualizarPaso(procIndex, paso.id, 'es_manual', e.target.checked)} className="rounded" /> Es manual
-                </label>
-              </div>
-
-              <input type="text" placeholder="Datos necesarios" className="border border-border p-2 rounded w-full text-sm" value={paso.datos_necesarios} onChange={e => actualizarPaso(procIndex, paso.id, 'datos_necesarios', e.target.value)} />
-              <input type="text" placeholder="Documentos generados" className="border border-border p-2 rounded w-full text-sm" value={paso.documentos_generados} onChange={e => actualizarPaso(procIndex, paso.id, 'documentos_generados', e.target.value)} />
-              <input type="text" placeholder="Plazos" className="border border-border p-2 rounded w-full text-sm" value={paso.plazos} onChange={e => actualizarPaso(procIndex, paso.id, 'plazos', e.target.value)} />
-              <input type="text" placeholder="Tiempo promedio" className="border border-border p-2 rounded w-full text-sm" value={paso.tiempo_promedio} onChange={e => actualizarPaso(procIndex, paso.id, 'tiempo_promedio', e.target.value)} />
-              <textarea placeholder="Riesgos" className="border border-border p-2 rounded w-full text-sm" rows="2" value={paso.riesgos} onChange={e => actualizarPaso(procIndex, paso.id, 'riesgos', e.target.value)} />
-
-              {/* Decisión */}
-              <div className="border-t border-border pt-2">
-                <label className="flex items-center gap-2 text-sm font-medium text-text">
-                  <input type="checkbox" checked={paso.tiene_decision} onChange={e => actualizarPaso(procIndex, paso.id, 'tiene_decision', e.target.checked)} className="rounded" /> Tiene decisión
-                </label>
-                {paso.tiene_decision && (
-                  <div className="ml-6 mt-2 space-y-2 card-warning p-2 rounded border">
-                    <input type="text" placeholder="Condición" className="border border-border p-2 rounded w-full text-sm" value={paso.condicion_decision} onChange={e => actualizarPaso(procIndex, paso.id, 'condicion_decision', e.target.value)} />
-                    <div className="flex gap-4">
-                      <div className="flex-1">
-                        <h5 className="text-sm font-bold">Sí</h5>
-                        <StepTree procIndex={procIndex} pasos={pasos} parentId={paso.id} branchType="si" level={level + 1} />
-                        <button onClick={() => addPaso(procIndex, paso.id, 'si')} className="btn-success px-2 py-1 rounded text-xs mt-1">+ Sí</button>
-                      </div>
-                      <div className="flex-1">
-                        <h5 className="text-sm font-bold">No</h5>
-                        <StepTree procIndex={procIndex} pasos={pasos} parentId={paso.id} branchType="no" level={level + 1} />
-                        <button onClick={() => addPaso(procIndex, paso.id, 'no')} className="btn-success px-2 py-1 rounded text-xs mt-1">+ No</button>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Handoff */}
-              <div className="border-t border-border pt-2">
-                <label className="flex items-center gap-2 text-sm font-medium" style={{ color: 'var(--color-warning)' }}>
-                  <input type="checkbox" checked={paso.pasa_a_otra_area} onChange={e => actualizarPaso(procIndex, paso.id, 'pasa_a_otra_area', e.target.checked)} className="rounded" /> Pasa a otra área
-                </label>
-                {paso.pasa_a_otra_area && (
-                  <div className="ml-6 mt-2 space-y-2 p-2 rounded border" style={{ backgroundColor: 'var(--color-warning-light)', borderColor: 'var(--color-warning)' }}>
-                    <input type="text" placeholder="Área destino" className="border border-border p-2 rounded w-full text-sm" value={paso.area_destino} onChange={e => actualizarPaso(procIndex, paso.id, 'area_destino', e.target.value)} />
-                    <input type="text" placeholder="¿Qué envía?" className="border border-border p-2 rounded w-full text-sm" value={paso.que_envia} onChange={e => actualizarPaso(procIndex, paso.id, 'que_envia', e.target.value)} />
-                    <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={paso.espera_respuesta} onChange={e => actualizarPaso(procIndex, paso.id, 'espera_respuesta', e.target.checked)} className="rounded" /> Espera respuesta</label>
-                  </div>
-                )}
-              </div>
-
-              {/* Paso final */}
-              <div className="border-t border-border pt-2 mt-2">
-                <label className="flex items-center gap-2 text-sm font-medium text-success">
-                  <input type="checkbox" checked={paso.es_paso_final} onChange={e => actualizarPaso(procIndex, paso.id, 'es_paso_final', e.target.checked)} className="rounded" /> Este paso finaliza el proceso
-                </label>
-                {paso.es_paso_final && <div className="ml-6 mt-1 p-2 card-success rounded border text-sm">Proceso termina aquí</div>}
-              </div>
-
-              {/* Siguiente (lineal) */}
-              {!paso.es_paso_final && !paso.tiene_decision && (
-                <div className="mt-2">
-                  <StepTree procIndex={procIndex} pasos={pasos} parentId={paso.id} branchType="linear" level={level + 1} />
-                  <button onClick={() => addPaso(procIndex, paso.id, 'linear')} className="btn-success px-2 py-1 rounded text-xs flex items-center gap-1 mt-1"><Icons.Plus /> Siguiente Paso</button>
-                </div>
-              )}
-            </div>
-          </div>
-        ))}
-      </div>
-    );
-  });
+  // Render: usamos procesosRef.current directamente
+  const procesos = procesosRef.current;
 
   if (!entrevista) return <div className="p-6 text-text">Cargando...</div>;
 
@@ -663,20 +644,8 @@
         <div className="grid grid-cols-2 gap-4 mb-4 text-text">
           <div><strong>Área:</strong> {entrevista.area}</div>
           <div><strong>Fecha:</strong> {new Date(entrevista.fecha).toLocaleDateString('es-AR')}</div>
-          <div><strong>Hora:</strong> {entrevista.hora ? entrevista.hora.slice(0, 5) : '—'}</div>
+          <div><strong>Hora:</strong> {entrevista.hora ? entrevista.hora.slice(0,5) : '—'}</div>
           <div><strong>Responsable:</strong> {entrevista.responsable || '—'}</div>
-          <div><strong>Entrevistador:</strong> {entrevista.entrevistador || '—'}</div>
-        </div>
-        <div className="mt-4">
-          <p className="font-medium mb-2 text-text">Público/Usuarios:</p>
-          <div className="flex flex-wrap gap-2">
-            {publicoOpciones.map(opt => (
-              <label key={opt} className="flex items-center gap-1 text-sm text-text">
-                <input type="checkbox" checked={complemento.publico_usuarios.includes(opt)} onChange={() => togglePublico(opt)} className="rounded" />
-                {opt}
-              </label>
-            ))}
-          </div>
         </div>
       </div>
 
@@ -694,33 +663,9 @@
             </div>
 
             <div className="grid grid-cols-2 gap-3 mb-4">
-              <input type="text" placeholder="Nombre del proceso *" className="border border-border p-2 rounded" value={proc.nombre} onChange={e => actualizarProceso(idx, 'nombre', e.target.value)} />
-              <select className="border border-border p-2 rounded" value={proc.frecuencia} onChange={e => actualizarProceso(idx, 'frecuencia', e.target.value)}>
-                <option value="diaria">Diaria</option>
-                <option value="semanal">Semanal</option>
-                <option value="mensual">Mensual</option>
-                <option value="eventual">Eventual</option>
-              </select>
-
-              <select className="border border-border p-2 rounded" value={proc.prioridad} onChange={e => actualizarProceso(idx, 'prioridad', e.target.value)}>
-                <option value="baja">Baja</option>
-                <option value="media">Media</option>
-                <option value="alta">Alta</option>
-              </select>
-              <input type="text" placeholder="Área que inicia *" className="border border-border p-2 rounded" value={proc.area_inicio} onChange={e => actualizarProceso(idx, 'area_inicio', e.target.value)} />
-              <input type="text" placeholder="Áreas intermedias" className="border border-border p-2 rounded" value={proc.areas_intermedias} onChange={e => actualizarProceso(idx, 'areas_intermedias', e.target.value)} />
-              <input type="text" placeholder="Área que cierra" className="border border-border p-2 rounded" value={proc.area_cierre} onChange={e => actualizarProceso(idx, 'area_cierre', e.target.value)} />
-              <input type="number" placeholder="Volumen mensual" className="border border-border p-2 rounded" value={proc.volumen_mensual} onChange={e => actualizarProceso(idx, 'volumen_mensual', e.target.value)} />
-              <input type="text" placeholder="Normativa" className="border border-border p-2 rounded" value={proc.normativa} onChange={e => actualizarProceso(idx, 'normativa', e.target.value)} />
-              <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={proc.reporte_obligatorio} onChange={e => actualizarProceso(idx, 'reporte_obligatorio', e.target.checked)} className="rounded" /> Reporte obligatorio</label>
-              <select className="border border-border p-2 rounded" value={proc.potencial_digital} onChange={e => actualizarProceso(idx, 'potencial_digital', e.target.value)}>
-                <option value="si">100% digital</option>
-                <option value="parcial">Parcial</option>
-                <option value="no">Requiere físico</option>
-              </select>
-              <input type="text" placeholder="Documento final" className="border border-border p-2 rounded" value={proc.documento_final} onChange={e => actualizarProceso(idx, 'documento_final', e.target.value)} />
-              <input type="text" placeholder="Proceso padre" className="border border-border p-2 rounded" value={proc.proceso_padre} onChange={e => actualizarProceso(idx, 'proceso_padre', e.target.value)} />
-              <input type="text" placeholder="Aprobador final" className="border border-border p-2 rounded" value={proc.aprobador_final} onChange={e => actualizarProceso(idx, 'aprobador_final', e.target.value)} />
+              <input type="text" placeholder="Nombre del proceso *" className="border border-border p-2 rounded" value={proc.nombre} onChange={(e) => actualizarProcesoCampo(idx, 'nombre', e.target.value)} />
+              <input type="text" placeholder="Área que inicia *" className="border border-border p-2 rounded" value={proc.area_inicio} onChange={(e) => actualizarProcesoCampo(idx, 'area_inicio', e.target.value)} />
+              {/* otros campos que necesites... */}
             </div>
 
             <div className="mt-4">
@@ -731,7 +676,7 @@
                 )}
               </div>
 
-              <StepTree procIndex={idx} pasos={proc.pasos} parentId={null} branchType="linear" />
+              <StepTree procIndex={idx} pasos={proc.pasos} parentId={null} branchType="linear" actualizarPaso={actualizarPaso} addPaso={addPaso} eliminarPaso={eliminarPaso} />
             </div>
           </div>
         ))}
@@ -1246,13 +1191,14 @@ const StepTreeView = ({ pasos, parentId, branchType, level = 0 }) => {
             );
         }
 
-  function EditarProceso({ procesoId, onCerrar }) {
-  const { useState, useEffect, useRef, useMemo, useCallback } = React;
+ function EditarProceso({ procesoId, onCerrar }) {
+  const { useState, useEffect, useRef, useCallback } = React;
   const [proceso, setProceso] = useState(null);
-  const [pasos, setPasos] = useState([]);
-  const originalPasos = useRef([]);
-  const tempIdCounter = useRef(0);
+  const pasosRef = useRef([]); // mantener referencia estable
+  const [tick, setTick] = useState(0);
   const [loading, setLoading] = useState(true);
+  const tempIdCounter = useRef(0);
+  const touch = useCallback(() => setTick(t => t + 1), []);
 
   useEffect(() => {
     async function cargar() {
@@ -1262,63 +1208,70 @@ const StepTreeView = ({ pasos, parentId, branchType, level = 0 }) => {
         const { data: pasosData, error: pasosErr } = await supabase.from('pasos_proceso').select('*').eq('proceso_id', procesoId);
         if (pasosErr) throw pasosErr;
         setProceso(procData);
-        originalPasos.current = pasosData || [];
-        setPasos((pasosData || []).map(p => ({ ...p, parentId: p.parent_id, branchType: p.branch_type || 'linear' })));
+        pasosRef.current = (pasosData || []).map(p => ({ ...p, parentId: p.parent_id, branchType: p.branch_type || 'linear' }));
       } catch (err) {
         alert('Error al cargar: ' + (err?.message || err));
       } finally {
         setLoading(false);
+        touch();
       }
     }
     cargar();
-  }, [procesoId]);
-
-  const handleChangeProceso = useCallback((campo, valor) => {
-    setProceso(prev => ({ ...prev, [campo]: valor }));
-  }, []);
+  }, [procesoId, touch]);
 
   const addPaso = useCallback((parentId = null, branchType = 'linear') => {
-    setPasos(prev => {
-      const siblings = prev.filter(p => p.parentId === parentId && p.branchType === branchType);
-      const orden = siblings.length + 1;
-      const tempId = `temp_${tempIdCounter.current++}`;
-      const newStep = {
-        id: tempId,
-        parentId,
-        branchType: branchType || 'linear',
-        orden,
-        descripcion: '', responsable_rol: '', area: '', herramienta: '', es_manual: true,
-        datos_necesarios: '', documentos_generados: '', plazos: '',
-        tiempo_promedio: '', riesgos: '',
-        tiene_decision: false, condicion_decision: '',
-        pasa_a_otra_area: false, area_destino: '', que_envia: '', espera_respuesta: false,
-        es_paso_final: false
-      };
-      return [...prev, newStep];
-    });
-  }, []);
+    const prev = pasosRef.current;
+    const orden = prev.filter(p => p.parentId === parentId && p.branchType === branchType).length + 1;
+    const newStep = {
+      id: `temp_${tempIdCounter.current++}`,
+      parentId,
+      branchType,
+      orden,
+      descripcion: '',
+      responsable_rol: '',
+      area: '',
+      herramienta: '',
+      es_manual: true,
+      datos_necesarios: '',
+      documentos_generados: '',
+      plazos: '',
+      tiempo_promedio: '',
+      riesgos: '',
+      tiene_decision: false,
+      condicion_decision: '',
+      pasa_a_otra_area: false,
+      area_destino: '',
+      que_envia: '',
+      espera_respuesta: false,
+      es_paso_final: false
+    };
+    pasosRef.current.push(newStep);
+    touch();
+  }, [touch]);
 
   const eliminarPaso = useCallback((stepId) => {
-    setPasos(prev => {
-      const toRemove = new Set();
-      const findDesc = (id) => {
-        toRemove.add(id);
-        prev.forEach(s => { if (s.parentId === id) findDesc(s.id); });
-      };
-      findDesc(stepId);
-      return prev.filter(s => !toRemove.has(s.id));
-    });
-  }, []);
+    const toRemove = new Set();
+    const find = (id) => {
+      toRemove.add(id);
+      pasosRef.current.forEach(s => { if (s.parentId === id) find(s.id); });
+    };
+    find(stepId);
+    pasosRef.current = pasosRef.current.filter(s => !toRemove.has(s.id));
+    touch();
+  }, [touch]);
 
   const actualizarPaso = useCallback((stepId, campo, valor) => {
-    setPasos(prev => prev.map(s => s.id === stepId ? { ...s, [campo]: valor } : s));
-  }, []);
+    const paso = pasosRef.current.find(p => p.id === stepId);
+    if (!paso) return;
+    paso[campo] = valor;
+    touch();
+  }, [touch]);
 
-  const handleGuardar = async () => {
+  const handleGuardar = useCallback(async () => {
     if (!proceso) return;
     setLoading(true);
     try {
-      // actualiza proceso
+      // actualizar proceso
       await supabase.from('procesos').update({
         nombre: proceso.nombre,
         frecuencia: proceso.frecuencia,
@@ -1336,15 +1289,16 @@ const StepTreeView = ({ pasos, parentId, branchType, level = 0 }) => {
         estado_relevamiento: proceso.estado_relevamiento
       }).eq('id', proceso.id);
 
-      // eliminar pasos borrados
-      const currentDbIds = pasos.filter(s => typeof s.id === 'number').map(s => s.id);
-      const deletedIds = originalPasos.current.filter(o => !currentDbIds.includes(o.id)).map(o => o.id);
+      // calcular borrados
+      const currentDbIds = pasosRef.current.filter(s => typeof s.id === 'number').map(s => s.id);
+      const { data: originalDb } = await supabase.from('pasos_proceso').select('id').eq('proceso_id', proceso.id);
+      const originalIds = (originalDb || []).map(o => o.id);
+      const deletedIds = originalIds.filter(id => !currentDbIds.includes(id));
       if (deletedIds.length) await supabase.from('pasos_proceso').delete().in('id', deletedIds);
 
-      // insertar pasos nuevos
-      const newSteps = pasos.filter(s => typeof s.id !== 'number');
+      // insertar nuevos
+      const newSteps = pasosRef.current.filter(s => typeof s.id !== 'number');
       const localToDb = {};
-      let inserted = [];
       if (newSteps.length) {
         const insertData = newSteps.map(s => ({
           proceso_id: proceso.id,
@@ -1369,14 +1323,12 @@ const StepTreeView = ({ pasos, parentId, branchType, level = 0 }) => {
           branch_type: s.branchType || null,
           parent_id: null
         }));
-        const res = await supabase.from('pasos_proceso').insert(insertData).select();
-        inserted = res.data || [];
+        const { data: inserted } = await supabase.from('pasos_proceso').insert(insertData).select();
         newSteps.forEach((s, i) => localToDb[s.id] = inserted[i].id);
       }
 
-      // actualizar parent_id y actualizar pasos existentes (si cambió parent/orden/otros campos)
-      const allCurrent = pasos.map(s => s);
-      for (const s of allCurrent) {
+      // actualizar parent_id y demás campos para todos los pasos
+      for (const s of pasosRef.current) {
         const dbId = typeof s.id === 'number' ? s.id : localToDb[s.id];
         const dbParent = s.parentId ? (typeof s.parentId === 'number' ? s.parentId : localToDb[s.parentId]) : null;
         await supabase.from('pasos_proceso').update({
@@ -1410,61 +1362,10 @@ const StepTreeView = ({ pasos, parentId, branchType, level = 0 }) => {
     } finally {
       setLoading(false);
     }
-  };
-
-  // StepTree memoizado para edición (evita perder foco)
-  const StepTree = React.memo(function StepTree({ pasos, parentId = null, branchType = 'linear', level = 0 }) {
-    const children = useMemo(() => pasos.filter(p => p.parentId === parentId && p.branchType === branchType).sort((a, b) => a.orden - b.orden), [pasos, parentId, branchType]);
-
-    return (
-      <div style={{ marginLeft: `${level * 20}px` }}>
-        {children.map(paso => (
-          <div key={paso.id} className="mb-4 p-4 border border-border rounded bg-surface">
-            <div className="flex justify-between mb-2">
-              <span className="text-sm font-semibold badge-primary px-2 py-1 rounded">Paso {typeof paso.id === 'number' ? `#${paso.id}` : '(nuevo)'}</span>
-              <button onClick={() => eliminarPaso(paso.id)} className="btn-danger p-1 rounded"><Icons.Trash /></button>
-            </div>
-
-            <div className="space-y-2">
-              <input type="text" placeholder="Descripción" className="border border-border p-2 rounded w-full text-sm" value={paso.descripcion} onChange={e => actualizarPaso(paso.id, 'descripcion', e.target.value)} />
-              <div className="grid grid-cols-2 gap-2">
-                <input type="text" placeholder="Responsable" className="border border-border p-2 rounded text-sm" value={paso.responsable_rol} onChange={e => actualizarPaso(paso.id, 'responsable_rol', e.target.value)} />
-                <input type="text" placeholder="Área" className="border border-border p-2 rounded text-sm" value={paso.area} onChange={e => actualizarPaso(paso.id, 'area', e.target.value)} />
-              </div>
-
-              {paso.tiene_decision && (
-                <div className="mt-2 p-2 card-warning rounded border">
-                  <input type="text" placeholder="Condición" className="border border-border p-2 rounded w-full text-sm" value={paso.condicion_decision} onChange={e => actualizarPaso(paso.id, 'condicion_decision', e.target.value)} />
-                  <div className="flex gap-4 mt-2">
-                    <div className="flex-1">
-                      <strong>Sí:</strong>
-                      <StepTree pasos={pasos} parentId={paso.id} branchType="si" level={level + 1} />
-                      <button onClick={() => addPaso(paso.id, 'si')} className="btn-success px-2 py-1 rounded text-xs mt-1">+ Sí</button>
-                    </div>
-                    <div className="flex-1">
-                      <strong>No:</strong>
-                      <StepTree pasos={pasos} parentId={paso.id} branchType="no" level={level + 1} />
-                      <button onClick={() => addPaso(paso.id, 'no')} className="btn-success px-2 py-1 rounded text-xs mt-1">+ No</button>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {!paso.tiene_decision && (
-                <>
-                  <StepTree pasos={pasos} parentId={paso.id} branchType="linear" level={level + 1} />
-                  <button onClick={() => addPaso(paso.id, 'linear')} className="btn-success px-2 py-1 rounded text-xs mt-1"><Icons.Plus /> Siguiente</button>
-                </>
-              )}
-            </div>
-          </div>
-        ))}
-      </div>
-    );
-  });
+  }, [proceso, onCerrar]);
 
   if (loading) return <div className="p-6 text-text">Cargando...</div>;
-  if (!proceso) return <div className="p-6 text-text">No se encontró el proceso</div>;
+  if (!proceso) return <div className="p-6 text-text">No encontrado</div>;
 
   return (
     <div className="bg-surface p-6 rounded-lg border border-border max-w-6xl mx-auto">
@@ -1477,22 +1378,9 @@ const StepTreeView = ({ pasos, parentId, branchType, level = 0 }) => {
       </div>
 
       <div className="grid grid-cols-2 gap-3 mb-4">
-        <input type="text" value={proceso.nombre} onChange={e => handleChangeProceso('nombre', e.target.value)} className="border border-border p-2 rounded" />
-        <select value={proceso.frecuencia} onChange={e => handleChangeProceso('frecuencia', e.target.value)} className="border border-border p-2 rounded">
-          <option value="diaria">Diaria</option>
-          <option value="semanal">Semanal</option>
-          <option value="mensual">Mensual</option>
-          <option value="eventual">Eventual</option>
-        </select>
-
-        <select value={proceso.prioridad} onChange={e => handleChangeProceso('prioridad', e.target.value)} className="border border-border p-2 rounded">
-          <option value="baja">Baja</option>
-          <option value="media">Media</option>
-          <option value="alta">Alta</option>
-        </select>
-        <input type="text" value={proceso.area_inicio} onChange={e => handleChangeProceso('area_inicio', e.target.value)} className="border border-border p-2 rounded" />
-        <input type="text" value={proceso.areas_intermedias} onChange={e => handleChangeProceso('areas_intermedias', e.target.value)} className="border border-border p-2 rounded" />
-        <input type="text" value={proceso.area_cierre} onChange={e => handleChangeProceso('area_cierre', e.target.value)} className="border border-border p-2 rounded" />
+        <input type="text" value={proceso.nombre} onChange={e => setProceso(prev => ({ ...prev, nombre: e.target.value }))} className="border border-border p-2 rounded" />
+        <input type="text" value={proceso.area_inicio || ''} onChange={e => setProceso(prev => ({ ...prev, area_inicio: e.target.value }))} className="border border-border p-2 rounded" />
+        {/* otros campos si los necesitás */}
       </div>
 
       <div>
@@ -1501,11 +1389,20 @@ const StepTreeView = ({ pasos, parentId, branchType, level = 0 }) => {
           <button onClick={() => addPaso(null, 'linear')} className="btn-success px-2 py-1 rounded text-sm"><Icons.Plus /> Agregar Paso Inicial</button>
         </div>
 
-        <StepTree pasos={pasos} parentId={null} branchType="linear" />
+        <StepTree
+          procIndex={0} // usamos índice 0 porque aquí manejamos solo un proceso
+          pasos={pasosRef.current}
+          parentId={null}
+          branchType="linear"
+          actualizarPaso={(idx, id, campo, valor) => actualizarPaso(id, campo, valor)}
+          addPaso={(idx, parentId, branchType) => addPaso(parentId, branchType)}
+          eliminarPaso={(idx, id) => eliminarPaso(id)}
+        />
       </div>
     </div>
   );
 }
+
 
        function GeneradorSistema({ onVolver }) {
     const [procesos, setProcesos] = useState([]);
